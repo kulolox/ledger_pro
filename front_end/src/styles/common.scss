@@ -1,0 +1,75 @@
+/** 运行时主题 **/
+page {
+  --bg-primary: #f2f2f7;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f9f9fb;
+  --bg-active: #e8f2ff;
+  --bg-operator: #f2f2f7;
+  --bg-operator-hover: #e5e5ea;
+  --bg-key: #ffffff;
+  --bg-key-hover: #e5e5ea;
+  --bg-blur: rgba(242, 242, 247, 0.72);
+
+  --border-primary: #e5e5ea;
+  --border-active: #007aff;
+  --border-subtle: rgba(60, 60, 67, 0.08);
+
+  --text-primary: #1d1d1f;
+  --text-secondary: #3c3c43;
+  --text-tertiary: #48484a;
+  --text-label: #8e8e93;
+  --text-muted: #aeaeb2;
+  --text-dim: #c7c7cc;
+  --text-placeholder: #c7c7cc;
+
+  --color-primary: #007aff;
+  --color-primary-hover: #0062cc;
+  --color-save: #34c759;
+  --color-save-hover: #30b350;
+  --color-expense: #ff3b30;
+  --color-income: #34c759;
+  --color-transfer: #007aff;
+  --color-handle: #d1d1d6;
+
+  --shadow-sm: 0 1rpx 3rpx rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12rpx 40rpx rgba(0, 0, 0, 0.08);
+  --shadow-fab: 0 8rpx 32rpx rgba(0, 122, 255, 0.3);
+
+  --radius-xs: 6rpx;
+  --radius-sm: 10rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  --radius-xl: 32rpx;
+  --radius-full: 9999rpx;
+
+  --input-height: 88rpx;
+
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --spring-default: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --text-inverse: #ffffff;
+
+  --font-family-base: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+
+  --shadow-primary-sm: 0 4rpx 16rpx rgba(0, 122, 255, 0.25);
+  --shadow-primary-md: 0 4rpx 20rpx rgba(0, 122, 255, 0.3);
+  --shadow-fab-active: 0 4rpx 14rpx rgba(0, 122, 255, 0.25);
+  --shadow-key: 0 1rpx 2rpx rgba(0, 0, 0, 0.04);
+  --shadow-save: 0 6rpx 24rpx rgba(52, 199, 89, 0.4);
+
+  --bg-overlay: rgba(0, 0, 0, 0.02);
+
+  --wot-input-text-color: var(--text-primary);
+  --wot-input-bg-color: var(--bg-secondary);
+  --wot-input-placeholder-color: var(--text-placeholder);
+  --wot-input-border-color: var(--border-primary);
+  --wot-primary: var(--color-primary);
+  --wot-radius: var(--radius-md);
+}

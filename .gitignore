@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# front-end
+front_end/node_modules/
+front_end/dist/
+
+# back-end
+back_end/target/
+back_end/.mvn/wrapper/maven-wrapper.jar
+
+# claude
+.claude/
+
+# env
+.env.local
+.env.*.local
