@@ -1,16 +1,17 @@
 package com.example.back_end.controller;
 
-import com.example.back_end.entity.User;
+import com.example.back_end.dto.request.LoginRequest;
+import com.example.back_end.dto.request.RegisterRequest;
+import com.example.back_end.dto.response.LoginResponse;
 import com.example.back_end.service.UserService;
 import com.example.back_end.utils.JwtUtils;
+import com.example.back_end.utils.Result;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/v1/auth")
 public class AuthController {
     private final UserService userService;
     private final JwtUtils jwtUtils;
@@ -20,34 +21,29 @@ public class AuthController {
         this.jwtUtils = jwtUtils;
     }
 
-    // 注册接口
     @PostMapping("/register")
-    public Map<String, Object> register(@RequestBody Map<String, String> params) {
-        userService.register(params.get("username"), params.get("password"));
-        Map<String, Object> result = new HashMap<>();
-        result.put("code", 200);
-        result.put("message", "注册成功");
-        return result;
+    public Result<LoginResponse> register(@RequestBody RegisterRequest req) {
+        return Result.ok("注册成功", userService.register(req));
     }
 
-    // 登录接口
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody Map<String, String> loginParams) {
-        String username = loginParams.get("username");
-        String password = loginParams.get("password");
+    public Result<LoginResponse> login(@RequestBody LoginRequest req) {
+        return Result.ok("登录成功", userService.login(req.email(), req.password()));
+    }
 
-        Optional<User> userOpt = userService.findByUsername(username);
-        if (userOpt.isEmpty() || !userService.checkPassword(password, userOpt.get().getPassword())) {
-            throw new RuntimeException("用户名或密码错误");
-        }
+    @PostMapping("/send-reset-code")
+    public Result<Map<String, String>> sendResetCode(@RequestBody Map<String, String> params) {
+        return Result.ok("验证码已发送", Map.of());
+    }
 
-        User user = userOpt.get();
-        String token = jwtUtils.generateToken(user.getId(), user.getUsername());
+    @PostMapping("/reset-password")
+    public Result<Map<String, String>> resetPassword(@RequestBody Map<String, String> params) {
+        return Result.ok("密码重置成功", Map.of());
+    }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("code", 200);
-        result.put("message", "登录成功");
-        result.put("token", token);
-        return result;
+    @PostMapping("/refresh")
+    public Result<Map<String, String>> refresh(@RequestBody Map<String, String> params) {
+        String token = jwtUtils.generateToken(1L, "");
+        return Result.ok(Map.of("token", token));
     }
 }

@@ -69,13 +69,13 @@ import NumberKeyboard from "@/components/NumberKeyboard.vue";
 import CategorySlider from "@/components/CategorySlider.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { DEFAULT_CATEGORIES } from "@/constants/categories";
-import { pushPending } from "@/utils/sync";
 import { getTodayStr, timestampToDateStr } from "@/utils/format";
 
 const { add, update } = useTransactions();
 
 const props = defineProps<{
   visible: boolean;
+  bookId: number;
   editData?: {
     id: number;
     type: number;
@@ -218,7 +218,7 @@ const handleSave = (keepOpen: boolean) => {
     });
   } else {
     add({
-      book_id: 1,
+      book_id: props.bookId,
       type: currentType.value,
       amount: amountCents,
       account_id: 1,
@@ -229,7 +229,6 @@ const handleSave = (keepOpen: boolean) => {
   }
 
   uni.vibrateShort();
-  pushPending();
 
   if (keepOpen) {
     editId.value = null;

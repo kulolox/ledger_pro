@@ -71,3 +71,32 @@ cd back_end
 - 注释: 添加必要注释，保证代码可读性
 - 纯函数需要提取放在utils下
 - 通用ts声明放在types下
+
+### 同步策略
+
+本地优先 (local-first)，服务端为备份：
+
+```
+pushDeletes → pushPending → pullFromServer
+```
+
+- **pushDeletes**: 收集本地 `deleted=1 + sync_status=pending + 有 server_id` 的记录，批量 POST `/batch-delete`
+- **pushPending**: 收集本地 `sync_status=pending + deleted=0` 的记录，批量 POST `/batch`（注意：data 必须用 `{items: [...]}` 对象包裹，uni-app H5 不支持裸数组序列化）
+- **pullFromServer**: 拉取当月全量数据（传 `book_id` + `month` YYYY-MM），按 server_id 去重合并
+- 同步失败**不修改本地数据状态**，保持 pending 等待下次重试
+- 同步锁 `syncing` 防止并发；定时轮询 30 分钟 + 网络恢复触发
+
+### 后端 Controller 模式
+
+- Controller 接收 `Map<String, Object>` 而非 DTO，用 `toLong()`/`toInt()` 私有方法做类型转换
+- 批量接口统一包裹格式：`{items: [...]}` 或 `{ids: [...]}`
+- 时间解析兼容空格和 T 分隔符：`transTimeStr.replace(" ", "T")`
+- month 查询：前端传 `YYYY-MM`，后端拼 `month + "-01T00:00:00"` 然后 `plusMonths(1)` 做范围查询
+- 软删除：设置 `deleted=1` 后 `saveAll`，不物理删除
+
+### 数据隔离
+
+- 所有接口通过 `book_id` 隔离数据
+- 前端 `dayGroups` 计算属性按 `currentBookId` 过滤
+- `currentBookId` 持久化到 storage，下次启动恢复
+- 记账时 `book_id` 取自当前选中账本

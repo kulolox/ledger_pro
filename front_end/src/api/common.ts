@@ -22,6 +22,23 @@ export const refreshToken = (data: { refresh_token: string }) => {
   return request.post<{ token: string }>("/api/v1/auth/refresh", data);
 };
 
+// ========== 账本相关 ==========
+
+export const getAccountBooks = () => {
+  return request.get<AccountBook[]>("/api/v1/account-books");
+};
+
+export const createAccountBook = (data: { name: string; coverIcon?: string; type?: number }) => {
+  return request.post<AccountBook>("/api/v1/account-books", data);
+};
+
+export interface AccountBook {
+  id: number;
+  name: string;
+  coverIcon: string;
+  type: number;
+}
+
 // ========== 用户相关 ==========
 
 export const getUserInfo = () => {
@@ -34,13 +51,7 @@ export const updateUserInfo = (data: Partial<UserInfo>) => {
 
 // ========== 记账相关 ==========
 
-export const getTransactions = (params: {
-  book_id: number;
-  page?: number;
-  size?: number;
-  start_time?: string;
-  end_time?: string;
-}) => {
+export const getTransactions = (params: { book_id: number; month: string }) => {
   return request.get<{ list: Transaction[]; total: number }>("/api/v1/transactions", params);
 };
 
@@ -107,3 +118,16 @@ export interface Account {
   icon: string;
   currency: string;
 }
+
+// ========== 统计相关 ==========
+
+export interface MonthlyStats {
+  total_expense: number;
+  total_income: number;
+  expense_by_category: Array<{ category_id: number; amount: number; count: number }>;
+  income_by_category: Array<{ category_id: number; amount: number; count: number }>;
+}
+
+export const getMonthlyStatistics = (params: { book_id: number; month: string }) => {
+  return request.get<MonthlyStats>("/api/v1/statistics/monthly", params);
+};

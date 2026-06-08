@@ -1,13 +1,21 @@
 <template>
   <view class="home-page">
     <view class="home-header">
-      <view class="month-nav">
-        <view class="nav-arrow" @click="prevMonth">
-          <text>‹</text>
+      <view class="nav-bar">
+        <view class="menu-btn" @click="showSidebar = true">
+          <text class="menu-icon">☰</text>
         </view>
-        <text class="month-label">{{ monthLabel }}</text>
-        <view class="nav-arrow" @click="nextMonth">
-          <text>›</text>
+        <view class="month-nav">
+          <view class="nav-arrow" @click="prevMonth">
+            <text>‹</text>
+          </view>
+          <text class="month-label">{{ monthLabel }}</text>
+          <view class="nav-arrow" @click="nextMonth">
+            <text>›</text>
+          </view>
+        </view>
+        <view class="stats-btn" @click="goStats">
+          <text class="stats-icon">📊</text>
         </view>
       </view>
       <view class="month-summary">
@@ -68,37 +76,45 @@
           </view>
         </view>
 
-        <view
+        <wd-swipe-action
           v-for="(tx, idx) in day.items"
           :key="tx.id"
-          class="tx-item"
-          :class="{ 'tx-item-last': idx === day.items.length - 1 }"
-          @click="onEditTx(tx)"
-          @longpress="onLongPressTx(tx)"
+          @click="onSwipeAction($event, tx)"
         >
-          <view class="tx-left">
-            <view
-              class="tx-icon"
-              :style="{ background: getCategoryColor(tx.type, tx.category_id) }"
-            >
-              <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
+          <view
+            class="tx-item"
+            :class="{ 'tx-item-last': idx === day.items.length - 1 }"
+            @click="onEditTx(tx)"
+          >
+            <view class="tx-left">
+              <view
+                class="tx-icon"
+                :style="{ background: getCategoryColor(tx.type, tx.category_id) }"
+              >
+                <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
+              </view>
+              <view class="tx-info">
+                <text class="tx-category">{{
+                  getCategoryName(tx.type, tx.category_id)
+                }}</text>
+                <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
+              </view>
             </view>
-            <view class="tx-info">
-              <text class="tx-category">{{
-                getCategoryName(tx.type, tx.category_id)
-              }}</text>
-              <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
+            <view class="tx-right">
+              <text class="tx-amount" :class="amountClass(tx.type)">
+                {{ formatTxAmount(tx) }}
+              </text>
+              <text v-if="tx.sync_status === 'pending'" class="tx-sync-badge"
+                >○</text
+              >
             </view>
           </view>
-          <view class="tx-right">
-            <text class="tx-amount" :class="amountClass(tx.type)">
-              {{ formatTxAmount(tx) }}
-            </text>
-            <text v-if="tx.sync_status === 'pending'" class="tx-sync-badge"
-              >○</text
-            >
-          </view>
-        </view>
+          <template #right>
+            <view class="swipe-delete-btn">
+              <text>删除</text>
+            </view>
+          </template>
+        </wd-swipe-action>
       </view>
 
       <view class="list-bottom" v-if="dayGroups.length > 0">
@@ -113,15 +129,22 @@
 
     <TransactionEditor
       :visible="editorVisible"
+      :bookId="currentBookId"
       :editData="editingTx"
       @close="onEditorClose"
       @saved="onEditorSaved"
     />
 
-    <wd-action-sheet
-      v-model:visible="showDeleteSheet"
-      :actions="deleteActions"
-      @select="onDeleteConfirm"
+    <Sidebar
+      v-model:visible="showSidebar"
+      :userInfo="userInfo"
+      :books="books"
+      :currentBookId="currentBookId"
+      @close="showSidebar = false"
+      @switchBook="onSwitchBook"
+      @sync="onSync"
+      @logout="onLogout"
+      @addBook="onAddBook"
     />
   </view>
 </template>
@@ -130,6 +153,7 @@
 import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import TransactionEditor from "@/components/TransactionEditor.vue";
+import Sidebar from "@/components/Sidebar.vue";
 import {
   useTransactions,
   type LocalTransaction,
@@ -139,9 +163,10 @@ import {
   getCategoryName,
   getCategoryColor,
 } from "@/constants/categories";
-import { isLoggedIn, getToken } from "@/utils/storage";
-import { fullSync, setupAutoSync } from "@/utils/sync";
+import { isLoggedIn, getToken, logout, getUserInfo, getCurrentBookId, setCurrentBookId } from "@/utils/storage";
+import { pullFromServer, scheduleSync, stopSync, fullSync } from "@/utils/sync";
 import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
+import { getAccountBooks, createAccountBook, type UserInfo, type AccountBook } from "@/api/common";
 
 const {
   transactions,
@@ -155,13 +180,14 @@ const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const editorVisible = ref(false);
 const editingTx = ref<LocalTransaction | null>(null);
-const showDeleteSheet = ref(false);
-const deleteTarget = ref<LocalTransaction | null>(null);
 const refreshing = ref(false);
 
 const isMockMode = getToken() === "dev-mock-token";
 
-const deleteActions = [{ name: "删除", value: "delete", color: "#ff3b30" }];
+const showSidebar = ref(false);
+const userInfo = ref<UserInfo | null>(null);
+const books = ref<AccountBook[]>([]);
+const currentBookId = ref(getCurrentBookId());
 
 const monthLabel = computed(
   () => `${currentYear.value}年 ${currentMonth.value}月`,
@@ -180,7 +206,11 @@ const dayGroups = computed(() => {
 
   for (const [date, group] of map) {
     if (date.startsWith(prefix)) {
-      result.push({ date, ...group });
+      const filtered = group.items.filter(t => t.book_id === currentBookId.value);
+      if (filtered.length === 0) continue;
+      const income = filtered.filter(t => t.type === 1).reduce((s, t) => s + t.amount, 0);
+      const expense = filtered.filter(t => t.type === 0).reduce((s, t) => s + t.amount, 0);
+      result.push({ date, income, expense, items: filtered });
     }
   }
 
@@ -244,17 +274,11 @@ function onEditTx(tx: LocalTransaction) {
   editorVisible.value = true;
 }
 
-function onLongPressTx(tx: LocalTransaction) {
-  deleteTarget.value = tx;
-  showDeleteSheet.value = true;
-}
-
-function onDeleteConfirm(action: any) {
-  if (action.value === "delete" && deleteTarget.value) {
-    removeTx(deleteTarget.value.id);
+function onSwipeAction(event: { value: string }, tx: LocalTransaction) {
+  if (event.value === "right") {
+    removeTx(tx.id);
     uni.showToast({ title: "已删除", icon: "success" });
   }
-  deleteTarget.value = null;
 }
 
 function onEditorClose() {
@@ -267,28 +291,88 @@ function onEditorSaved() {
   editingTx.value = null;
 }
 
+function onSwitchBook(bookId: number) {
+  currentBookId.value = bookId;
+  setCurrentBookId(bookId);
+  showSidebar.value = false;
+  load();
+  if (!isMockMode) {
+    scheduleSync(bookId);
+    pullFromServer(bookId);
+  }
+}
+
+async function onSync() {
+  showSidebar.value = false;
+  uni.showLoading({ title: "同步中..." });
+  try {
+    const result = await fullSync(currentBookId.value);
+    uni.hideLoading();
+    uni.showToast({
+      title: `已同步：推送 ${result.pushed} 条，拉取 ${result.pulled} 条`,
+      icon: "none",
+      duration: 2000,
+    });
+    if (result.pulled > 0 || result.pushed > 0) {
+      load();
+    }
+  } catch {
+    uni.hideLoading();
+    uni.showToast({ title: "同步失败", icon: "error" });
+  }
+}
+
+async function onAddBook(name: string) {
+  try {
+    const book = await createAccountBook({ name });
+    books.value.push(book);
+    uni.showToast({ title: "创建成功", icon: "success" });
+  } catch {
+    uni.showToast({ title: "创建失败", icon: "error" });
+  }
+}
+
+function goStats() {
+  uni.navigateTo({ url: "/pages/statistics/index" });
+}
+
+function onLogout() {
+  showSidebar.value = false;
+  logout();
+  stopSync();
+  uni.reLaunch({ url: "/pages/login/index" });
+}
+
 async function onRefresh() {
   refreshing.value = true;
   if (!isMockMode) {
-    await fullSync();
+    const { runSyncCycle } = await import("@/utils/sync");
+    await runSyncCycle(currentBookId.value, false);
   }
   refreshing.value = false;
 }
 
 function loadMore() {}
 
-onShow(() => {
+onShow(async () => {
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
   }
+  userInfo.value = getUserInfo();
   load();
+  scheduleSync(currentBookId.value);
   if (!isMockMode) {
-    fullSync();
+    pullFromServer(currentBookId.value);
+    try {
+      books.value = await getAccountBooks();
+    } catch {
+      books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
+    }
+  } else {
+    books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
   }
 });
-
-setupAutoSync();
 </script>
 
 <style lang="scss" scoped>
@@ -301,45 +385,100 @@ setupAutoSync();
 }
 
 .home-header {
-  padding: 48rpx 32rpx 36rpx;
+  padding: 0 32rpx 36rpx;
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 40rpx;
 }
 
 .month-nav {
   display: flex;
   align-items: center;
+  gap: 0;
+  flex: 1;
   justify-content: center;
-  margin-bottom: 40rpx;
+}
 
-  .nav-arrow {
-    width: 64rpx;
-    height: 64rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--bg-secondary);
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.15s var(--spring-default);
+.menu-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default);
 
-    &:active {
-      transform: scale(0.92);
-    }
-
-    text {
-      font-size: 48rpx;
-      color: var(--text-secondary);
-      font-weight: 300;
-      line-height: 1;
-    }
+  &:active {
+    transform: scale(0.92);
   }
 
-  .month-label {
-    font-size: 40rpx;
-    font-weight: 700;
-    color: var(--text-primary);
-    min-width: 320rpx;
-    text-align: center;
-    letter-spacing: 1rpx;
+  .menu-icon {
+    font-size: 32rpx;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+}
+
+.nav-arrow {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  text {
+    font-size: 48rpx;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1;
+  }
+}
+
+.month-label {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 260rpx;
+  text-align: center;
+  letter-spacing: 1rpx;
+  flex-shrink: 0;
+}
+
+.stats-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  .stats-icon {
+    font-size: 32rpx;
+    line-height: 1;
   }
 }
 
@@ -554,6 +693,21 @@ setupAutoSync();
 .tx-sync-badge {
   font-size: 16rpx;
   color: var(--text-muted);
+}
+
+.swipe-delete-btn {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 36rpx;
+  background: var(--color-expense);
+
+  text {
+    font-size: 28rpx;
+    color: var(--text-inverse);
+    font-weight: 600;
+  }
 }
 
 .list-bottom {

@@ -26,6 +26,16 @@ export const removeUserInfo = (): void => {
   uni.removeStorageSync(USER_KEY);
 };
 
+const BOOK_KEY = "currentBookId";
+
+export const getCurrentBookId = (): number => {
+  return uni.getStorageSync(BOOK_KEY) || 1;
+};
+
+export const setCurrentBookId = (bookId: number): void => {
+  uni.setStorageSync(BOOK_KEY, bookId);
+};
+
 export const isLoggedIn = (): boolean => {
   return !!getToken();
 };
