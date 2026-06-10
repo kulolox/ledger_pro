@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-记账软件 LedgerPro。前端 uni-app (Vue 3 + TS + Vite)，后端 Spring Boot + JPA + H2，JWT 认证。
+记账软件 LedgerPro。前端 uni-app (Vue 3 + TS + Vite)，后端 Spring Boot + MyBatis-Plus + MySQL，JWT 认证。
 
 ```
 daily_ledger/
@@ -28,9 +28,10 @@ pnpm type-check      # TypeScript 类型检查 (vue-tsc --noEmit)
 
 ```bash
 cd back_end
-./mvnw spring-boot:run        # 启动开发服务器
-./mvnw test                    # 运行测试
-./mvnw clean package           # 打包
+mvn spring-boot:run              # 启动开发服务器
+mvn test                         # 运行测试
+mvn clean package                # 打包
+mvn spotless:apply               # 代码格式化
 ```
 
 ## 架构关键点
@@ -46,31 +47,32 @@ cd back_end
 
 ### 后端
 
-- **框架**: Spring Boot 4.0.6 + Java 21 + JPA (Hibernate) + Spring Security
-- **数据库**: 开发环境 H2 内存数据库 (jdbc:h2:mem:testdb, sa/123456)。生产计划用 MySQL 8.0。JPA `ddl-auto: update` 自动建表
-- **H2 控制台**: `/h2-console`
-- **认证**: JWT (jjwt 0.12.5, HS256)，24 小时过期。当前 AuthController 路径为 `/user/*`，计划迁移到 `/api/v1/auth/*`
+- **框架**: Spring Boot 4.0.6 + Java 21 + MyBatis-Plus 3.5.16 + Spring Security
+- **数据库**: MySQL 8.0 (jdbc:mysql://localhost:3306/ledger_pro, root/123456)
+- **ORM**: MyBatis-Plus，逻辑删除由 `global-config.db-config.logic-delete-field` 自动处理
+- **认证**: JWT (jjwt 0.12.5, HS256)，24 小时过期
 - **密码**: BCrypt
-- **分层**: Controller → Service → Repository (JPA)
+- **代码格式**: Spotless (Palantir Java Format) + EditorConfig，`mvn spotless:apply` 手动格式化
+- **分层**: Controller → Service Interface (IService) → Service Impl (ServiceImpl) → Mapper (BaseMapper)
 
 ### 关键约定
 
 - 不要做多余的事
 - **金额存储**: 一律用 `INT` 存储"分"（避免浮点精度问题），前后端传输时注意 ×100/÷100 转换
-- **API 规范**: RESTful，JSON，版本前缀 `/api/v1/`，JWT Bearer token（计划中，当前实现尚未完全遵循）
+- **API 规范**: RESTful，JSON，版本前缀 `/api/v1/`，JWT Bearer token
 - **多账本隔离**: 所有数据接口通过 `bookId` 参数隔离，后端结合当前用户鉴权
-- **逻辑删除**: 核心表用 `deleted` 字段标记，不物理删除
+- **逻辑删除**: 核心表用 `deleted` 字段标记，不物理删除。MyBatis-Plus 自动处理，查询/更新自动追加 `deleted=0`
 - **一期目标**: 登录认证 + 支出/收入/转账记账 + 交易历史列表。账户、分类暂为系统预置
 
 ## 规范
 
 ### 前端规范
 
-- 可以使用wotui组件的，用组件，不要自己实现
-- 样式规范: 禁止使用颜色硬编码，scss样式采用嵌套写法
+- 可以使用 wotui 组件的，用组件，不要自己实现
+- 样式规范: 禁止使用颜色硬编码，scss 样式采用嵌套写法
 - 注释: 添加必要注释，保证代码可读性
-- 纯函数需要提取放在utils下
-- 通用ts声明放在types下
+- 纯函数需要提取放在 utils 下
+- 通用 ts 声明放在 types 下
 
 ### 同步策略
 
@@ -88,11 +90,17 @@ pushDeletes → pushPending → pullFromServer
 
 ### 后端 Controller 模式
 
-- Controller 接收 `Map<String, Object>` 而非 DTO，用 `toLong()`/`toInt()` 私有方法做类型转换
 - 批量接口统一包裹格式：`{items: [...]}` 或 `{ids: [...]}`
 - 时间解析兼容空格和 T 分隔符：`transTimeStr.replace(" ", "T")`
 - month 查询：前端传 `YYYY-MM`，后端拼 `month + "-01T00:00:00"` 然后 `plusMonths(1)` 做范围查询
-- 软删除：设置 `deleted=1` 后 `saveAll`，不物理删除
+- 软删除：使用 MyBatis-Plus `UpdateWrapper.set("deleted", 1)` 批量更新
+
+### Service 层模式
+
+- 接口继承 `IService<Entity>`，定义业务方法
+- 实现类继承 `ServiceImpl<Mapper, Entity>` 实现接口，获得内置 CRUD
+- `lambdaQuery()` 链式调用替代手动构建 QueryWrapper
+- 批量插入使用 `saveBatch()`，批量更新使用 `UpdateWrapper` + `update(wrapper)`
 
 ### 数据隔离
 
