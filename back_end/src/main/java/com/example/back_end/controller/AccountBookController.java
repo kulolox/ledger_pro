@@ -2,24 +2,24 @@ package com.example.back_end.controller;
 
 import com.example.back_end.dto.request.CreateAccountBookRequest;
 import com.example.back_end.dto.response.AccountBookResponse;
-import com.example.back_end.service.AccountBookService;
+import com.example.back_end.service.IAccountBookService;
 import com.example.back_end.utils.Result;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/account-books")
+@RequestMapping("/account-books")
 public class AccountBookController {
-    private final AccountBookService accountBookService;
+    private final IAccountBookService accountBookService;
 
-    public AccountBookController(AccountBookService accountBookService) {
+    public AccountBookController(IAccountBookService accountBookService) {
         this.accountBookService = accountBookService;
     }
 
     @GetMapping
     public Result<List<AccountBookResponse>> list() {
-        return Result.ok(accountBookService.list());
+        return Result.ok(accountBookService.listByOwner());
     }
 
     @PostMapping

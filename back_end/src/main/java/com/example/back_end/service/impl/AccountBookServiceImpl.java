@@ -1,26 +1,23 @@
-package com.example.back_end.service;
+package com.example.back_end.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.back_end.dto.request.CreateAccountBookRequest;
 import com.example.back_end.dto.response.AccountBookResponse;
 import com.example.back_end.entity.AccountBook;
 import com.example.back_end.exception.BizException;
-import com.example.back_end.repository.AccountBookRepository;
+import com.example.back_end.mapper.AccountBookMapper;
+import com.example.back_end.service.IAccountBookService;
 import com.example.back_end.utils.AuthUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class AccountBookService {
-    private final AccountBookRepository accountBookRepository;
+public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, AccountBook> implements IAccountBookService {
 
-    public AccountBookService(AccountBookRepository accountBookRepository) {
-        this.accountBookRepository = accountBookRepository;
-    }
-
-    public List<AccountBookResponse> list() {
+    public List<AccountBookResponse> listByOwner() {
         Long userId = AuthUtils.getCurrentUserId();
-        return accountBookRepository.findByOwnerIdAndDeleted(userId, 0)
+        return lambdaQuery().eq(AccountBook::getOwnerId, userId).list()
                 .stream().map(AccountBookResponse::from).toList();
     }
 
@@ -33,7 +30,7 @@ public class AccountBookService {
         book.setOwnerId(AuthUtils.getCurrentUserId());
         if (req.coverIcon() != null) book.setCoverIcon(req.coverIcon());
         if (req.type() != null) book.setType(req.type());
-        book = accountBookRepository.save(book);
+        save(book);
         return AccountBookResponse.from(book);
     }
 }

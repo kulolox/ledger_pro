@@ -4,18 +4,18 @@ import com.example.back_end.dto.request.BatchCreateRequest;
 import com.example.back_end.dto.request.BatchDeleteRequest;
 import com.example.back_end.dto.request.TransactionRequest;
 import com.example.back_end.dto.response.TransactionResponse;
-import com.example.back_end.service.TransactionService;
+import com.example.back_end.service.ITransactionService;
 import com.example.back_end.utils.Result;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/transactions")
+@RequestMapping("/transactions")
 public class TransactionController {
-    private final TransactionService transactionService;
+    private final ITransactionService transactionService;
 
-    public TransactionController(TransactionService transactionService) {
+    public TransactionController(ITransactionService transactionService) {
         this.transactionService = transactionService;
     }
 

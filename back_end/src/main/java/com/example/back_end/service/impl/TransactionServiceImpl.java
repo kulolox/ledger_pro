@@ -1,12 +1,16 @@
-package com.example.back_end.service;
+package com.example.back_end.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.back_end.dto.request.BatchCreateRequest;
 import com.example.back_end.dto.request.BatchDeleteRequest;
 import com.example.back_end.dto.request.TransactionRequest;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.entity.Transaction;
 import com.example.back_end.exception.BizException;
-import com.example.back_end.repository.TransactionRepository;
+import com.example.back_end.mapper.TransactionMapper;
+import com.example.back_end.service.ITransactionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,17 +20,12 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class TransactionService {
-    private final TransactionRepository transactionRepository;
-
-    public TransactionService(TransactionRepository transactionRepository) {
-        this.transactionRepository = transactionRepository;
-    }
+public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Transaction> implements ITransactionService {
 
     @Transactional
     public TransactionResponse create(TransactionRequest req) {
         Transaction tx = toEntity(req);
-        tx = transactionRepository.save(tx);
+        save(tx);
         return TransactionResponse.from(tx);
     }
 
@@ -39,7 +38,7 @@ public class TransactionService {
         for (TransactionRequest params : body.items()) {
             txs.add(toEntity(params));
         }
-        txs = transactionRepository.saveAll(txs);
+        saveBatch(txs);
         List<TransactionResponse> list = txs.stream().map(TransactionResponse::from).toList();
         return Map.of("list", list, "count", list.size());
     }
@@ -49,18 +48,25 @@ public class TransactionService {
         if (body.ids() == null || body.ids().isEmpty()) {
             throw new BizException("ids 不能为空");
         }
-        List<Transaction> txs = transactionRepository.findAllById(body.ids());
-        for (Transaction tx : txs) {
-            tx.setDeleted(1);
-        }
-        transactionRepository.saveAll(txs);
-        return txs.size();
+        UpdateWrapper<Transaction> wrapper = new UpdateWrapper<>();
+        wrapper.in("id", body.ids())
+               .set("deleted", 1)
+               .set("updated_at", LocalDateTime.now());
+        update(wrapper);
+        return body.ids().size();
     }
 
     public Map<String, Object> list(Long bookId, String month) {
         LocalDateTime monthStart = LocalDateTime.parse(month + "-01T00:00:00");
         LocalDateTime monthEnd = monthStart.plusMonths(1);
-        List<Transaction> txs = transactionRepository.findByBookIdAndMonth(bookId, monthStart, monthEnd);
+
+        LambdaQueryWrapper<Transaction> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Transaction::getBookId, bookId)
+               .ge(Transaction::getTransTime, monthStart)
+               .lt(Transaction::getTransTime, monthEnd)
+               .orderByDesc(Transaction::getTransTime);
+
+        List<Transaction> txs = list(wrapper);
         List<TransactionResponse> list = txs.stream().map(TransactionResponse::from).toList();
         return Map.of("list", list, "total", list.size());
     }

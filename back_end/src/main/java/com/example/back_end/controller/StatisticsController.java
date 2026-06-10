@@ -1,16 +1,16 @@
 package com.example.back_end.controller;
 
 import com.example.back_end.dto.response.StatisticsResponse;
-import com.example.back_end.service.StatisticsService;
+import com.example.back_end.service.IStatisticsService;
 import com.example.back_end.utils.Result;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/statistics")
+@RequestMapping("/statistics")
 public class StatisticsController {
-    private final StatisticsService statisticsService;
+    private final IStatisticsService statisticsService;
 
-    public StatisticsController(StatisticsService statisticsService) {
+    public StatisticsController(IStatisticsService statisticsService) {
         this.statisticsService = statisticsService;
     }
 

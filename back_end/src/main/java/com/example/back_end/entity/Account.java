@@ -1,51 +1,27 @@
 package com.example.back_end.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "account")
+@TableName("account")
 public class Account {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
-    @Column(nullable = false)
     private Long bookId;
-
-    @Column(nullable = false)
     private String name = "";
-
-    @Column(nullable = false)
     private Integer type = 0;
-
-    @Column(nullable = false)
     private String currency = "CNY";
-
     private String icon = "";
-
-    @Column(nullable = false)
     private Integer initialBalance = 0;
-
-    @Column(nullable = false)
     private Integer isIncludeTotal = 1;
-
-    @Column(nullable = false)
     private Integer sortOrder = 0;
 
-    @Column(nullable = false, updatable = false)
+    @TableField(updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @Column(nullable = false)
     private Integer deleted = 0;
-
-    @PreUpdate
-    void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

@@ -3,7 +3,7 @@ package com.example.back_end.controller;
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.dto.request.RegisterRequest;
 import com.example.back_end.dto.response.LoginResponse;
-import com.example.back_end.service.UserService;
+import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.JwtUtils;
 import com.example.back_end.utils.Result;
 import org.springframework.web.bind.annotation.*;
@@ -11,12 +11,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 public class AuthController {
-    private final UserService userService;
+    private final IUserService userService;
     private final JwtUtils jwtUtils;
 
-    public AuthController(UserService userService, JwtUtils jwtUtils) {
+    public AuthController(IUserService userService, JwtUtils jwtUtils) {
         this.userService = userService;
         this.jwtUtils = jwtUtils;
     }

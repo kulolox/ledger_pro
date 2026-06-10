@@ -1,43 +1,25 @@
 package com.example.back_end.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "user")
+@TableName("user")
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
-    @Column(nullable = false)
     private String nickname = "";
-
     private String avatarUrl = "";
-
     private String phone = "";
-
-    @Column(nullable = false)
     private String email = "";
-
-    @Column(nullable = false)
     private String passwordHash = "";
-
     private String dataKeySalt;
 
-    @Column(nullable = false, updatable = false)
+    @TableField(updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @Column(nullable = false)
     private Integer deleted = 0;
-
-    @PreUpdate
-    void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

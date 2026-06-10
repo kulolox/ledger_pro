@@ -1,7 +1,7 @@
 package com.example.back_end.config;
 
 import com.example.back_end.entity.Category;
-import com.example.back_end.repository.CategoryRepository;
+import com.example.back_end.service.ICategoryService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -10,15 +10,15 @@ import java.util.List;
 @Component
 public class DataInitializer implements CommandLineRunner {
 
-    private final CategoryRepository categoryRepository;
+    private final ICategoryService categoryService;
 
-    public DataInitializer(CategoryRepository categoryRepository) {
-        this.categoryRepository = categoryRepository;
+    public DataInitializer(ICategoryService categoryService) {
+        this.categoryService = categoryService;
     }
 
     @Override
     public void run(String... args) {
-        if (categoryRepository.count() > 0) return;
+        if (categoryService.count() > 0) return;
 
         List<Category> categories = List.of(
             cat(null, 0L, "餐饮", 0, "🍔", "#ff6b35", 1),
@@ -39,7 +39,7 @@ public class DataInitializer implements CommandLineRunner {
             cat(null, 0L, "其他", 1, "💵", "#636e72", 6)
         );
 
-        categoryRepository.saveAll(categories);
+        categoryService.saveBatch(categories);
     }
 
     private Category cat(Long bookId, Long parentId, String name, int type, String icon, String color, int sortOrder) {

@@ -1,5 +1,6 @@
-package com.example.back_end.service;
+package com.example.back_end.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.back_end.dto.request.RegisterRequest;
 import com.example.back_end.dto.request.UpdateUserRequest;
 import com.example.back_end.dto.response.LoginResponse;
@@ -8,40 +9,38 @@ import com.example.back_end.entity.Account;
 import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.User;
 import com.example.back_end.exception.BizException;
-import com.example.back_end.repository.AccountBookRepository;
-import com.example.back_end.repository.AccountRepository;
-import com.example.back_end.repository.UserRepository;
+import com.example.back_end.mapper.AccountBookMapper;
+import com.example.back_end.mapper.AccountMapper;
+import com.example.back_end.mapper.UserMapper;
+import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.AuthUtils;
 import com.example.back_end.utils.JwtUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Service
-public class UserService {
-    private final UserRepository userRepository;
-    private final AccountBookRepository accountBookRepository;
-    private final AccountRepository accountRepository;
+public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
+    private final AccountBookMapper accountBookMapper;
+    private final AccountMapper accountMapper;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
 
-    public UserService(UserRepository userRepository,
-                       AccountBookRepository accountBookRepository,
-                       AccountRepository accountRepository,
-                       BCryptPasswordEncoder passwordEncoder,
-                       JwtUtils jwtUtils) {
-        this.userRepository = userRepository;
-        this.accountBookRepository = accountBookRepository;
-        this.accountRepository = accountRepository;
+    public UserServiceImpl(AccountBookMapper accountBookMapper,
+                           AccountMapper accountMapper,
+                           BCryptPasswordEncoder passwordEncoder,
+                           JwtUtils jwtUtils) {
+        this.accountBookMapper = accountBookMapper;
+        this.accountMapper = accountMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
     }
 
     @Transactional
     public LoginResponse register(RegisterRequest req) {
-        if (userRepository.existsByEmail(req.email())) {
+        if (lambdaQuery().eq(User::getEmail, req.email()).count() > 0) {
             throw new BizException("邮箱已注册");
         }
 
@@ -49,52 +48,56 @@ public class UserService {
         user.setEmail(req.email());
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         user.setNickname(req.nickname() != null ? req.nickname() : "");
-        user = userRepository.save(user);
+        save(user);
 
         AccountBook book = new AccountBook();
         book.setName("日常账本");
         book.setOwnerId(user.getId());
         book.setType(0);
-        accountBookRepository.save(book);
+        accountBookMapper.insert(book);
 
         Account account = new Account();
         account.setBookId(book.getId());
         account.setName("现金");
         account.setType(0);
         account.setIcon("💵");
-        accountRepository.save(account);
+        accountMapper.insert(account);
 
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
         return new LoginResponse(token, toUserInfo(user));
     }
 
     public LoginResponse login(String email, String rawPassword) {
-        Optional<User> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isEmpty() || !passwordEncoder.matches(rawPassword, userOpt.get().getPasswordHash())) {
+        User user = lambdaQuery().eq(User::getEmail, email).one();
+        if (user == null || !passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
             throw new BizException(401, "邮箱或密码错误");
         }
-        User user = userOpt.get();
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
         return new LoginResponse(token, toUserInfo(user));
     }
 
     public UserInfoResponse getInfo() {
         Long userId = AuthUtils.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BizException("用户不存在"));
+        User user = getById(userId);
+        if (user == null) {
+            throw new BizException("用户不存在");
+        }
         return toUserInfo(user);
     }
 
     public UserInfoResponse updateInfo(UpdateUserRequest req) {
         Long userId = AuthUtils.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BizException("用户不存在"));
+        User user = getById(userId);
+        if (user == null) {
+            throw new BizException("用户不存在");
+        }
 
         if (req.nickname() != null) user.setNickname(req.nickname());
         if (req.avatar() != null) user.setAvatarUrl(req.avatar());
         if (req.phone() != null) user.setPhone(req.phone());
+        user.setUpdatedAt(LocalDateTime.now());
 
-        userRepository.save(user);
+        updateById(user);
         return toUserInfo(user);
     }
 
