@@ -12,5 +12,7 @@ public class BizException extends RuntimeException {
         this(400, message);
     }
 
-    public int getCode() { return code; }
+    public int getCode() {
+        return code;
+    }
 }

@@ -6,12 +6,11 @@ import com.example.back_end.dto.response.StatisticsResponse;
 import com.example.back_end.entity.Transaction;
 import com.example.back_end.mapper.TransactionMapper;
 import com.example.back_end.service.IStatisticsService;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Service;
 
 @Service
 public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transaction> implements IStatisticsService {
@@ -22,12 +21,12 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
 
         QueryWrapper<Transaction> wrapper = new QueryWrapper<>();
         wrapper.select("type", "category_id", "SUM(amount) as total", "COUNT(*) as count")
-               .eq("book_id", bookId)
-               .ge("trans_time", monthStart)
-               .lt("trans_time", monthEnd)
-               .groupBy("type", "category_id")
-               .orderByAsc("type")
-               .orderByDesc("SUM(amount)");
+                .eq("book_id", bookId)
+                .ge("trans_time", monthStart)
+                .lt("trans_time", monthEnd)
+                .groupBy("type", "category_id")
+                .orderByAsc("type")
+                .orderByDesc("SUM(amount)");
 
         List<Map<String, Object>> rows = listMaps(wrapper);
 
@@ -38,14 +37,12 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
 
         for (Map<String, Object> row : rows) {
             Integer type = (Integer) row.get("type");
-            Long categoryId = row.get("category_id") != null
-                    ? ((Number) row.get("category_id")).longValue() : 0L;
-            Long total = row.get("total") != null
-                    ? ((Number) row.get("total")).longValue() : 0L;
-            Long count = row.get("count") != null
-                    ? ((Number) row.get("count")).longValue() : 0L;
+            Long categoryId = row.get("category_id") != null ? ((Number) row.get("category_id")).longValue() : 0L;
+            Long total = row.get("total") != null ? ((Number) row.get("total")).longValue() : 0L;
+            Long count = row.get("count") != null ? ((Number) row.get("count")).longValue() : 0L;
 
-            StatisticsResponse.CategoryStatItem item = new StatisticsResponse.CategoryStatItem(categoryId, total, count);
+            StatisticsResponse.CategoryStatItem item =
+                    new StatisticsResponse.CategoryStatItem(categoryId, total, count);
             if (type == 0) {
                 totalExpense += total;
                 expenseItems.add(item);

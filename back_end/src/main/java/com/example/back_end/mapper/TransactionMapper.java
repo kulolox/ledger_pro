@@ -5,5 +5,4 @@ import com.example.back_end.entity.Transaction;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface TransactionMapper extends BaseMapper<Transaction> {
-}
+public interface TransactionMapper extends BaseMapper<Transaction> {}

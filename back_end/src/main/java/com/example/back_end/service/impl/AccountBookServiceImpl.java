@@ -8,17 +8,17 @@ import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.service.IAccountBookService;
 import com.example.back_end.utils.AuthUtils;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 @Service
 public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, AccountBook> implements IAccountBookService {
 
     public List<AccountBookResponse> listByOwner() {
         Long userId = AuthUtils.getCurrentUserId();
-        return lambdaQuery().eq(AccountBook::getOwnerId, userId).list()
-                .stream().map(AccountBookResponse::from).toList();
+        return lambdaQuery().eq(AccountBook::getOwnerId, userId).list().stream()
+                .map(AccountBookResponse::from)
+                .toList();
     }
 
     public AccountBookResponse create(CreateAccountBookRequest req) {

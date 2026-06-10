@@ -11,13 +11,12 @@ import com.example.back_end.entity.Transaction;
 import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.TransactionMapper;
 import com.example.back_end.service.ITransactionService;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Transaction> implements ITransactionService {
@@ -39,7 +38,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             txs.add(toEntity(params));
         }
         saveBatch(txs);
-        List<TransactionResponse> list = txs.stream().map(TransactionResponse::from).toList();
+        List<TransactionResponse> list =
+                txs.stream().map(TransactionResponse::from).toList();
         return Map.of("list", list, "count", list.size());
     }
 
@@ -49,9 +49,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             throw new BizException("ids 不能为空");
         }
         UpdateWrapper<Transaction> wrapper = new UpdateWrapper<>();
-        wrapper.in("id", body.ids())
-               .set("deleted", 1)
-               .set("updated_at", LocalDateTime.now());
+        wrapper.in("id", body.ids()).set("deleted", 1).set("updated_at", LocalDateTime.now());
         update(wrapper);
         return body.ids().size();
     }
@@ -62,12 +60,13 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
 
         LambdaQueryWrapper<Transaction> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Transaction::getBookId, bookId)
-               .ge(Transaction::getTransTime, monthStart)
-               .lt(Transaction::getTransTime, monthEnd)
-               .orderByDesc(Transaction::getTransTime);
+                .ge(Transaction::getTransTime, monthStart)
+                .lt(Transaction::getTransTime, monthEnd)
+                .orderByDesc(Transaction::getTransTime);
 
         List<Transaction> txs = list(wrapper);
-        List<TransactionResponse> list = txs.stream().map(TransactionResponse::from).toList();
+        List<TransactionResponse> list =
+                txs.stream().map(TransactionResponse::from).toList();
         return Map.of("list", list, "total", list.size());
     }
 
@@ -81,7 +80,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         tx.setCategoryId(req.category_id());
         tx.setRemark(req.remark() != null ? req.remark() : "");
         if (req.trans_time() != null && !req.trans_time().isBlank()) {
-            tx.setTransTime(LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
+            tx.setTransTime(
+                    LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
         } else {
             tx.setTransTime(LocalDateTime.now());
         }

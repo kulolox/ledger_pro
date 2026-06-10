@@ -15,11 +15,10 @@ import com.example.back_end.mapper.UserMapper;
 import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.AuthUtils;
 import com.example.back_end.utils.JwtUtils;
+import java.time.LocalDateTime;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
@@ -28,10 +27,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
 
-    public UserServiceImpl(AccountBookMapper accountBookMapper,
-                           AccountMapper accountMapper,
-                           BCryptPasswordEncoder passwordEncoder,
-                           JwtUtils jwtUtils) {
+    public UserServiceImpl(
+            AccountBookMapper accountBookMapper,
+            AccountMapper accountMapper,
+            BCryptPasswordEncoder passwordEncoder,
+            JwtUtils jwtUtils) {
         this.accountBookMapper = accountBookMapper;
         this.accountMapper = accountMapper;
         this.passwordEncoder = passwordEncoder;
@@ -102,7 +102,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     private UserInfoResponse toUserInfo(User user) {
-        return new UserInfoResponse(user.getId(), user.getNickname(),
-                user.getAvatarUrl(), user.getEmail(), user.getPhone());
+        return new UserInfoResponse(
+                user.getId(), user.getNickname(), user.getAvatarUrl(), user.getEmail(), user.getPhone());
     }
 }

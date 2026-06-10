@@ -3,9 +3,8 @@ package com.example.back_end.controller;
 import com.example.back_end.dto.response.CategoryResponse;
 import com.example.back_end.service.ICategoryService;
 import com.example.back_end.utils.Result;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/categories")

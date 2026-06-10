@@ -5,9 +5,8 @@ import com.example.back_end.dto.response.CategoryResponse;
 import com.example.back_end.entity.Category;
 import com.example.back_end.mapper.CategoryMapper;
 import com.example.back_end.service.ICategoryService;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 @Service
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements ICategoryService {
@@ -16,6 +15,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         return lambdaQuery()
                 .and(w -> w.isNull(Category::getBookId).or().eq(Category::getBookId, bookId))
                 .list()
-                .stream().map(CategoryResponse::from).toList();
+                .stream()
+                .map(CategoryResponse::from)
+                .toList();
     }
 }

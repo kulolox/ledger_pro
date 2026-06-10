@@ -9,7 +9,10 @@ import com.example.back_end.entity.User;
 
 public interface IUserService extends IService<User> {
     LoginResponse register(RegisterRequest req);
+
     LoginResponse login(String email, String rawPassword);
+
     UserInfoResponse getInfo();
+
     UserInfoResponse updateInfo(UpdateUserRequest req);
 }
