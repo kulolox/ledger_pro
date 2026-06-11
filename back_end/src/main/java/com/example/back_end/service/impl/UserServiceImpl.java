@@ -44,12 +44,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             throw new BizException("邮箱已注册");
         }
 
+        // 创建User实例,并写入数据
         User user = new User();
         user.setEmail(req.email());
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         user.setNickname(req.nickname() != null ? req.nickname() : "");
+        // 保存user
         save(user);
 
+        // 创建AccountBook实例,并写入数据
         AccountBook book = new AccountBook();
         book.setName("日常账本");
         book.setOwnerId(user.getId());
@@ -64,7 +67,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         accountMapper.insert(account);
 
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
-        return new LoginResponse(token, toUserInfo(user));
+        String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getEmail());
+        return new LoginResponse(token, refreshToken, toUserInfo(user));
     }
 
     public LoginResponse login(String email, String rawPassword) {
@@ -73,7 +77,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             throw new BizException(401, "邮箱或密码错误");
         }
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
-        return new LoginResponse(token, toUserInfo(user));
+        String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getEmail());
+        return new LoginResponse(token, refreshToken, toUserInfo(user));
     }
 
     public UserInfoResponse getInfo() {

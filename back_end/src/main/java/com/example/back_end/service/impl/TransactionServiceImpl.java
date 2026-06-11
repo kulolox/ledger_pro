@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.back_end.dto.request.BatchCreateRequest;
 import com.example.back_end.dto.request.BatchDeleteRequest;
 import com.example.back_end.dto.request.TransactionRequest;
+import com.example.back_end.dto.response.TransactionListResponse;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.entity.Transaction;
 import com.example.back_end.exception.BizException;
@@ -15,12 +16,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Transaction> implements ITransactionService {
 
+    @CacheEvict(value = "transactions", allEntries = true)
     @Transactional
     public TransactionResponse create(TransactionRequest req) {
         Transaction tx = toEntity(req);
@@ -28,6 +32,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return TransactionResponse.from(tx);
     }
 
+    @CacheEvict(value = "transactions", allEntries = true)
     @Transactional
     public Map<String, Object> createBatch(BatchCreateRequest body) {
         if (body.items() == null || body.items().isEmpty()) {
@@ -43,6 +48,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return Map.of("list", list, "count", list.size());
     }
 
+    @CacheEvict(value = "transactions", allEntries = true)
     @Transactional
     public int batchDelete(BatchDeleteRequest body) {
         if (body.ids() == null || body.ids().isEmpty()) {
@@ -54,7 +60,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return body.ids().size();
     }
 
-    public Map<String, Object> list(Long bookId, String month) {
+    @Cacheable(value = "transactions", key = "#bookId + '::' + #month", unless = "#result == null")
+    public TransactionListResponse list(Long bookId, String month) {
         LocalDateTime monthStart = LocalDateTime.parse(month + "-01T00:00:00");
         LocalDateTime monthEnd = monthStart.plusMonths(1);
 
@@ -67,7 +74,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         List<Transaction> txs = list(wrapper);
         List<TransactionResponse> list =
                 txs.stream().map(TransactionResponse::from).toList();
-        return Map.of("list", list, "total", list.size());
+        return new TransactionListResponse(list, list.size());
     }
 
     private Transaction toEntity(TransactionRequest req) {

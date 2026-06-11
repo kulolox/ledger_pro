@@ -40,54 +40,47 @@
           </text>
         </view>
       </view>
+
+      <view class="tab-bar">
+        <view
+          class="tab-item"
+          :class="{ active: activeTab === 0 }"
+          @click="activeTab = 0"
+        >
+          <text>支出</text>
+        </view>
+        <view
+          class="tab-item"
+          :class="{ active: activeTab === 1 }"
+          @click="activeTab = 1"
+        >
+          <text>收入</text>
+        </view>
+      </view>
     </view>
 
     <scroll-view scroll-y class="stats-body">
-      <view v-if="expenseCategories.length > 0" class="chart-section">
-        <text class="section-title">支出分类</text>
+      <view v-if="currentCategories.length > 0" class="chart-section">
+        <text class="section-title">{{ activeTab === 0 ? '支出分类' : '收入分类' }}</text>
         <EChart :options="pieOption" :height="420" />
       </view>
 
-      <view v-if="expenseCategories.length > 0" class="category-list">
+      <view v-if="currentCategories.length > 0" class="category-list">
         <view
-          v-for="(cat, idx) in expenseCategories"
+          v-for="(cat, idx) in currentCategories"
           :key="cat.category_id"
           class="category-item"
         >
           <view class="cat-left">
             <view
               class="cat-dot"
-              :style="{ background: catColors[idx % catColors.length] }"
+              :style="{ background: cat.color }"
             />
             <text class="cat-name">{{ cat.name }}</text>
           </view>
           <view class="cat-right">
-            <text class="cat-amount">-{{ formatCents(cat.amount) }}</text>
-            <text class="cat-percent">{{ cat.percent }}%</text>
-          </view>
-        </view>
-      </view>
-
-      <view v-if="incomeCategories.length > 0" class="chart-section">
-        <text class="section-title">收入分类</text>
-      </view>
-
-      <view v-if="incomeCategories.length > 0" class="category-list">
-        <view
-          v-for="(cat, idx) in incomeCategories"
-          :key="cat.category_id"
-          class="category-item"
-        >
-          <view class="cat-left">
-            <view
-              class="cat-dot"
-              :style="{ background: incomeColors[idx % incomeColors.length] }"
-            />
-            <text class="cat-name">{{ cat.name }}</text>
-          </view>
-          <view class="cat-right">
-            <text class="cat-amount income-text"
-              >+{{ formatCents(cat.amount) }}</text
+            <text class="cat-amount" :class="{ 'income-text': activeTab === 1 }"
+              >{{ activeTab === 0 ? '-' : '+' }}{{ formatCents(cat.amount) }}</text
             >
             <text class="cat-percent">{{ cat.percent }}%</text>
           </view>
@@ -112,17 +105,19 @@ import { ref, computed, watch } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import EChart from "@/components/EChart.vue";
 import { useTransactions } from "@/stores/transactionStore";
-import { DEFAULT_CATEGORIES, getCategoryName } from "@/constants/categories";
+import { useCategories } from "@/stores/categoryStore";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { formatCents } from "@/utils/format";
 import { getMonthlyStatistics, type MonthlyStats } from "@/api/common";
 
 const { transactions, load } = useTransactions();
+const { getCategoryName, getCategoryColor, loadCategories } = useCategories();
 
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const statsData = ref<MonthlyStats | null>(null);
 const isMockMode = ref(false);
+const activeTab = ref(0);
 
 const monthLabel = computed(
   () => `${currentYear.value}年 ${currentMonth.value}月`,
@@ -138,29 +133,8 @@ interface CatItem {
   amount: number;
   count: number;
   percent: string;
+  color: string;
 }
-
-const catColors = [
-  "#ff6b35",
-  "#5b9bd5",
-  "#ff6b8a",
-  "#a29bfe",
-  "#fdcb6e",
-  "#00b894",
-  "#e17055",
-  "#00cec9",
-  "#fd79a8",
-  "#636e72",
-];
-
-const incomeColors = [
-  "#00b894",
-  "#5b9bd5",
-  "#fdcb6e",
-  "#ff6b6b",
-  "#00cec9",
-  "#636e72",
-];
 
 function buildCategories(
   rawList: Array<{ category_id: number; amount: number; count: number }>,
@@ -173,6 +147,7 @@ function buildCategories(
     amount: c.amount,
     count: c.count,
     percent: total > 0 ? ((c.amount / total) * 100).toFixed(1) : "0",
+    color: getCategoryColor(type, c.category_id),
   }));
 }
 
@@ -186,11 +161,17 @@ const incomeCategories = computed(() => {
   return buildCategories(statsData.value.income_by_category, 1);
 });
 
+const currentCategories = computed(() =>
+  activeTab.value === 0 ? expenseCategories.value : incomeCategories.value,
+);
+
 const pieOption = computed(() => {
-  const data = expenseCategories.value.map((c, i) => ({
+  const cats = currentCategories.value;
+  const prefix = activeTab.value === 0 ? "-" : "+";
+  const data = cats.map((c) => ({
     name: c.name,
     value: c.amount,
-    itemStyle: { color: catColors[i % catColors.length] },
+    itemStyle: { color: c.color },
   }));
 
   return {
@@ -198,7 +179,7 @@ const pieOption = computed(() => {
       trigger: "item",
       formatter: (params: any) => {
         const val = (params.value / 100).toFixed(2);
-        return `${params.name}: -${val} (${params.percent}%)`;
+        return `${params.name}: ${prefix}${val} (${params.percent}%)`;
       },
     },
     series: [
@@ -349,6 +330,7 @@ onShow(async () => {
   const token = uni.getStorageSync("token");
   isMockMode.value = token === "dev-mock-token";
   load();
+  loadCategories();
   if (isMockMode.value) {
     calcLocalStats(getCurrentBookId());
   } else {
@@ -466,6 +448,32 @@ onShow(async () => {
     &.income {
       color: var(--color-income);
     }
+  }
+}
+
+.tab-bar {
+  display: flex;
+  margin-top: 28rpx;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 6rpx;
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: calc(var(--radius-lg) - 4rpx);
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+
+  &.active {
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 600;
   }
 }
 

@@ -1,6 +1,7 @@
 package com.example.back_end.dto.response;
 
 import com.example.back_end.entity.Transaction;
+import java.io.Serializable;
 
 public record TransactionResponse(
         Long id,
@@ -12,7 +13,7 @@ public record TransactionResponse(
         Long category_id,
         String remark,
         String trans_time,
-        String created_at) {
+        String created_at) implements Serializable {
     public static TransactionResponse from(Transaction tx) {
         return new TransactionResponse(
                 tx.getId(),

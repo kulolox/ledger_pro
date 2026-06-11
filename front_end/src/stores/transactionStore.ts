@@ -1,8 +1,4 @@
 import { ref, computed } from "vue";
-import { DEFAULT_CATEGORIES, getCategoryName, getCategoryColor } from "@/constants/categories";
-
-export type { Category } from "@/constants/categories";
-export { DEFAULT_CATEGORIES, getCategoryName, getCategoryColor };
 
 export interface LocalTransaction {
   id: number;

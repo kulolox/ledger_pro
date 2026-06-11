@@ -20,6 +20,7 @@ interface RequestConfig {
   timeout?: number;
   showLoading?: boolean;
   loadingText?: string;
+  _retry?: boolean;
 }
 
 // 响应数据接口
@@ -59,6 +60,54 @@ class InterceptorManager<T> {
     return this.interceptors;
   }
 }
+
+// Token刷新锁，防止并发401重复刷新
+let refreshPromise: Promise<boolean> | null = null;
+
+const tryRefreshToken = async (): Promise<boolean> => {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = uni.getStorageSync("refreshToken");
+      if (!refreshToken) return false;
+
+      const baseURL = getEnv("VITE_API_BASE_URL");
+      const res = await new Promise<any>((resolve, reject) => {
+        uni.request({
+          url: baseURL + "/api/v1/auth/refresh",
+          method: "POST",
+          data: { refresh_token: refreshToken },
+          success: resolve,
+          fail: reject,
+        });
+      });
+
+      if (
+        res.statusCode >= 200 &&
+        res.statusCode < 300 &&
+        (res.data.code === 0 || res.data.code === 200)
+      ) {
+        uni.setStorageSync("token", res.data.data.token);
+        uni.setStorageSync("refreshToken", res.data.data.refreshToken);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+// 获取环境变量
+const getEnv = (key: string): string => {
+  // @ts-ignore
+  return import.meta.env?.[key] || "";
+};
 
 // 请求实例类
 class Request {
@@ -150,17 +199,26 @@ class Request {
         if (error.code === 401) {
           // token过期，跳转登录
           uni.removeStorageSync("token");
-          uni.navigateTo({
+          uni.removeStorageSync("refreshToken");
+          uni.reLaunch({
             url: "/pages/login/index",
           });
         }
       } else if (error.name === "HttpError") {
         // HTTP错误
-        uni.showToast({
-          title: `网络错误: ${error.statusCode}`,
-          icon: "none",
-          duration: 2000,
-        });
+        if (error.statusCode === 401) {
+          uni.removeStorageSync("token");
+          uni.removeStorageSync("refreshToken");
+          uni.reLaunch({
+            url: "/pages/login/index",
+          });
+        } else {
+          uni.showToast({
+            title: `网络错误: ${error.statusCode}`,
+            icon: "none",
+            duration: 2000,
+          });
+        }
       } else {
         // 网络错误或其他错误
         uni.showToast({
@@ -252,6 +310,19 @@ class Request {
 
       return result as T;
     } catch (error) {
+      const err: any = error;
+      const is401 = err?.code === 401 || err?.statusCode === 401;
+      const token = uni.getStorageSync("token");
+      const isMock = token === "dev-mock-token";
+      if (is401 && !config._retry && !isMock) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+          return this.request({ ...config, _retry: true });
+        }
+        uni.removeStorageSync("token");
+        uni.removeStorageSync("refreshToken");
+      }
+
       // 执行错误拦截器
       let result = error;
       for (const interceptor of this.errorInterceptors.getInterceptors()) {
@@ -347,12 +418,6 @@ class Request {
     });
   }
 }
-
-// 获取环境变量
-const getEnv = (key: string): string => {
-  // @ts-ignore
-  return import.meta.env?.[key] || "";
-};
 
 // 创建默认实例
 const request = new Request({

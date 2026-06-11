@@ -1,25 +1,49 @@
 import request from "@/utils/request";
+import { encryptPassword } from "@/utils/crypto";
 
 // ========== 认证相关 ==========
 
-export const login = (data: { email: string; password: string }) => {
-  return request.post<{ token: string; userInfo: UserInfo }>("/api/v1/auth/login", data);
+export const login = async (data: { email: string; password: string }) => {
+  const encryptedPassword = await encryptPassword(data.password);
+  return request.post<{ token: string; refreshToken: string; userInfo: UserInfo }>(
+    "/api/v1/auth/login",
+    {
+      email: data.email,
+      password: encryptedPassword,
+    },
+  );
 };
 
-export const register = (data: { email: string; password: string; nickname: string }) => {
-  return request.post<{ token: string; userInfo: UserInfo }>("/api/v1/auth/register", data);
+export const register = async (data: { email: string; password: string; nickname: string }) => {
+  const encryptedPassword = await encryptPassword(data.password);
+  return request.post<{ token: string; refreshToken: string; userInfo: UserInfo }>(
+    "/api/v1/auth/register",
+    {
+      email: data.email,
+      password: encryptedPassword,
+      nickname: data.nickname,
+    },
+  );
 };
 
 export const sendResetCode = (data: { email: string }) => {
   return request.post("/api/v1/auth/send-reset-code", data);
 };
 
-export const resetPassword = (data: { email: string; code: string; new_password: string }) => {
-  return request.post("/api/v1/auth/reset-password", data);
+export const resetPassword = async (data: { email: string; code: string; new_password: string }) => {
+  const encryptedPassword = await encryptPassword(data.new_password);
+  return request.post("/api/v1/auth/reset-password", {
+    email: data.email,
+    code: data.code,
+    new_password: encryptedPassword,
+  });
 };
 
 export const refreshToken = (data: { refresh_token: string }) => {
-  return request.post<{ token: string }>("/api/v1/auth/refresh", data);
+  return request.post<{ token: string; refreshToken: string; userInfo: UserInfo }>(
+    "/api/v1/auth/refresh",
+    data,
+  );
 };
 
 // ========== 账本相关 ==========
@@ -70,8 +94,33 @@ export const createTransaction = (data: {
 
 // ========== 分类相关 ==========
 
-export const getCategories = (params: { book_id: number }) => {
-  return request.get<Category[]>("/api/v1/categories", params);
+export const getCategories = () => {
+  return request.get<Category[]>("/api/v1/categories");
+};
+
+export const createCategory = (data: {
+  name: string;
+  type: number;
+  icon: string;
+  color: string;
+  parent_id?: number;
+}) => {
+  return request.post<Category>("/api/v1/categories", data);
+};
+
+export const updateCategory = (
+  id: number,
+  data: { name?: string; icon?: string; color?: string; sort_order?: number; visible?: number },
+) => {
+  return request.put<Category>(`/api/v1/categories/${id}`, data);
+};
+
+export const deleteCategory = (id: number) => {
+  return request.delete(`/api/v1/categories/${id}`);
+};
+
+export const reorderCategories = (data: { ids: number[] }) => {
+  return request.put("/api/v1/categories/reorder", data);
 };
 
 // ========== 账户相关 ==========
@@ -109,6 +158,9 @@ export interface Category {
   icon: string;
   color: string;
   parent_id: number;
+  is_system: number;
+  sort_order: number;
+  visible: number;
 }
 
 export interface Account {

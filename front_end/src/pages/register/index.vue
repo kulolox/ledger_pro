@@ -69,7 +69,7 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { register } from "@/api/common";
-import { setToken, setUserInfo } from "@/utils/storage";
+import { setToken, setRefreshToken, setUserInfo } from "@/utils/storage";
 
 const formData = reactive({
   nickname: "",
@@ -99,12 +99,13 @@ const handleRegister = async () => {
 
   loading.value = true;
   try {
-    const { token, userInfo } = await register({
+    const { token, refreshToken, userInfo } = await register({
       email: formData.email,
       password: formData.password,
       nickname: formData.nickname,
     });
     setToken(token);
+    setRefreshToken(refreshToken);
     setUserInfo(userInfo);
     uni.showToast({ title: "注册成功", icon: "success" });
     setTimeout(() => {

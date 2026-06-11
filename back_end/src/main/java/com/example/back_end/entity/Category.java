@@ -8,13 +8,14 @@ public class Category {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long bookId;
     private Long parentId = 0L;
     private String name = "";
     private Integer type = 0;
     private String icon = "";
     private String color = "";
     private Integer sortOrder = 0;
+    private Integer isSystem = 0;
+    private Integer visible = 1;
 
     @TableField(updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -28,14 +29,6 @@ public class Category {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Long getBookId() {
-        return bookId;
-    }
-
-    public void setBookId(Long bookId) {
-        this.bookId = bookId;
     }
 
     public Long getParentId() {
@@ -100,6 +93,22 @@ public class Category {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Integer getIsSystem() {
+        return isSystem;
+    }
+
+    public void setIsSystem(Integer isSystem) {
+        this.isSystem = isSystem;
+    }
+
+    public Integer getVisible() {
+        return visible;
+    }
+
+    public void setVisible(Integer visible) {
+        this.visible = visible;
     }
 
     public Integer getDeleted() {

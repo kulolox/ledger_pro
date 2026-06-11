@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtUtils {
     private final SecretKey secretKey;
-    private final long expireTime = 24 * 60 * 60 * 1000;
+    private final long accessExpireMs = 24 * 60 * 60 * 1000;
+    private final long refreshExpireMs = 7 * 24 * 60 * 60 * 1000;
 
     public JwtUtils(@Value("${app.jwt.secret:ledger-pro-default-secret-key-2026}") String secret) {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
@@ -25,11 +26,20 @@ public class JwtUtils {
     }
 
     public String generateToken(Long userId, String email) {
+        return buildToken(userId, email, "access", accessExpireMs);
+    }
+
+    public String generateRefreshToken(Long userId, String email) {
+        return buildToken(userId, email, "refresh", refreshExpireMs);
+    }
+
+    private String buildToken(Long userId, String email, String type, long expireMs) {
         return Jwts.builder()
                 .subject(email)
                 .claim("userId", userId)
+                .claim("type", type)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expireTime))
+                .expiration(new Date(System.currentTimeMillis() + expireMs))
                 .signWith(secretKey)
                 .compact();
     }
@@ -44,8 +54,17 @@ public class JwtUtils {
 
     public boolean validateToken(String token) {
         try {
-            parseClaims(token);
-            return true;
+            Claims claims = parseClaims(token);
+            return !"refresh".equals(claims.get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean validateRefreshToken(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            return "refresh".equals(claims.get("type", String.class));
         } catch (Exception e) {
             return false;
         }

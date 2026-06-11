@@ -62,6 +62,9 @@ importers:
       echarts:
         specifier: ^6.1.0
         version: 6.1.0
+      sortablejs:
+        specifier: ^1.15.7
+        version: 1.15.7
       vue:
         specifier: ^3.4.21
         version: 3.5.35(typescript@4.9.5)
@@ -84,6 +87,9 @@ importers:
       '@dcloudio/vite-plugin-uni':
         specifier: 3.0.0-5000720260410001
         version: 3.0.0-5000720260410001(postcss@8.5.15)(rollup@4.61.1)(vite@5.2.8(@types/node@25.9.2)(sass@1.100.0)(terser@5.48.0))(vue@3.5.35(typescript@4.9.5))
+      '@types/sortablejs':
+        specifier: ^1.15.9
+        version: 1.15.9
       '@vue/runtime-core':
         specifier: ^3.4.21
         version: 3.5.35
@@ -1560,6 +1566,9 @@ packages:
 
   '@types/prettier@2.7.3':
     resolution: {integrity: sha512-+68kP9yzs4LMp7VNh8gdzMSPZFL44MLGqiHWvttYJe+6qnuVr4Ek9wSBQoveqY/r+LwjCcU29kNVkidwim+kYA==}
+
+  '@types/sortablejs@1.15.9':
+    resolution: {integrity: sha512-7HP+rZGE2p886PKV9c9OJzLBI6BBJu1O7lJGYnPyG3fS4/duUCcngkNCjsLwIMV+WMqANe3tt4irrXHSIe68OQ==}
 
   '@types/stack-utils@2.0.3':
     resolution: {integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==}
@@ -3350,6 +3359,9 @@ packages:
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
+
+  sortablejs@1.15.7:
+    resolution: {integrity: sha512-Kk8wLQPlS+yi1ZEf48a4+fzHa4yxjC30M/Sr2AnQu+f/MPwvvX9XjZ6OWejiz8crBsLwSq8GHqaxaET7u6ux0A==}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -6001,6 +6013,8 @@ snapshots:
 
   '@types/prettier@2.7.3': {}
 
+  '@types/sortablejs@1.15.9': {}
+
   '@types/stack-utils@2.0.3': {}
 
   '@types/yargs-parser@21.0.3': {}
@@ -8101,6 +8115,8 @@ snapshots:
   sisteransi@1.0.5: {}
 
   slash@3.0.0: {}
+
+  sortablejs@1.15.7: {}
 
   source-map-js@1.2.1: {}
 

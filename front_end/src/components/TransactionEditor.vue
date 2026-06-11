@@ -68,10 +68,11 @@ import { ref, computed, watch } from "vue";
 import NumberKeyboard from "@/components/NumberKeyboard.vue";
 import CategorySlider from "@/components/CategorySlider.vue";
 import { useTransactions } from "@/stores/transactionStore";
-import { DEFAULT_CATEGORIES } from "@/constants/categories";
-import { getTodayStr, timestampToDateStr } from "@/utils/format";
+import { useCategories } from "@/stores/categoryStore";
+import { timestampToDateStr } from "@/utils/format";
 
 const { add, update } = useTransactions();
+const { categories } = useCategories();
 
 const props = defineProps<{
   visible: boolean;
@@ -108,7 +109,7 @@ const transDate = computed(() => timestampToDateStr(transTimestamp.value));
 const showDatePicker = ref(false);
 
 const currentCategories = computed(
-  () => DEFAULT_CATEGORIES[currentType.value] || [],
+  () => (categories.value[currentType.value] || []).filter((c) => c.visible !== 0),
 );
 
 const rawInput = computed(() => {
@@ -186,7 +187,7 @@ const onKeyPress = (key: string) => {
 
 const onTypeChange = (type: number) => {
   currentType.value = type;
-  const cats = DEFAULT_CATEGORIES[type];
+  const cats = categories.value[type];
   selectedCategory.value = cats.length > 0 ? cats[0].id : 0;
 };
 
@@ -253,7 +254,7 @@ watch(
         currentType.value = props.editData.type;
         selectedCategory.value =
           props.editData.category_id ||
-          DEFAULT_CATEGORIES[props.editData.type]?.[0]?.id ||
+          categories.value[props.editData.type]?.[0]?.id ||
           0;
         if (props.editData.amount > 0) {
           inputBuffer.value = String(props.editData.amount / 100);
@@ -265,7 +266,7 @@ watch(
       } else {
         editId.value = null;
         currentType.value = 0;
-        selectedCategory.value = DEFAULT_CATEGORIES[0]?.[0]?.id || 1;
+        selectedCategory.value = categories.value[0]?.[0]?.id || 1;
         transTimestamp.value = Date.now();
       }
     }

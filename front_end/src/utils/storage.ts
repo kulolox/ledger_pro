@@ -1,4 +1,5 @@
 const TOKEN_KEY = "token";
+const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "userInfo";
 
 export const getToken = (): string => {
@@ -11,6 +12,18 @@ export const setToken = (token: string): void => {
 
 export const removeToken = (): void => {
   uni.removeStorageSync(TOKEN_KEY);
+};
+
+export const getRefreshToken = (): string => {
+  return uni.getStorageSync(REFRESH_TOKEN_KEY) || "";
+};
+
+export const setRefreshToken = (token: string): void => {
+  uni.setStorageSync(REFRESH_TOKEN_KEY, token);
+};
+
+export const removeRefreshToken = (): void => {
+  uni.removeStorageSync(REFRESH_TOKEN_KEY);
 };
 
 export const getUserInfo = <T = any>(): T | null => {
@@ -42,5 +55,6 @@ export const isLoggedIn = (): boolean => {
 
 export const logout = (): void => {
   removeToken();
+  removeRefreshToken();
   removeUserInfo();
 };

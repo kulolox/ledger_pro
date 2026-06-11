@@ -40,6 +40,13 @@
         "navigationBarTitleText": "统计",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/category/index",
+      "style": {
+        "navigationBarTitleText": "分类管理",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

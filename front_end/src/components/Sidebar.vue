@@ -65,6 +65,10 @@
       <view class="sidebar-divider" />
 
       <view class="sidebar-actions">
+        <view class="action-item" @click="$emit('manageCategories')">
+          <text class="action-icon">📋</text>
+          <text class="action-label">分类管理</text>
+        </view>
         <view class="action-item" @click="$emit('sync')">
           <text class="action-icon">🔄</text>
           <text class="action-label">同步数据</text>
@@ -103,6 +107,7 @@ const emit = defineEmits<{
   sync: [];
   logout: [];
   addBook: [name: string];
+  manageCategories: [];
 }>();
 
 const avatarText = computed(() => {

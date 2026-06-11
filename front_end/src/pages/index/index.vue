@@ -145,6 +145,7 @@
       @sync="onSync"
       @logout="onLogout"
       @addBook="onAddBook"
+      @manageCategories="onManageCategories"
     />
   </view>
 </template>
@@ -158,11 +159,7 @@ import {
   useTransactions,
   type LocalTransaction,
 } from "@/stores/transactionStore";
-import {
-  DEFAULT_CATEGORIES,
-  getCategoryName,
-  getCategoryColor,
-} from "@/constants/categories";
+import { useCategories } from "@/stores/categoryStore";
 import { isLoggedIn, getToken, logout, getUserInfo, getCurrentBookId, setCurrentBookId } from "@/utils/storage";
 import { pullFromServer, scheduleSync, stopSync, fullSync } from "@/utils/sync";
 import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
@@ -175,6 +172,8 @@ const {
   delete: removeTx,
   getByDate,
 } = useTransactions();
+
+const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } = useCategories();
 
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
@@ -258,12 +257,6 @@ function amountClass(type: number): string {
   return "transfer";
 }
 
-function getCategoryIcon(type: number, categoryId?: number): string {
-  if (categoryId == null) return "?";
-  const cats = DEFAULT_CATEGORIES[type] || [];
-  return cats.find((c) => c.id === categoryId)?.icon || "?";
-}
-
 function onAdd() {
   editingTx.value = null;
   editorVisible.value = true;
@@ -336,6 +329,11 @@ function goStats() {
   uni.navigateTo({ url: "/pages/statistics/index" });
 }
 
+function onManageCategories() {
+  showSidebar.value = false;
+  uni.navigateTo({ url: "/pages/category/index" });
+}
+
 function onLogout() {
   showSidebar.value = false;
   logout();
@@ -362,6 +360,7 @@ onShow(async () => {
   userInfo.value = getUserInfo();
   load();
   scheduleSync(currentBookId.value);
+  loadCategories();
   if (!isMockMode) {
     pullFromServer(currentBookId.value);
     try {

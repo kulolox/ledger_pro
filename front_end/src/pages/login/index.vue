@@ -57,7 +57,7 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { login } from "@/api/common";
-import { setToken, setUserInfo } from "@/utils/storage";
+import { setToken, setRefreshToken, setUserInfo } from "@/utils/storage";
 
 const formData = reactive({
   email: "",
@@ -79,11 +79,12 @@ const handleLogin = async () => {
 
   loading.value = true;
   try {
-    const { token, userInfo } = await login({
+    const { token, refreshToken, userInfo } = await login({
       email: formData.email,
       password: formData.password,
     });
     setToken(token);
+    setRefreshToken(refreshToken);
     setUserInfo(userInfo);
     uni.showToast({ title: "登录成功", icon: "success" });
     setTimeout(() => {

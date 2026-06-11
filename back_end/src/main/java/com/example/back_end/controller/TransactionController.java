@@ -3,6 +3,7 @@ package com.example.back_end.controller;
 import com.example.back_end.dto.request.BatchCreateRequest;
 import com.example.back_end.dto.request.BatchDeleteRequest;
 import com.example.back_end.dto.request.TransactionRequest;
+import com.example.back_end.dto.response.TransactionListResponse;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.service.ITransactionService;
 import com.example.back_end.utils.Result;
@@ -35,6 +36,7 @@ public class TransactionController {
 
     @GetMapping
     public Result<Map<String, Object>> list(@RequestParam Long book_id, @RequestParam String month) {
-        return Result.ok(transactionService.list(book_id, month));
+        TransactionListResponse result = transactionService.list(book_id, month);
+        return Result.ok(Map.of("list", result.list(), "total", result.total()));
     }
 }

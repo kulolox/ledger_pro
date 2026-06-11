@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-记账软件 LedgerPro。前端 uni-app (Vue 3 + TS + Vite)，后端 Spring Boot + MyBatis-Plus + MySQL，JWT 认证。
+记账软件 LedgerPro。前端 uni-app (Vue 3 + TS + Vite)，后端 Spring Boot + MyBatis-Plus + MySQL + Redis，JWT 双 token 认证，RSA 密码加密。
 
 ```
 daily_ledger/
@@ -42,27 +42,47 @@ mvn spotless:apply               # 代码格式化
 - **UI 库**: Wot UI (`@wot-ui/ui`, 组件前缀 `wd-`)
 - **路径别名**: `@/` → `src/` (tsconfig paths)
 - **请求封装**: `src/utils/request.ts` — 基于 `uni.request` 的拦截器模式 Request 类，自动注入 Bearer token、响应解析、错误 toast。默认实例从 `VITE_API_BASE_URL` 读 baseURL
+- **密码加密**: `src/utils/crypto.ts` — RSA 公钥加密，登录/注册前加密密码
 - **页面路由**: `src/pages.json` 管理，easycom 自动扫描组件
-- **当前页面**: `pages/index/index` (首页/记账页)、`pages/login/index` (登录页)
+- **当前页面**: `pages/index/index` (首页)、`pages/login/index` (登录)、`pages/statistics/index` (统计)、`pages/category/index` (分类管理)
+- **拖拽排序**: `sortablejs` 库，分类管理页拖拽排序
 
 ### 后端
 
 - **框架**: Spring Boot 4.0.6 + Java 21 + MyBatis-Plus 3.5.16 + Spring Security
 - **数据库**: MySQL 8.0 (jdbc:mysql://localhost:3306/ledger_pro, root/123456)
+- **缓存**: Redis 7 (localhost:6379, Lettuce 连接池), Spring Cache 抽象，自定义 `JacksonSerializer` JSON 序列化（`@type`/`@value` 包装格式）
 - **ORM**: MyBatis-Plus，逻辑删除由 `global-config.db-config.logic-delete-field` 自动处理
-- **认证**: JWT (jjwt 0.12.5, HS256)，24 小时过期
-- **密码**: BCrypt
+- **认证**: JWT (jjwt 0.12.5, HS256)，access token 24h + refresh token 7d 滑动过期，`type` claim 区分
+- **密码**: BCrypt + RSA 加密传输 (前端公钥加密 → 后端私钥解密 → BCrypt)
 - **代码格式**: Spotless (Palantir Java Format) + EditorConfig，`mvn spotless:apply` 手动格式化
 - **分层**: Controller → Service Interface (IService) → Service Impl (ServiceImpl) → Mapper (BaseMapper)
+
+### 缓存策略
+
+- **交易列表缓存**: `getTransactions` → `@Cacheable(value="transactions", key="#bookId + '::' + #month")`，30min TTL
+- **写操作淘汰**: `create/createBatch/batchDelete` → `@CacheEvict(value="transactions", allEntries=true)`，清空全部交易缓存
+- **配置**: `spring.cache.type=redis`，`RedisCacheManager` Bean 配置自定义 `JacksonSerializer`（`@type`/`@value` JSON 包装，解决 Jackson `@class` 类型信息缺失问题）
+- **序列化**: `TransactionListResponse` record 实现 `Serializable`，缓存值以 JSON 存入 Redis
+- **分类 ETag 缓存**: `GET /categories` 响应 `ETag` 头，前端 `If-None-Match` 协商缓存，`categoryStore` 本地 storage 缓存 + ETag 双重缓存
 
 ### 关键约定
 
 - 不要做多余的事
 - **金额存储**: 一律用 `INT` 存储"分"（避免浮点精度问题），前后端传输时注意 ×100/÷100 转换
 - **API 规范**: RESTful，JSON，版本前缀 `/api/v1/`，JWT Bearer token
-- **多账本隔离**: 所有数据接口通过 `bookId` 参数隔离，后端结合当前用户鉴权
+- **多账本隔离**: 交易数据通过 `bookId` 参数隔离，分类全局共享不绑账本
 - **逻辑删除**: 核心表用 `deleted` 字段标记，不物理删除。MyBatis-Plus 自动处理，查询/更新自动追加 `deleted=0`
-- **一期目标**: 登录认证 + 支出/收入/转账记账 + 交易历史列表。账户、分类暂为系统预置
+- **RSA 加密**: 前端获取公钥 → JSEncrypt 加密 → 后端 RSA 解密 → BCrypt 验证。`GET /api/v1/auth/public-key`
+
+### 分类管理
+
+- **全局共享**: 分类不绑定账本，所有账本共用同一套分类
+- **系统分类**: `is_system=1`，不可编辑名称/图标/颜色、不可删除，可调整排序和可见性
+- **自定义分类**: `is_system=0`，用户可增删改、排序、切换可见性
+- **排序**: `sort_order` 字段，`listAll()` 按 `sort_order ASC` 排序，`PUT /categories/reorder` 批量更新排序
+- **可见性**: `visible` 字段，`visible=0` 的分类在记账页不显示，分类管理页半透明标示
+- **数据初始化**: `DataInitializer` 在空表时插入 16 个系统分类（10 支出 + 6 收入），ID 与前端 `DEFAULT_CATEGORIES` 一致
 
 ## 规范
 
@@ -104,7 +124,12 @@ pushDeletes → pushPending → pullFromServer
 
 ### 数据隔离
 
-- 所有接口通过 `book_id` 隔离数据
+- 交易接口通过 `book_id` 隔离数据
+- 分类接口全局共享，不传 `book_id`
 - 前端 `dayGroups` 计算属性按 `currentBookId` 过滤
 - `currentBookId` 持久化到 storage，下次启动恢复
 - 记账时 `book_id` 取自当前选中账本
+
+### 前移的 status quo
+
+分类从硬编码迁移到服务端：`DEFAULT_CATEGORIES` 仅作离线兜底，正常流程通过 `categoryStore.loadCategories()` 从服务端获取，ETag 协商缓存减少传输。
