@@ -7,7 +7,9 @@ import com.example.back_end.dto.request.TransactionRequest;
 import com.example.back_end.dto.response.TransactionListResponse;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.entity.Transaction;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface ITransactionService extends IService<Transaction> {
     TransactionResponse create(TransactionRequest req);
@@ -17,4 +19,8 @@ public interface ITransactionService extends IService<Transaction> {
     int batchDelete(BatchDeleteRequest body);
 
     TransactionListResponse list(Long bookId, String month);
+
+    void exportTransactions(Long bookId, String month, String format, HttpServletResponse response);
+
+    Map<String, Object> importTransactions(Long bookId, MultipartFile file, String format);
 }

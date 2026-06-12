@@ -417,6 +417,93 @@ class Request {
       ...config,
     });
   }
+
+  /**
+   * 文件下载（导出）
+   */
+  async download(url: string, params?: Record<string, any>): Promise<void> {
+    const token = uni.getStorageSync("token");
+    const query = params
+      ? "?" +
+        Object.entries(params)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+          .join("&")
+      : "";
+    const fullUrl = this.baseURL + url + query;
+
+    const response = await fetch(fullUrl, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (response.status === 401) {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        return this.download(url, params);
+      }
+      uni.removeStorageSync("token");
+      uni.removeStorageSync("refreshToken");
+      uni.reLaunch({ url: "/pages/login/index" });
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = "download";
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;\s]+)/);
+      if (match) {
+        filename = decodeURIComponent(match[1]);
+      }
+    }
+
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  }
+
+  /**
+   * 文件上传（导入）
+   */
+  upload<T = any>(
+    url: string,
+    filePath: string,
+    formData?: Record<string, any>,
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const token = uni.getStorageSync("token");
+      uni.uploadFile({
+        url: this.baseURL + url,
+        filePath,
+        name: "file",
+        formData,
+        header: token ? { Authorization: `Bearer ${token}` } : {},
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data);
+            if (data.code === 0 || data.code === 200) {
+              resolve(data.data as T);
+            } else {
+              reject(new Error(data.message || "上传失败"));
+            }
+          } catch {
+            reject(new Error("解析响应失败"));
+          }
+        },
+        fail: (err) => {
+          reject(err);
+        },
+      });
+    });
+  }
 }
 
 // 创建默认实例

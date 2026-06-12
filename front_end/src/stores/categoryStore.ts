@@ -14,6 +14,8 @@ const categories = ref<Record<number, Category[]>>({
   1: [...(DEFAULT_CATEGORIES[1] || [])],
 });
 
+let loadPromise: Promise<void> | null = null;
+
 function getCache(): CategoryCache | null {
   try {
     const raw = uni.getStorageSync(CATEGORY_CACHE_KEY);
@@ -88,39 +90,55 @@ function fetchFromServer(
 
 export function useCategories() {
   const loadCategories = async () => {
-    const cache = getCache();
-    if (cache) {
-      categories.value = cache.categories;
-    }
+    if (loadPromise) return loadPromise;
 
-    try {
-      const result = await fetchFromServer();
-      if (result) {
-        categories.value = result.data;
-        setCache(result.data);
-        if (result.etag) setEtag(result.etag);
+    loadPromise = (async () => {
+      const cache = getCache();
+      if (cache) {
+        categories.value = cache.categories;
       }
-    } catch {
-      if (!cache) {
-        categories.value = {
-          0: [...(DEFAULT_CATEGORIES[0] || [])],
-          1: [...(DEFAULT_CATEGORIES[1] || [])],
-        };
+
+      try {
+        const result = await fetchFromServer();
+        if (result) {
+          categories.value = result.data;
+          setCache(result.data);
+          if (result.etag) setEtag(result.etag);
+        }
+      } catch {
+        if (!cache) {
+          categories.value = {
+            0: [...(DEFAULT_CATEGORIES[0] || [])],
+            1: [...(DEFAULT_CATEGORIES[1] || [])],
+          };
+        }
+      } finally {
+        loadPromise = null;
       }
-    }
+    })();
+
+    return loadPromise;
   };
 
   const refreshCategories = async () => {
-    try {
-      const result = await fetchFromServer(true);
-      if (result) {
-        categories.value = result.data;
-        setCache(result.data);
-        if (result.etag) setEtag(result.etag);
+    if (loadPromise) return loadPromise;
+
+    loadPromise = (async () => {
+      try {
+        const result = await fetchFromServer(true);
+        if (result) {
+          categories.value = result.data;
+          setCache(result.data);
+          if (result.etag) setEtag(result.etag);
+        }
+      } catch {
+        // ignore
+      } finally {
+        loadPromise = null;
       }
-    } catch {
-      // ignore
-    }
+    })();
+
+    return loadPromise;
   };
 
   const addCategory = async (data: {

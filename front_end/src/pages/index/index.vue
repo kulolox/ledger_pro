@@ -146,6 +146,7 @@
       @logout="onLogout"
       @addBook="onAddBook"
       @manageCategories="onManageCategories"
+      @importExport="onImportExport"
     />
   </view>
 </template>
@@ -334,6 +335,11 @@ function onManageCategories() {
   uni.navigateTo({ url: "/pages/category/index" });
 }
 
+function onImportExport() {
+  showSidebar.value = false;
+  uni.navigateTo({ url: "/pages/import-export/index" });
+}
+
 function onLogout() {
   showSidebar.value = false;
   logout();
@@ -352,24 +358,30 @@ async function onRefresh() {
 
 function loadMore() {}
 
+let pageReady = false;
+
 onShow(async () => {
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
   }
-  userInfo.value = getUserInfo();
   load();
-  scheduleSync(currentBookId.value);
-  loadCategories();
-  if (!isMockMode) {
-    pullFromServer(currentBookId.value);
-    try {
-      books.value = await getAccountBooks();
-    } catch {
+  pullFromServer(currentBookId.value);
+
+  if (!pageReady) {
+    pageReady = true;
+    userInfo.value = getUserInfo();
+    scheduleSync(currentBookId.value);
+    loadCategories();
+    if (!isMockMode) {
+      try {
+        books.value = await getAccountBooks();
+      } catch {
+        books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
+      }
+    } else {
       books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
     }
-  } else {
-    books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
   }
 });
 </script>

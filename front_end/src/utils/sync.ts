@@ -15,8 +15,10 @@ function currentMonth(): string {
 }
 
 let syncTimer: number | null = null;
+let networkChangeHandler: ((res: any) => void) | null = null;
 // 防止并发同步
 let syncing = false;
+let pullPromise: Promise<number> | null = null;
 
 // 直接从 storage 读取，避免与 store 的响应式引用混淆
 function getLocalTransactions(): LocalTransaction[] {
@@ -149,18 +151,21 @@ export async function pushDeletes(): Promise<number> {
 }
 
 export async function pullFromServer(bookId: number): Promise<number> {
+  if (pullPromise) return pullPromise;
+
   const token = getToken();
   if (!token || token === "dev-mock-token") return 0;
 
-  try {
-    const result = (await silentRequest({
-      url: "/api/v1/transactions",
-      method: "GET",
-      data: {
-        book_id: bookId,
-        month: currentMonth(),
-      },
-    })) as any;
+  pullPromise = (async () => {
+    try {
+      const result = (await silentRequest({
+        url: "/api/v1/transactions",
+        method: "GET",
+        data: {
+          book_id: bookId,
+          month: currentMonth(),
+        },
+      })) as any;
 
     const serverList = (result?.list || result) as any[];
     if (!Array.isArray(serverList) || serverList.length === 0) return 0;
@@ -196,10 +201,15 @@ export async function pullFromServer(bookId: number): Promise<number> {
     loadTransactions();
     setLastSyncTime();
 
-    return serverList.length;
-  } catch {
-    return 0;
-  }
+      return serverList.length;
+    } catch {
+      return 0;
+    } finally {
+      pullPromise = null;
+    }
+  })();
+
+  return pullPromise;
 }
 
 // 单次同步周期：先推后拉，syncing 锁防止并发
@@ -235,16 +245,21 @@ export function scheduleSync(bookId: number) {
   }, SYNC_INTERVAL) as unknown as number;
 
   // 断网恢复后立即同步一次
-  uni.onNetworkStatusChange((res) => {
+  networkChangeHandler = (res: any) => {
     if (res.isConnected) {
       runSyncCycle(bookId, true);
     }
-  });
+  };
+  uni.onNetworkStatusChange(networkChangeHandler);
 }
 
 export function stopSync() {
   if (syncTimer) {
     clearInterval(syncTimer);
     syncTimer = null;
+  }
+  if (networkChangeHandler) {
+    uni.offNetworkStatusChange(networkChangeHandler);
+    networkChangeHandler = null;
   }
 }

@@ -207,7 +207,11 @@ const handleSave = (keepOpen: boolean) => {
   }
 
   const amountCents = Math.round(amount * 100);
-  const transTime = transDate.value + "T00:00:00";
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  const transTime = transDate.value + `T${hh}:${mm}:${ss}`;
 
   if (editId.value != null) {
     update(editId.value, {

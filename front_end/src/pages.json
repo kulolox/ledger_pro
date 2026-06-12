@@ -47,6 +47,13 @@
         "navigationBarTitleText": "分类管理",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/import-export/index",
+      "style": {
+        "navigationBarTitleText": "导入导出",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

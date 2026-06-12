@@ -171,6 +171,20 @@ export interface Account {
   currency: string;
 }
 
+// ========== 导入导出相关 ==========
+
+export const exportTransactions = (params: { book_id: number; month: string; format: string }) => {
+  return request.download("/api/v1/transactions/export", params);
+};
+
+export const importTransactions = (bookId: number, filePath: string, format: string) => {
+  return request.upload<{ imported: number; errors: string[]; total: number }>(
+    "/api/v1/transactions/import",
+    filePath,
+    { book_id: bookId, format },
+  );
+};
+
 // ========== 统计相关 ==========
 
 export interface MonthlyStats {

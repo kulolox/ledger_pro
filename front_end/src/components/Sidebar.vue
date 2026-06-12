@@ -69,6 +69,10 @@
           <text class="action-icon">📋</text>
           <text class="action-label">分类管理</text>
         </view>
+        <view class="action-item" @click="$emit('importExport')">
+          <text class="action-icon">📥</text>
+          <text class="action-label">导入导出</text>
+        </view>
         <view class="action-item" @click="$emit('sync')">
           <text class="action-icon">🔄</text>
           <text class="action-label">同步数据</text>
@@ -108,6 +112,7 @@ const emit = defineEmits<{
   logout: [];
   addBook: [name: string];
   manageCategories: [];
+  importExport: [];
 }>();
 
 const avatarText = computed(() => {

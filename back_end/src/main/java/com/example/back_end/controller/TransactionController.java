@@ -7,8 +7,10 @@ import com.example.back_end.dto.response.TransactionListResponse;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.service.ITransactionService;
 import com.example.back_end.utils.Result;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/transactions")
@@ -38,5 +40,22 @@ public class TransactionController {
     public Result<Map<String, Object>> list(@RequestParam Long book_id, @RequestParam String month) {
         TransactionListResponse result = transactionService.list(book_id, month);
         return Result.ok(Map.of("list", result.list(), "total", result.total()));
+    }
+
+    @GetMapping("/export")
+    public void exportTransactions(
+            @RequestParam Long book_id,
+            @RequestParam String month,
+            @RequestParam(defaultValue = "csv") String format,
+            HttpServletResponse response) {
+        transactionService.exportTransactions(book_id, month, format, response);
+    }
+
+    @PostMapping("/import")
+    public Result<Map<String, Object>> importTransactions(
+            @RequestParam Long book_id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "csv") String format) {
+        return Result.ok("导入完成", transactionService.importTransactions(book_id, file, format));
     }
 }
