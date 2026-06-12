@@ -44,8 +44,9 @@ mvn spotless:apply               # 代码格式化
 - **请求封装**: `src/utils/request.ts` — 基于 `uni.request` 的拦截器模式 Request 类，自动注入 Bearer token、响应解析、错误 toast。默认实例从 `VITE_API_BASE_URL` 读 baseURL
 - **密码加密**: `src/utils/crypto.ts` — RSA 公钥加密，登录/注册前加密密码
 - **页面路由**: `src/pages.json` 管理，easycom 自动扫描组件
-- **当前页面**: `pages/index/index` (首页)、`pages/login/index` (登录)、`pages/statistics/index` (统计)、`pages/category/index` (分类管理)
+- **当前页面**: `pages/index/index` (首页)、`pages/login/index` (登录)、`pages/statistics/index` (统计)、`pages/category/index` (分类管理)、`pages/import-export/index` (导入导出)
 - **拖拽排序**: `sortablejs` 库，分类管理页拖拽排序
+- **请求去重**: `sync.ts` 的 `pullFromServer` 和 `categoryStore.ts` 的 `loadCategories`/`refreshCategories` 用飞行中 Promise 去重，防止 `onShow` 双重触发导致重复请求
 
 ### 后端
 
@@ -66,6 +67,15 @@ mvn spotless:apply               # 代码格式化
 - **前端 refresh 流程**: `request.ts` catch 块 `err.statusCode === 401` → `tryRefreshToken()` → POST `/api/v1/auth/refresh` → 拿到新 token → 重试请求。refresh 失败则清 token 跳转登录页
 - **categoryStore 的坑**: `fetchFromServer` 用原始 `uni.request`（非 request 实例），不会自动带 Authorization header，需要手动从 storage 取 token 加入 header
 
+### 导入导出
+
+- **后端**: `GET /transactions/export?book_id&month&format=[csv|excel|json]` 导出当月账单，`POST /transactions/import` (multipart) 导入
+- **导出格式**: `type` 显示"支出/收入"文本、`amount` 显示元（保留两位小数）、`category` 显示分类名称、`trans_time` 显示 `yyyy-MM-dd HH:mm:ss`
+- **导入兼容**: 同时支持新旧格式——type 文本/数字、amount 元/分自动检测、category 名称查 ID 或直接传数字、表头兼容 `category` 和 `category_id`
+- **依赖**: Apache POI (poi-ooxml 5.4.0) 处理 Excel、OpenCSV 5.10 处理 CSV、jackson-databind 处理 JSON
+- **前端页**: `pages/import-export/index`，两个 tab（导出/导入），导出触发浏览器下载（fetch blob + `<a>` 标签），导入走 `uni.chooseFile` + `request.upload`
+- **通道**: `request.download(url, params)` — fetch + blob + download link；`request.upload(url, filePath, formData)` — `uni.uploadFile` 封装
+
 ### 缓存策略
 
 - **交易列表缓存**: `getTransactions` → `@Cacheable(value="transactions", key="#bookId + '::' + #month")`，30min TTL
@@ -81,6 +91,7 @@ mvn spotless:apply               # 代码格式化
 - **API 规范**: RESTful，JSON，版本前缀 `/api/v1/`，JWT Bearer token
 - **多账本隔离**: 交易数据通过 `bookId` 参数隔离，分类全局共享不绑账本
 - **逻辑删除**: 核心表用 `deleted` 字段标记，不物理删除。MyBatis-Plus 自动处理，查询/更新自动追加 `deleted=0`
+- **交易时间**: `trans_time` 精确到秒。前端 `TransactionEditor` 构造 `YYYY-MM-DDThh:mm:ss`（当前时分秒），后端 `toEntity` 解析 `LocalDateTime.parse(time.replace(" ", "T").substring(0, 19))`
 - **RSA 加密**: 前端获取公钥 → Web Crypto API (RSA-OAEP SHA-256) 加密 → 后端 RSA 解密 → BCrypt 验证。`GET /api/v1/auth/public-key`。密钥持久化到 `data/`，前端 `cachedPublicKey` 缓存（重启后需清除）
 
 ### 分类管理
@@ -115,6 +126,8 @@ pushDeletes → pushPending → pullFromServer
 - **pullFromServer**: 拉取当月全量数据（传 `book_id` + `month` YYYY-MM），按 server_id 去重合并
 - 同步失败**不修改本地数据状态**，保持 pending 等待下次重试
 - 同步锁 `syncing` 防止并发；定时轮询 30 分钟 + 网络恢复触发
+- `scheduleSync` 注册 `onNetworkStatusChange` 监听器，`stopSync` 必须用 `offNetworkStatusChange` 清理，否则累积监听器
+- `pullFromServer` 用 `pullPromise` 飞行中跟踪，重复调用返回已有 Promise，完成后 `finally` 清空
 
 ### 后端 Controller 模式
 
