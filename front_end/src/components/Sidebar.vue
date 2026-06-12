@@ -19,8 +19,29 @@
       <view class="sidebar-divider" />
 
       <view class="sidebar-section">
-        <text class="section-title">我的账本</text>
-        <scroll-view scroll-y class="book-list" v-if="books.length > 0">
+        <view class="section-header">
+          <text class="section-title">我的账本</text>
+          <view
+            v-if="books.length < 4 && !showAddInput"
+            class="section-add-btn"
+            @click="showAddInput = true"
+          >
+            <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
+          </view>
+        </view>
+
+        <view v-if="showAddInput" class="add-book-inline">
+          <input
+            class="add-book-input"
+            v-model="newBookName"
+            placeholder="输入账本名称"
+            :focus="showAddInput"
+            @confirm="onAddBook"
+          />
+          <text class="add-book-cancel" @click="onAddCancel">取消</text>
+        </view>
+
+        <view class="book-list" v-if="books.length > 0">
           <view
             v-for="book in books"
             :key="book.id"
@@ -32,53 +53,31 @@
               <text>{{ book.coverIcon || getBookLetter(book.name) }}</text>
             </view>
             <text class="book-name">{{ book.name }}</text>
-            <text v-if="book.id === currentBookId" class="book-check">✓</text>
+            <wd-icon v-if="book.id === currentBookId" name="check" size="28rpx" color="var(--color-primary)" />
           </view>
-        </scroll-view>
+        </view>
         <view v-else class="book-empty">
           <text class="book-empty-text">暂无账本</text>
         </view>
-
-        <view class="add-book">
-          <template v-if="showAddInput">
-            <input
-              class="add-book-input"
-              v-model="newBookName"
-              placeholder="输入账本名称"
-              :focus="showAddInput"
-              @confirm="onAddBook"
-            />
-            <view class="add-book-actions">
-              <text class="add-book-btn cancel" @click="onAddCancel">取消</text>
-              <text class="add-book-btn confirm" @click="onAddBook">确定</text>
-            </view>
-          </template>
-          <view v-else class="add-book-trigger" @click="showAddInput = true">
-            <text class="add-book-icon">+</text>
-            <text class="add-book-label">新增账本</text>
-          </view>
-        </view>
       </view>
-
-      <view class="sidebar-spacer" />
 
       <view class="sidebar-divider" />
 
       <view class="sidebar-actions">
         <view class="action-item" @click="$emit('manageCategories')">
-          <text class="action-icon">📋</text>
+          <wd-icon name="tags" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">分类管理</text>
         </view>
         <view class="action-item" @click="$emit('importExport')">
-          <text class="action-icon">📥</text>
+          <wd-icon name="import" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">导入导出</text>
         </view>
         <view class="action-item" @click="$emit('sync')">
-          <text class="action-icon">🔄</text>
+          <wd-icon name="sync" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">同步数据</text>
         </view>
         <view class="action-item logout-item" @click="$emit('logout')">
-          <text class="action-icon">🚪</text>
+          <wd-icon name="poweroff" size="28rpx" color="var(--color-expense)" />
           <text class="action-label">退出登录</text>
         </view>
       </view>
@@ -124,6 +123,12 @@ const showAddInput = ref(false);
 const newBookName = ref("");
 
 function onAddBook() {
+  if (props.books.length >= 4) {
+    uni.showToast({ title: "最多4个账本", icon: "none" });
+    newBookName.value = "";
+    showAddInput.value = false;
+    return;
+  }
   const name = newBookName.value.trim();
   if (name) {
     emit('addBook', name);
@@ -215,23 +220,31 @@ function getBookLetter(name: string): string {
 }
 
 .sidebar-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   padding: 28rpx 0 0;
-  min-height: 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 36rpx 16rpx;
 }
 
 .section-title {
   font-size: 22rpx;
   color: var(--text-label);
   font-weight: 500;
-  padding: 0 36rpx 16rpx;
   letter-spacing: 1rpx;
 }
 
-.book-list {
-  flex: 1;
+.section-add-btn {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  background: var(--bg-active);
 }
 
 .book-item {
@@ -280,12 +293,6 @@ function getBookLetter(name: string): string {
   white-space: nowrap;
 }
 
-.book-check {
-  font-size: 28rpx;
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
 .book-empty {
   padding: 40rpx 36rpx;
   text-align: center;
@@ -296,45 +303,16 @@ function getBookLetter(name: string): string {
   }
 }
 
-.add-book {
-  padding: 12rpx 36rpx 24rpx;
-}
-
-.add-book-trigger {
+.add-book-inline {
   display: flex;
   align-items: center;
-  gap: 14rpx;
-  padding: 20rpx 0;
-  transition: opacity 0.15s;
-
-  &:active {
-    opacity: 0.6;
-  }
-
-  .add-book-icon {
-    width: 48rpx;
-    height: 48rpx;
-    border-radius: 12rpx;
-    background: var(--bg-active);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32rpx;
-    color: var(--color-primary);
-    font-weight: 500;
-    line-height: 1;
-  }
-
-  .add-book-label {
-    font-size: 28rpx;
-    color: var(--color-primary);
-    font-weight: 500;
-  }
+  gap: 16rpx;
+  padding: 0 36rpx 16rpx;
 }
 
 .add-book-input {
-  width: 100%;
-  height: 72rpx;
+  flex: 1;
+  height: 64rpx;
   border-radius: 12rpx;
   background: var(--bg-primary);
   padding: 0 20rpx;
@@ -343,27 +321,10 @@ function getBookLetter(name: string): string {
   box-sizing: border-box;
 }
 
-.add-book-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 28rpx;
-  padding-top: 16rpx;
-
-  .add-book-btn {
-    font-size: 28rpx;
-    font-weight: 500;
-
-    &.cancel {
-      color: var(--text-muted);
-    }
-    &.confirm {
-      color: var(--color-primary);
-    }
-  }
-}
-
-.sidebar-spacer {
-  flex: 1;
+.add-book-cancel {
+  font-size: 26rpx;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .sidebar-actions {
@@ -379,10 +340,6 @@ function getBookLetter(name: string): string {
 
   &:active {
     background: var(--bg-overlay);
-  }
-
-  .action-icon {
-    font-size: 36rpx;
   }
 
   .action-label {

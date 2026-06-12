@@ -3,7 +3,7 @@
     <view class="page-header">
       <view class="nav-bar">
         <view class="nav-back" @click="goBack">
-          <text class="back-icon">‹</text>
+          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
         </view>
         <text class="nav-title">分类管理</text>
         <view class="nav-sort" :class="{ active: sortMode }" @click="sortMode = !sortMode">
@@ -43,7 +43,7 @@
       >
         <view class="cat-left">
           <view v-if="sortMode" class="sort-handle">
-            <text>≡</text>
+            <wd-icon name="menu" size="32rpx" color="var(--text-muted)" />
           </view>
           <view class="cat-icon" :style="{ background: cat.color }">
             <text>{{ cat.icon }}</text>
@@ -56,17 +56,17 @@
         <view class="cat-right">
           <template v-if="!sortMode">
             <view class="cat-action visibility" @click="onToggleVisible(cat)">
-              <text>{{ cat.visible === 0 ? '👁‍🗨' : '👁' }}</text>
+              <wd-icon :name="cat.visible === 0 ? 'eye-invisible' : 'eye'" size="28rpx" color="var(--text-muted)" />
             </view>
             <view v-if="isSystem(cat)" class="cat-lock">
-              <text class="lock-icon">🔒</text>
+              <wd-icon name="lock" size="24rpx" color="var(--text-muted)" />
             </view>
             <template v-else>
               <view class="cat-action edit" @click="onEdit(cat)">
-                <text>✏️</text>
+                <wd-icon name="edit" size="28rpx" color="var(--text-secondary)" />
               </view>
               <view class="cat-action delete" @click="onDelete(cat)">
-                <text>🗑</text>
+                <wd-icon name="delete" size="28rpx" color="var(--color-expense)" />
               </view>
             </template>
           </template>
@@ -76,7 +76,7 @@
 
     <view v-if="!sortMode" class="add-bar">
       <view class="add-btn" @click="onAdd">
-        <text class="add-icon">+</text>
+        <wd-icon name="plus" size="32rpx" color="var(--color-primary)" />
         <text class="add-label">添加分类</text>
       </view>
     </view>
@@ -367,12 +367,6 @@ onShow(() => {
     transform: scale(0.92);
   }
 
-  .back-icon {
-    font-size: 48rpx;
-    color: var(--text-secondary);
-    font-weight: 300;
-    line-height: 1;
-  }
 }
 
 .nav-title {
@@ -484,13 +478,6 @@ onShow(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-
-  text {
-    font-size: 36rpx;
-    color: var(--text-muted);
-    font-weight: 700;
-    line-height: 1;
-  }
 }
 
 .cat-icon {
@@ -538,10 +525,6 @@ onShow(() => {
 }
 
 .cat-lock {
-  .lock-icon {
-    font-size: 28rpx;
-    opacity: 0.5;
-  }
 }
 
 .cat-action {
@@ -556,10 +539,6 @@ onShow(() => {
 
   &:active {
     transform: scale(0.88);
-  }
-
-  text {
-    font-size: 26rpx;
   }
 
   &.delete {
@@ -593,13 +572,6 @@ onShow(() => {
 
   &:active {
     background: var(--bg-overlay);
-  }
-
-  .add-icon {
-    font-size: 36rpx;
-    color: var(--color-primary);
-    font-weight: 500;
-    line-height: 1;
   }
 
   .add-label {

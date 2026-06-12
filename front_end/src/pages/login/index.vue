@@ -3,7 +3,7 @@
     <view class="login-card">
       <view class="login-header">
         <view class="logo-wrapper">
-          <text class="logo-icon">📒</text>
+          <wd-icon name="book" size="72rpx" color="var(--text-inverse)" />
         </view>
         <text class="app-name">LedgerPro</text>
         <text class="app-slogan">极简记账，一秒开始</text>
@@ -148,10 +148,6 @@ const handleDevBypass = () => {
     align-items: center;
     justify-content: center;
     margin: 0 auto 32rpx;
-  }
-
-  .logo-icon {
-    font-size: 60rpx;
   }
 
   .app-name {

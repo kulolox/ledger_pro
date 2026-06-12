@@ -2,7 +2,7 @@
   <view class="page">
     <view class="nav-bar">
       <view class="back-btn" @click="goBack">
-        <text class="back-icon">‹</text>
+        <wd-icon name="left" size="24px" color="var(--text-secondary)" />
       </view>
       <text class="nav-title">导入导出</text>
       <view class="nav-placeholder" />
@@ -36,9 +36,9 @@
       <view class="section">
         <text class="section-label">导出月份</text>
         <view class="month-picker">
-          <view class="month-arrow" @click="prevExportMonth"><text>‹</text></view>
+          <view class="month-arrow" @click="prevExportMonth"><wd-icon name="left" size="24px" color="var(--text-secondary)" /></view>
           <text class="month-text">{{ exportMonthLabel }}</text>
-          <view class="month-arrow" @click="nextExportMonth"><text>›</text></view>
+          <view class="month-arrow" @click="nextExportMonth"><wd-icon name="right" size="24px" color="var(--text-secondary)" /></view>
         </view>
       </view>
 
@@ -47,7 +47,7 @@
         <picker :range="bookNames" :value="bookIndex" @change="onBookChange">
           <view class="picker-row">
             <text>{{ books[bookIndex]?.name || '选择账本' }}</text>
-            <text class="picker-arrow">›</text>
+            <wd-icon name="arrow-down" size="28rpx" color="var(--text-muted)" />
           </view>
         </picker>
       </view>
@@ -78,7 +78,7 @@
         <picker :range="bookNames" :value="bookIndex" @change="onBookChange">
           <view class="picker-row">
             <text>{{ books[bookIndex]?.name || '选择账本' }}</text>
-            <text class="picker-arrow">›</text>
+            <wd-icon name="arrow-down" size="28rpx" color="var(--text-muted)" />
           </view>
         </picker>
       </view>
@@ -87,7 +87,7 @@
         <text class="section-label">选择文件</text>
         <view class="file-area" @click="onChooseFile">
           <view v-if="!selectedFile" class="file-empty">
-            <text class="file-icon">📁</text>
+            <wd-icon name="folder" size="56rpx" color="var(--text-muted)" />
             <text class="file-hint">点击选择文件</text>
             <text class="file-types">支持 CSV / Excel / JSON</text>
           </view>
@@ -360,13 +360,6 @@ onShow(async () => {
   &:active {
     transform: scale(0.92);
   }
-
-  .back-icon {
-    font-size: 48rpx;
-    color: var(--text-secondary);
-    font-weight: 300;
-    line-height: 1;
-  }
 }
 
 .nav-title {
@@ -464,13 +457,6 @@ onShow(async () => {
   &:active {
     transform: scale(0.92);
   }
-
-  text {
-    font-size: 40rpx;
-    color: var(--text-secondary);
-    font-weight: 300;
-    line-height: 1;
-  }
 }
 
 .month-text {
@@ -490,12 +476,6 @@ onShow(async () => {
   padding: 28rpx 24rpx;
   font-size: 28rpx;
   color: var(--text-primary);
-
-  .picker-arrow {
-    font-size: 36rpx;
-    color: var(--text-muted);
-    font-weight: 300;
-  }
 }
 
 .export-btn {
@@ -535,10 +515,6 @@ onShow(async () => {
   flex-direction: column;
   align-items: center;
   gap: 8rpx;
-
-  .file-icon {
-    font-size: 56rpx;
-  }
 
   .file-hint {
     font-size: 28rpx;

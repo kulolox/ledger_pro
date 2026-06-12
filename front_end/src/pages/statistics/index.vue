@@ -3,59 +3,59 @@
     <view class="stats-header">
       <view class="nav-bar">
         <view class="nav-left" @click="goBack">
-          <text class="nav-back">←</text>
+          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
         </view>
         <view class="nav-center">
           <view class="nav-arrow" @click="prevMonth">
-            <text>‹</text>
+            <wd-icon name="left" size="24px" color="var(--text-secondary)" />
           </view>
           <text class="month-label">{{ monthLabel }}</text>
           <view class="nav-arrow" @click="nextMonth">
-            <text>›</text>
+            <wd-icon name="right" size="24px" color="var(--text-secondary)" />
           </view>
         </view>
         <view class="nav-right" />
       </view>
+    </view>
 
-      <view class="month-summary">
-        <view class="summary-item expense-card">
-          <text class="summary-label">支出</text>
-          <text class="summary-value expense"
-            >-{{ formatCents(totalExpense) }}</text
-          >
-        </view>
-        <view class="summary-item income-card">
-          <text class="summary-label">收入</text>
-          <text class="summary-value income"
-            >+{{ formatCents(totalIncome) }}</text
-          >
-        </view>
-        <view class="summary-item balance-card">
-          <text class="summary-label">结余</text>
-          <text
-            class="summary-value"
-            :class="balance >= 0 ? 'income' : 'expense'"
-          >
-            {{ balance >= 0 ? "+" : "-" }}{{ formatCents(Math.abs(balance)) }}
-          </text>
-        </view>
+    <view class="month-summary">
+      <view class="summary-item expense-card">
+        <text class="summary-label">支出</text>
+        <text class="summary-value expense"
+          >-{{ formatCents(totalExpense) }}</text
+        >
       </view>
+      <view class="summary-item income-card">
+        <text class="summary-label">收入</text>
+        <text class="summary-value income"
+          >+{{ formatCents(totalIncome) }}</text
+        >
+      </view>
+      <view class="summary-item balance-card">
+        <text class="summary-label">结余</text>
+        <text
+          class="summary-value"
+          :class="balance >= 0 ? 'income' : 'expense'"
+        >
+          {{ balance >= 0 ? "+" : "-" }}{{ formatCents(Math.abs(balance)) }}
+        </text>
+      </view>
+    </view>
 
-      <view class="tab-bar">
-        <view
-          class="tab-item"
-          :class="{ active: activeTab === 0 }"
-          @click="activeTab = 0"
-        >
-          <text>支出</text>
-        </view>
-        <view
-          class="tab-item"
-          :class="{ active: activeTab === 1 }"
-          @click="activeTab = 1"
-        >
-          <text>收入</text>
-        </view>
+    <view class="tab-bar">
+      <view
+        class="tab-item"
+        :class="{ active: activeTab === 0 }"
+        @click="activeTab = 0"
+      >
+        <text>支出</text>
+      </view>
+      <view
+        class="tab-item"
+        :class="{ active: activeTab === 1 }"
+        @click="activeTab = 1"
+      >
+        <text>收入</text>
       </view>
     </view>
 
@@ -91,7 +91,7 @@
         v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
         class="empty-state"
       >
-        <text class="empty-icon">📊</text>
+        <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
         <text class="empty-title">本月暂无数据</text>
       </view>
 
@@ -341,21 +341,24 @@ onShow(async () => {
 
 <style lang="scss" scoped>
 .stats-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  overflow: hidden;
 }
 
 .stats-header {
-  padding: 0 32rpx 28rpx;
+  padding: 0 32rpx;
+  background: var(--bg-secondary);
+  border-bottom: 1rpx solid var(--border-primary);
 }
 
 .nav-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 64rpx 1fr 64rpx;
   align-items: center;
-  justify-content: space-between;
-  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 28rpx;
+  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 20rpx;
 }
 
 .nav-left {
@@ -365,59 +368,52 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   box-shadow: var(--shadow-sm);
-
-  .nav-back {
-    font-size: 32rpx;
-    color: var(--text-secondary);
-    line-height: 1;
-  }
+  flex-shrink: 0;
 }
 
 .nav-center {
   display: flex;
   align-items: center;
-  gap: 0;
+  justify-content: center;
 }
 
 .nav-arrow {
-  width: 64rpx;
-  height: 64rpx;
+  width: 44rpx;
+  height: 44rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-sm);
+  border-radius: 12rpx;
+  background: var(--bg-primary);
+  flex-shrink: 0;
 
   &:active {
-    transform: scale(0.92);
-  }
-
-  text {
-    font-size: 48rpx;
-    color: var(--text-secondary);
-    font-weight: 300;
-    line-height: 1;
+    opacity: 0.6;
   }
 }
 
 .month-label {
-  font-size: 40rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: var(--text-primary);
-  min-width: 320rpx;
   text-align: center;
+  letter-spacing: 1rpx;
+  flex-shrink: 0;
 }
 
 .nav-right {
   width: 64rpx;
+  height: 64rpx;
+  flex-shrink: 0;
 }
 
 .month-summary {
   display: flex;
   gap: 16rpx;
+  padding: 16rpx 32rpx 16rpx;
+  background: var(--bg-primary);
 }
 
 .summary-item {
@@ -453,7 +449,7 @@ onShow(async () => {
 
 .tab-bar {
   display: flex;
-  margin-top: 28rpx;
+  margin: 0 32rpx 16rpx;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   padding: 6rpx;
@@ -479,8 +475,9 @@ onShow(async () => {
 
 .stats-body {
   flex: 1;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 0 20rpx 40rpx;
+  padding: 0 20rpx 60rpx;
 }
 
 .chart-section {
@@ -563,10 +560,6 @@ onShow(async () => {
   flex-direction: column;
   align-items: center;
   padding: 240rpx 0;
-
-  .empty-icon {
-    font-size: 72rpx;
-  }
 
   .empty-title {
     font-size: 30rpx;

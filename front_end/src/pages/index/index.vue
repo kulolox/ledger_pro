@@ -3,44 +3,57 @@
     <view class="home-header">
       <view class="nav-bar">
         <view class="menu-btn" @click="showSidebar = true">
-          <text class="menu-icon">☰</text>
+          <wd-icon name="menu" size="32rpx" color="var(--text-secondary)" />
         </view>
         <view class="month-nav">
           <view class="nav-arrow" @click="prevMonth">
-            <text>‹</text>
+            <wd-icon
+              name="left"
+              size="24px"
+              color="var(--text-secondary)"
+            />
           </view>
           <text class="month-label">{{ monthLabel }}</text>
           <view class="nav-arrow" @click="nextMonth">
-            <text>›</text>
+            <wd-icon
+              name="right"
+              size="24px"
+              color="var(--text-secondary)"
+            />
           </view>
         </view>
         <view class="stats-btn" @click="goStats">
-          <text class="stats-icon">📊</text>
+          <wd-icon
+            name="dashboard"
+            size="32rpx"
+            color="var(--text-secondary)"
+          />
         </view>
       </view>
-      <view class="month-summary">
-        <view class="summary-item expense-card">
-          <text class="summary-label">支出</text>
-          <text class="summary-value expense"
-            >-{{ formatCents(monthExpense) }}</text
-          >
-        </view>
-        <view class="summary-item income-card">
-          <text class="summary-label">收入</text>
-          <text class="summary-value income"
-            >+{{ formatCents(monthIncome) }}</text
-          >
-        </view>
-        <view class="summary-item balance-card">
-          <text class="summary-label">结余</text>
-          <text
-            class="summary-value"
-            :class="monthBalance >= 0 ? 'income' : 'expense'"
-          >
-            {{ monthBalance >= 0 ? "+" : "-"
-            }}{{ formatCents(Math.abs(monthBalance)) }}
-          </text>
-        </view>
+    </view>
+
+    <view class="month-summary">
+      <view class="summary-item expense-card">
+        <text class="summary-label">支出</text>
+        <text class="summary-value expense"
+          >-{{ formatCents(monthExpense) }}</text
+        >
+      </view>
+      <view class="summary-item income-card">
+        <text class="summary-label">收入</text>
+        <text class="summary-value income"
+          >+{{ formatCents(monthIncome) }}</text
+        >
+      </view>
+      <view class="summary-item balance-card">
+        <text class="summary-label">结余</text>
+        <text
+          class="summary-value"
+          :class="monthBalance >= 0 ? 'income' : 'expense'"
+        >
+          {{ monthBalance >= 0 ? "+" : "-"
+          }}{{ formatCents(Math.abs(monthBalance)) }}
+        </text>
       </view>
     </view>
 
@@ -54,7 +67,7 @@
     >
       <view v-if="dayGroups.length === 0" class="empty-state">
         <view class="empty-icon-wrapper">
-          <text class="empty-icon">📒</text>
+          <wd-icon name="book" size="72rpx" color="var(--text-label)" />
         </view>
         <text class="empty-title">暂无账单</text>
         <text class="empty-hint">点击右下角 + 开始记账</text>
@@ -83,13 +96,19 @@
         >
           <view
             class="tx-item"
-            :class="{ 'tx-item-last': idx === day.items.length - 1 }"
+            :class="{
+              'tx-item-last': idx === day.items.length - 1,
+              'tx-item-pending': tx.sync_status === 'pending',
+              'tx-item-failed': tx.sync_status === 'failed',
+            }"
             @click="onEditTx(tx)"
           >
             <view class="tx-left">
               <view
                 class="tx-icon"
-                :style="{ background: getCategoryColor(tx.type, tx.category_id) }"
+                :style="{
+                  background: getCategoryColor(tx.type, tx.category_id),
+                }"
               >
                 <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
               </view>
@@ -104,8 +123,15 @@
               <text class="tx-amount" :class="amountClass(tx.type)">
                 {{ formatTxAmount(tx) }}
               </text>
-              <text v-if="tx.sync_status === 'pending'" class="tx-sync-badge"
-                >○</text
+              <text
+                v-if="tx.sync_status === 'pending'"
+                class="tx-sync-badge tx-sync-pending"
+                >待同步</text
+              >
+              <text
+                v-if="tx.sync_status === 'failed'"
+                class="tx-sync-badge tx-sync-failed"
+                >同步失败</text
               >
             </view>
           </view>
@@ -124,7 +150,7 @@
     </scroll-view>
 
     <view class="fab" @click="onAdd">
-      <text class="fab-icon">+</text>
+      <wd-icon name="plus" size="48rpx" color="var(--text-inverse)" />
     </view>
 
     <TransactionEditor
@@ -161,10 +187,22 @@ import {
   type LocalTransaction,
 } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
-import { isLoggedIn, getToken, logout, getUserInfo, getCurrentBookId, setCurrentBookId } from "@/utils/storage";
+import {
+  isLoggedIn,
+  getToken,
+  logout,
+  getUserInfo,
+  getCurrentBookId,
+  setCurrentBookId,
+} from "@/utils/storage";
 import { pullFromServer, scheduleSync, stopSync, fullSync } from "@/utils/sync";
 import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
-import { getAccountBooks, createAccountBook, type UserInfo, type AccountBook } from "@/api/common";
+import {
+  getAccountBooks,
+  createAccountBook,
+  type UserInfo,
+  type AccountBook,
+} from "@/api/common";
 
 const {
   transactions,
@@ -174,7 +212,8 @@ const {
   getByDate,
 } = useTransactions();
 
-const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } = useCategories();
+const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
+  useCategories();
 
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
@@ -206,10 +245,16 @@ const dayGroups = computed(() => {
 
   for (const [date, group] of map) {
     if (date.startsWith(prefix)) {
-      const filtered = group.items.filter(t => t.book_id === currentBookId.value);
+      const filtered = group.items.filter(
+        (t) => t.book_id === currentBookId.value,
+      );
       if (filtered.length === 0) continue;
-      const income = filtered.filter(t => t.type === 1).reduce((s, t) => s + t.amount, 0);
-      const expense = filtered.filter(t => t.type === 0).reduce((s, t) => s + t.amount, 0);
+      const income = filtered
+        .filter((t) => t.type === 1)
+        .reduce((s, t) => s + t.amount, 0);
+      const expense = filtered
+        .filter((t) => t.type === 0)
+        .reduce((s, t) => s + t.amount, 0);
       result.push({ date, income, expense, items: filtered });
     }
   }
@@ -388,29 +433,30 @@ onShow(async () => {
 
 <style lang="scss" scoped>
 .home-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
   background: var(--bg-primary);
+  overflow: hidden;
 }
 
 .home-header {
-  padding: 0 32rpx 36rpx;
+  padding: 0 32rpx;
+  background: var(--bg-secondary);
+  border-bottom: 1rpx solid var(--border-primary);
 }
 
 .nav-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 64rpx 1fr 64rpx;
   align-items: center;
-  justify-content: space-between;
-  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 40rpx;
+  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 20rpx;
 }
 
 .month-nav {
   display: flex;
   align-items: center;
-  gap: 0;
-  flex: 1;
   justify-content: center;
 }
 
@@ -421,51 +467,35 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
   transition: transform 0.15s var(--spring-default);
 
   &:active {
     transform: scale(0.92);
-  }
-
-  .menu-icon {
-    font-size: 32rpx;
-    color: var(--text-secondary);
-    line-height: 1;
   }
 }
 
 .nav-arrow {
-  width: 64rpx;
-  height: 64rpx;
+  width: 44rpx;
+  height: 44rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-sm);
+  border-radius: 12rpx;
+  background: var(--bg-primary);
   flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default);
 
   &:active {
-    transform: scale(0.92);
-  }
-
-  text {
-    font-size: 48rpx;
-    color: var(--text-secondary);
-    font-weight: 300;
-    line-height: 1;
+    opacity: 0.6;
   }
 }
 
 .month-label {
-  font-size: 40rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: var(--text-primary);
-  min-width: 260rpx;
   text-align: center;
   letter-spacing: 1rpx;
   flex-shrink: 0;
@@ -478,7 +508,7 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
   transition: transform 0.15s var(--spring-default);
@@ -486,16 +516,13 @@ onShow(async () => {
   &:active {
     transform: scale(0.92);
   }
-
-  .stats-icon {
-    font-size: 32rpx;
-    line-height: 1;
-  }
 }
 
 .month-summary {
   display: flex;
   gap: 16rpx;
+  padding: 16rpx 32rpx 20rpx;
+  background: var(--bg-primary);
 }
 
 .summary-item {
@@ -533,7 +560,13 @@ onShow(async () => {
 .transaction-list {
   box-sizing: border-box;
   flex: 1;
-  padding: 0 20rpx 160rpx;
+  min-height: 0;
+  padding: 0 20rpx 60rpx;
+  :deep() {
+    .uni-scroll-view {
+      border-radius: var(--radius-lg);
+    }
+  }
 }
 
 .empty-state {
@@ -551,10 +584,6 @@ onShow(async () => {
     align-items: center;
     justify-content: center;
     box-shadow: var(--shadow-md);
-  }
-
-  .empty-icon {
-    font-size: 72rpx;
   }
 
   .empty-title {
@@ -701,9 +730,32 @@ onShow(async () => {
   }
 }
 
+.tx-item-pending {
+  border-left: 6rpx solid #ff9500;
+  padding-left: 18rpx;
+}
+
+.tx-item-failed {
+  border-left: 6rpx solid var(--color-expense);
+  padding-left: 18rpx;
+}
+
 .tx-sync-badge {
-  font-size: 16rpx;
-  color: var(--text-muted);
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 4rpx 10rpx;
+  border-radius: var(--radius-xs);
+  line-height: 1.4;
+
+  &.tx-sync-pending {
+    color: #ff9500;
+    background: rgba(255, 149, 0, 0.1);
+  }
+
+  &.tx-sync-failed {
+    color: var(--color-expense);
+    background: rgba(255, 59, 48, 0.1);
+  }
 }
 
 .swipe-delete-btn {
@@ -723,7 +775,7 @@ onShow(async () => {
 
 .list-bottom {
   text-align: center;
-  padding: 56rpx 0 80rpx;
+  padding: 32rpx 0 60rpx;
 
   .bottom-divider {
     width: 80rpx;
@@ -760,13 +812,6 @@ onShow(async () => {
   &:active {
     transform: scale(0.88);
     box-shadow: var(--shadow-fab-active);
-  }
-
-  .fab-icon {
-    font-size: 56rpx;
-    color: var(--text-inverse);
-    line-height: 1;
-    font-weight: 300;
   }
 }
 </style>
