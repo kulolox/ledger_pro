@@ -46,7 +46,6 @@ mvn spotless:apply               # 代码格式化
 - **页面路由**: `src/pages.json` 管理，easycom 自动扫描组件
 - **当前页面**: `pages/index/index` (首页)、`pages/login/index` (登录)、`pages/statistics/index` (统计)、`pages/category/index` (分类管理)、`pages/import-export/index` (导入导出)
 - **拖拽排序**: `sortablejs` 库，分类管理页拖拽排序
-- **请求去重**: `sync.ts` 的 `pullFromServer` 和 `categoryStore.ts` 的 `loadCategories`/`refreshCategories` 用飞行中 Promise 去重，防止 `onShow` 双重触发导致重复请求
 
 ### 后端
 
@@ -86,7 +85,6 @@ mvn spotless:apply               # 代码格式化
 
 ### 关键约定
 
-- 不要做多余的事
 - **金额存储**: 一律用 `INT` 存储"分"（避免浮点精度问题），前后端传输时注意 ×100/÷100 转换
 - **API 规范**: RESTful，JSON，版本前缀 `/api/v1/`，JWT Bearer token
 - **多账本隔离**: 交易数据通过 `bookId` 参数隔离，分类全局共享不绑账本
@@ -102,6 +100,7 @@ mvn spotless:apply               # 代码格式化
 - **排序**: `sort_order` 字段，`listAll()` 按 `sort_order ASC` 排序，`PUT /categories/reorder` 批量更新排序
 - **可见性**: `visible` 字段，`visible=0` 的分类在记账页不显示，分类管理页半透明标示
 - **数据初始化**: `DataInitializer` 在空表时插入 16 个系统分类（10 支出 + 6 收入），ID 与前端 `DEFAULT_CATEGORIES` 一致
+- **离线兜底**: `DEFAULT_CATEGORIES` 在服务端获取失败时作 fallback，正常流程走 `categoryStore.loadCategories()` + ETag 协商缓存
 
 ## 规范
 
@@ -150,7 +149,3 @@ pushDeletes → pushPending → pullFromServer
 - 前端 `dayGroups` 计算属性按 `currentBookId` 过滤
 - `currentBookId` 持久化到 storage，下次启动恢复
 - 记账时 `book_id` 取自当前选中账本
-
-### 前移的 status quo
-
-分类从硬编码迁移到服务端：`DEFAULT_CATEGORIES` 仅作离线兜底，正常流程通过 `categoryStore.loadCategories()` 从服务端获取，ETag 协商缓存减少传输。
