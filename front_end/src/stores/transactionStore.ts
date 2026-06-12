@@ -128,6 +128,12 @@ export function getPendingDeletes(): LocalTransaction[] {
   return transactions.value.filter((t) => t.sync_status === "pending" && t.deleted === 1 && t.server_id != null);
 }
 
+export function clearTransactions() {
+  transactions.value = [];
+  nextLocalId = -1;
+  uni.removeStorageSync(STORAGE_KEY);
+}
+
 export function useTransactions() {
   return {
     transactions,
@@ -139,5 +145,6 @@ export function useTransactions() {
     getByDate: getTransactionsByDate,
     getPending: getPendingTransactions,
     getPendingDeletes,
+    clear: clearTransactions,
   };
 }

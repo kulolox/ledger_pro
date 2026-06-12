@@ -193,6 +193,16 @@ export function useCategories() {
     return cats.find((c) => c.id === categoryId)?.icon || "?";
   };
 
+  const clearCategories = () => {
+    categories.value = {
+      0: [...(DEFAULT_CATEGORIES[0] || [])],
+      1: [...(DEFAULT_CATEGORIES[1] || [])],
+    };
+    uni.removeStorageSync(CATEGORY_CACHE_KEY);
+    uni.removeStorageSync(CATEGORY_ETAG_KEY);
+    loadPromise = null;
+  };
+
   return {
     categories,
     loadCategories,
@@ -205,5 +215,6 @@ export function useCategories() {
     getCategoryName,
     getCategoryColor,
     getCategoryIcon,
+    clear: clearCategories,
   };
 }

@@ -16,6 +16,7 @@ import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.AuthUtils;
 import com.example.back_end.utils.JwtUtils;
 import java.time.LocalDateTime;
+import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,16 +45,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             throw new BizException("邮箱已注册");
         }
 
-        // 创建User实例,并写入数据
         User user = new User();
         user.setEmail(req.email());
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         user.setNickname(req.nickname() != null ? req.nickname() : "");
-        // 保存user
         save(user);
 
-        // 创建AccountBook实例,并写入数据
         AccountBook book = new AccountBook();
+        book.setId(generateBookId());
         book.setName("日常账本");
         book.setOwnerId(user.getId());
         book.setType(0);
@@ -69,6 +68,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getEmail());
         return new LoginResponse(token, refreshToken, toUserInfo(user));
+    }
+
+    private Long generateBookId() {
+        long id;
+        do {
+            id = ThreadLocalRandom.current().nextLong(10000000L, 100000000000L);
+        } while (accountBookMapper.selectById(id) != null);
+        return id;
     }
 
     public LoginResponse login(String email, String rawPassword) {

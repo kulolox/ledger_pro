@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 @TableName("account_book")
 public class AccountBook {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     private String name = "";

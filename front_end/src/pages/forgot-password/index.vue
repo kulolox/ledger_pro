@@ -13,6 +13,7 @@
             v-model="formData.email"
             class="form-input"
             placeholder="请输入注册邮箱"
+            type="mail"
             clearable
           />
         </view>
@@ -22,6 +23,7 @@
             <wd-input
               v-model="formData.code"
               class="form-input code-input"
+              type="inter"
               placeholder="请输入验证码"
               clearable
             />
@@ -41,7 +43,6 @@
           <wd-input
             v-model="formData.new_password"
             class="form-input"
-            type="password"
             show-password
             placeholder="请设置新密码（至少6位）"
             clearable
@@ -95,8 +96,7 @@ const handleSendCode = async () => {
         clearInterval(timer);
       }
     }, 1000);
-  } catch (e) {
-    console.error("发送验证码失败:", e);
+  } catch (_e) {
   } finally {
     sending.value = false;
   }
@@ -127,8 +127,7 @@ const handleReset = async () => {
     setTimeout(() => {
       uni.navigateBack();
     }, 800);
-  } catch (e) {
-    console.error("重置密码失败:", e);
+  } catch (_e) {
   } finally {
     loading.value = false;
   }

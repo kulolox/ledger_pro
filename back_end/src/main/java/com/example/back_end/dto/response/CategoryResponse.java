@@ -1,6 +1,7 @@
 package com.example.back_end.dto.response;
 
 import com.example.back_end.entity.Category;
+import com.example.back_end.entity.UserCategory;
 
 public record CategoryResponse(
         Long id,
@@ -12,6 +13,19 @@ public record CategoryResponse(
         Integer is_system,
         Integer sort_order,
         Integer visible) {
+    public static CategoryResponse from(UserCategory uc) {
+        return new CategoryResponse(
+                uc.getId(),
+                uc.getName(),
+                uc.getType(),
+                uc.getIcon(),
+                uc.getColor(),
+                uc.getParentId(),
+                uc.getIsSystem(),
+                uc.getSortOrder(),
+                uc.getVisible());
+    }
+
     public static CategoryResponse from(Category c) {
         return new CategoryResponse(
                 c.getId(),
@@ -22,6 +36,6 @@ public record CategoryResponse(
                 c.getParentId(),
                 c.getIsSystem(),
                 c.getSortOrder(),
-                c.getVisible());
+                1);
     }
 }

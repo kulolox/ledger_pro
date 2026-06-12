@@ -71,6 +71,10 @@ public class JwtUtils {
         }
     }
 
+    public Date getExpiration(String token) {
+        return parseClaims(token).getExpiration();
+    }
+
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)

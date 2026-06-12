@@ -30,7 +30,6 @@
           <wd-input
             v-model="formData.password"
             class="form-input"
-            type="password"
             show-password
             placeholder="请设置密码（至少6位）"
             clearable
@@ -41,7 +40,6 @@
           <wd-input
             v-model="confirmPassword"
             class="form-input"
-            type="password"
             show-password
             placeholder="请再次输入密码"
             clearable

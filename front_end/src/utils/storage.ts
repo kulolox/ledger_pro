@@ -53,8 +53,21 @@ export const isLoggedIn = (): boolean => {
   return !!getToken();
 };
 
+const ALL_KEYS = [
+  TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+  USER_KEY,
+  BOOK_KEY,
+  "local_transactions",
+  "category_cache",
+  "category_etag",
+  "sync_last_at",
+];
+
+export const clearAllData = (): void => {
+  ALL_KEYS.forEach((key) => uni.removeStorageSync(key));
+};
+
 export const logout = (): void => {
-  removeToken();
-  removeRefreshToken();
-  removeUserInfo();
+  clearAllData();
 };

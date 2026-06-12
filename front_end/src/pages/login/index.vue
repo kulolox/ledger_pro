@@ -24,7 +24,6 @@
           <wd-input
             v-model="formData.password"
             class="form-input"
-            type="password"
             show-password
             placeholder="请输入密码"
             clearable

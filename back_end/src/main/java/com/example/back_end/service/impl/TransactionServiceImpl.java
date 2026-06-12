@@ -8,11 +8,14 @@ import com.example.back_end.dto.request.BatchDeleteRequest;
 import com.example.back_end.dto.request.TransactionRequest;
 import com.example.back_end.dto.response.TransactionListResponse;
 import com.example.back_end.dto.response.TransactionResponse;
+import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.Transaction;
 import com.example.back_end.exception.BizException;
+import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.TransactionMapper;
-import com.example.back_end.service.ICategoryService;
 import com.example.back_end.service.ITransactionService;
+import com.example.back_end.service.IUserCategoryService;
+import com.example.back_end.utils.AuthUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
@@ -31,7 +34,8 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,54 +50,102 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final ICategoryService categoryService;
+    private final IUserCategoryService userCategoryService;
+    private final AccountBookMapper accountBookMapper;
+    private final CacheManager cacheManager;
 
-    public TransactionServiceImpl(ICategoryService categoryService) {
-        this.categoryService = categoryService;
+    public TransactionServiceImpl(IUserCategoryService userCategoryService, AccountBookMapper accountBookMapper, CacheManager cacheManager) {
+        this.userCategoryService = userCategoryService;
+        this.accountBookMapper = accountBookMapper;
+        this.cacheManager = cacheManager;
     }
 
-    @CacheEvict(value = "transactions", allEntries = true)
+    private void validateBookOwnership(Long bookId) {
+        var book = accountBookMapper.selectById(bookId);
+        if (book == null || !book.getOwnerId().equals(AuthUtils.getCurrentUserId())) {
+            throw new BizException("无权访问该账本");
+        }
+    }
+
+    private List<Long> getOwnedBookIds() {
+        return accountBookMapper.selectList(
+                        new LambdaQueryWrapper<AccountBook>()
+                                .eq(AccountBook::getOwnerId, AuthUtils.getCurrentUserId()))
+                .stream()
+                .map(AccountBook::getId)
+                .toList();
+    }
+
+    private void evictTransactionCache(Long bookId) {
+        Cache cache = cacheManager.getCache("transactions");
+        if (cache != null) {
+            Long userId = AuthUtils.getCurrentUserId();
+            String month = java.time.YearMonth.now().toString();
+            cache.evict(userId + "::" + bookId + "::" + month);
+        }
+    }
+
     @Transactional
     public TransactionResponse create(TransactionRequest req) {
+        validateBookOwnership(req.book_id());
         Transaction tx = toEntity(req);
         save(tx);
+        evictTransactionCache(req.book_id());
         return TransactionResponse.from(tx);
     }
 
-    @CacheEvict(value = "transactions", allEntries = true)
     @Transactional
     public Map<String, Object> createBatch(BatchCreateRequest body) {
         if (body.items() == null || body.items().isEmpty()) {
             throw new BizException("items 不能为空");
+        }
+        var bookIds = new java.util.HashSet<Long>();
+        for (var item : body.items()) {
+            validateBookOwnership(item.book_id());
+            bookIds.add(item.book_id());
         }
         List<Transaction> txs = new ArrayList<>();
         for (TransactionRequest params : body.items()) {
             txs.add(toEntity(params));
         }
         saveBatch(txs);
+        bookIds.forEach(this::evictTransactionCache);
         List<TransactionResponse> list =
                 txs.stream().map(TransactionResponse::from).toList();
         return Map.of("list", list, "count", list.size());
     }
 
-    @CacheEvict(value = "transactions", allEntries = true)
     @Transactional
     public int batchDelete(BatchDeleteRequest body) {
         if (body.ids() == null || body.ids().isEmpty()) {
             throw new BizException("ids 不能为空");
         }
+        List<Long> ownedBookIds = getOwnedBookIds();
+        if (ownedBookIds.isEmpty()) {
+            throw new BizException("无权操作");
+        }
+        List<Transaction> txs = lambdaQuery().in(Transaction::getId, body.ids()).list();
+        var affectedBookIds = new java.util.HashSet<Long>();
+        for (Transaction tx : txs) {
+            if (ownedBookIds.contains(tx.getBookId())) {
+                affectedBookIds.add(tx.getBookId());
+            }
+        }
         UpdateWrapper<Transaction> wrapper = new UpdateWrapper<>();
-        wrapper.in("id", body.ids()).set("deleted", 1).set("updated_at", LocalDateTime.now());
+        wrapper.in("id", body.ids()).in("book_id", ownedBookIds).set("deleted", 1).set("updated_at", LocalDateTime.now());
         update(wrapper);
+        affectedBookIds.forEach(this::evictTransactionCache);
         return body.ids().size();
     }
 
-    @Cacheable(value = "transactions", key = "#bookId + '::' + #month", unless = "#result == null")
+    @Cacheable(value = "transactions", key = "T(com.example.back_end.utils.AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month", unless = "#result == null")
     public TransactionListResponse list(Long bookId, String month) {
+        validateBookOwnership(bookId);
         return queryTransactions(bookId, month);
     }
 
     public void exportTransactions(Long bookId, String month, String format, HttpServletResponse response) {
+        validateBookOwnership(bookId);
         TransactionListResponse result = queryTransactions(bookId, month);
         List<TransactionResponse> txs = result.list();
         Map<Long, String> categoryMap = categoryNameMap();
@@ -115,9 +167,9 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         }
     }
 
-    @CacheEvict(value = "transactions", allEntries = true)
     @Transactional
     public Map<String, Object> importTransactions(Long bookId, MultipartFile file, String format) {
+        validateBookOwnership(bookId);
         try {
             Map<Long, String> categoryMap = categoryNameMap();
             Map<String, Long> nameToId = categoryMap.entrySet().stream()
@@ -153,6 +205,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             }
 
             saveBatch(txs);
+            evictTransactionCache(bookId);
             return Map.of("imported", txs.size(), "errors", errors, "total", items.size());
         } catch (BizException e) {
             throw e;
@@ -178,7 +231,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     }
 
     private Map<Long, String> categoryNameMap() {
-        return categoryService.listAll().stream().collect(Collectors.toMap(c -> c.id(), c -> c.name(), (a, b) -> a));
+        return userCategoryService.listAll().stream().collect(Collectors.toMap(c -> c.id(), c -> c.name(), (a, b) -> a));
     }
 
     private String formatType(Integer type) {

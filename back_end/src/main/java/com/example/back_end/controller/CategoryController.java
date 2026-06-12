@@ -2,7 +2,7 @@ package com.example.back_end.controller;
 
 import com.example.back_end.dto.request.CategoryRequest;
 import com.example.back_end.dto.response.CategoryResponse;
-import com.example.back_end.service.ICategoryService;
+import com.example.back_end.service.IUserCategoryService;
 import com.example.back_end.utils.Result;
 import java.util.List;
 import java.util.Map;
@@ -13,16 +13,16 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/categories")
 public class CategoryController {
-    private final ICategoryService categoryService;
+    private final IUserCategoryService userCategoryService;
 
-    public CategoryController(ICategoryService categoryService) {
-        this.categoryService = categoryService;
+    public CategoryController(IUserCategoryService userCategoryService) {
+        this.userCategoryService = userCategoryService;
     }
 
     @GetMapping
     public ResponseEntity<Result<List<CategoryResponse>>> list(
             @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
-        List<CategoryResponse> categories = categoryService.listAll();
+        List<CategoryResponse> categories = userCategoryService.listAll();
         String etag = computeEtag(categories);
         if (etag.equals(ifNoneMatch)) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build();
@@ -32,23 +32,23 @@ public class CategoryController {
 
     @PostMapping
     public Result<CategoryResponse> create(@RequestBody CategoryRequest req) {
-        return Result.ok("添加成功", categoryService.create(req));
+        return Result.ok("添加成功", userCategoryService.create(req));
     }
 
     @PutMapping("/{id}")
     public Result<CategoryResponse> update(@PathVariable Long id, @RequestBody CategoryRequest req) {
-        return Result.ok("修改成功", categoryService.update(id, req));
+        return Result.ok("修改成功", userCategoryService.update(id, req));
     }
 
     @PutMapping("/reorder")
     public Result<Void> reorder(@RequestBody Map<String, List<Long>> body) {
-        categoryService.reorder(body.get("ids"));
+        userCategoryService.reorder(body.get("ids"));
         return Result.ok();
     }
 
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        categoryService.delete(id);
+        userCategoryService.delete(id);
         return Result.ok("删除成功", null);
     }
 

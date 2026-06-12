@@ -46,6 +46,10 @@ export const refreshToken = (data: { refresh_token: string }) => {
   );
 };
 
+export const logoutApi = (data: { refresh_token: string }) => {
+  return request.post("/api/v1/auth/logout", data);
+};
+
 // ========== 账本相关 ==========
 
 export const getAccountBooks = () => {

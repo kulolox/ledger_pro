@@ -14,11 +14,21 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
+  profiles:
+    active: local
   datasource:
     url: jdbc:mysql://localhost:3306/ledger_pro?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: 123456
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
@@ -32,7 +42,7 @@ mybatis-plus:
 
 app:
   jwt:
-    secret: ledger-pro-jwt-secret-key-2026-must-be-32bytes
+    secret: ${JWT_SECRET:}
 
 server:
   port: 8080

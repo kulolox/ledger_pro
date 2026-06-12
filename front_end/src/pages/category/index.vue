@@ -10,8 +10,12 @@
         <text class="nav-title">分类管理</text>
       </template>
       <template #right>
-        <view class="nav-sort" :class="{ active: sortMode }" @click="sortMode = !sortMode">
-          <text>{{ sortMode ? '完成' : '排序' }}</text>
+        <view
+          class="nav-sort"
+          :class="{ active: sortMode }"
+          @click="sortMode = !sortMode"
+        >
+          <text>{{ sortMode ? "完成" : "排序" }}</text>
         </view>
       </template>
     </NavBar>
@@ -54,23 +58,37 @@
           </view>
           <view class="cat-info">
             <text class="cat-name">{{ cat.name }}</text>
-            <text v-if="!sortMode && cat.visible === 0" class="cat-hidden-tag">已隐藏</text>
+            <text v-if="!sortMode && cat.visible === 0" class="cat-hidden-tag"
+              >已隐藏</text
+            >
           </view>
         </view>
         <view class="cat-right">
           <template v-if="!sortMode">
             <view class="cat-action visibility" @click="onToggleVisible(cat)">
-              <wd-icon :name="cat.visible === 0 ? 'eye-invisible' : 'eye'" size="28rpx" color="var(--text-muted)" />
+              <wd-icon
+                :name="cat.visible === 0 ? 'eye-invisible' : 'eye'"
+                size="28rpx"
+                color="var(--text-muted)"
+              />
             </view>
             <view v-if="isSystem(cat)" class="cat-lock">
               <wd-icon name="lock" size="24rpx" color="var(--text-muted)" />
             </view>
             <template v-else>
               <view class="cat-action edit" @click="onEdit(cat)">
-                <wd-icon name="edit" size="28rpx" color="var(--text-secondary)" />
+                <wd-icon
+                  name="edit"
+                  size="28rpx"
+                  color="var(--text-secondary)"
+                />
               </view>
               <view class="cat-action delete" @click="onDelete(cat)">
-                <wd-icon name="delete" size="28rpx" color="var(--color-expense)" />
+                <wd-icon
+                  name="delete"
+                  size="28rpx"
+                  color="var(--color-expense)"
+                />
               </view>
             </template>
           </template>
@@ -185,10 +203,26 @@ function isSystem(cat: Category): boolean {
 }
 
 const presetColors = [
-  "#ff6b35", "#5b9bd5", "#ff6b8a", "#a29bfe", "#fdcb6e",
-  "#00b894", "#e17055", "#00cec9", "#fd79a8", "#636e72",
-  "#ff3b30", "#34c759", "#007aff", "#ff9500", "#af52de",
-  "#8e44ad", "#2ecc71", "#e74c3c", "#1abc9c", "#f39c12",
+  "#ff6b35",
+  "#5b9bd5",
+  "#ff6b8a",
+  "#a29bfe",
+  "#fdcb6e",
+  "#00b894",
+  "#e17055",
+  "#00cec9",
+  "#fd79a8",
+  "#636e72",
+  "#ff3b30",
+  "#34c759",
+  "#007aff",
+  "#ff9500",
+  "#af52de",
+  "#8e44ad",
+  "#2ecc71",
+  "#e74c3c",
+  "#1abc9c",
+  "#f39c12",
 ];
 
 let sortableInstance: Sortable | null = null;
@@ -208,7 +242,11 @@ watch(sortMode, async (val) => {
         animation: 150,
         ghostClass: "sort-ghost",
         onEnd: (evt) => {
-          if (evt.oldIndex !== undefined && evt.newIndex !== undefined && evt.oldIndex !== evt.newIndex) {
+          if (
+            evt.oldIndex !== undefined &&
+            evt.newIndex !== undefined &&
+            evt.oldIndex !== evt.newIndex
+          ) {
             const list = [...categoryList.value];
             const [moved] = list.splice(evt.oldIndex, 1);
             list.splice(evt.newIndex, 0, moved);
@@ -339,10 +377,11 @@ onShow(() => {
 
 <style lang="scss" scoped>
 .category-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  overflow: hidden;
 }
 
 .nav-back {
@@ -389,7 +428,6 @@ onShow(() => {
 
 .tab-bar {
   display: flex;
-  margin: 0 32rpx 24rpx;
   background: var(--bg-secondary);
   border-radius: var(--radius-md);
   padding: 6rpx;
@@ -425,7 +463,7 @@ onShow(() => {
   flex: 1;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: 0 32rpx 24rpx;
+  padding: 24rpx 32rpx 24rpx;
 }
 
 .empty-state {

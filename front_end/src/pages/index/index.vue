@@ -19,7 +19,11 @@
       </template>
       <template #right>
         <view class="stats-btn" @click="goStats">
-          <wd-icon name="dashboard" size="32rpx" color="var(--text-secondary)" />
+          <wd-icon
+            name="dashboard"
+            size="32rpx"
+            color="var(--text-secondary)"
+          />
         </view>
       </template>
     </NavBar>
@@ -81,58 +85,50 @@
           </view>
         </view>
 
-        <wd-swipe-action
+        <view
           v-for="(tx, idx) in day.items"
           :key="tx.id"
-          @click="onSwipeAction($event, tx)"
+          class="tx-item"
+          :class="{
+            'tx-item-last': idx === day.items.length - 1,
+            'tx-item-pending': tx.sync_status === 'pending',
+            'tx-item-failed': tx.sync_status === 'failed',
+          }"
+          @click="onEditTx(tx)"
+          @longpress="onLongPressDelete(tx)"
         >
-          <view
-            class="tx-item"
-            :class="{
-              'tx-item-last': idx === day.items.length - 1,
-              'tx-item-pending': tx.sync_status === 'pending',
-              'tx-item-failed': tx.sync_status === 'failed',
-            }"
-            @click="onEditTx(tx)"
-          >
-            <view class="tx-left">
-              <view
-                class="tx-icon"
-                :style="{
-                  background: getCategoryColor(tx.type, tx.category_id),
-                }"
-              >
-                <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
-              </view>
-              <view class="tx-info">
-                <text class="tx-category">{{
-                  getCategoryName(tx.type, tx.category_id)
-                }}</text>
-                <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
-              </view>
+          <view class="tx-left">
+            <view
+              class="tx-icon"
+              :style="{
+                background: getCategoryColor(tx.type, tx.category_id),
+              }"
+            >
+              <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
             </view>
-            <view class="tx-right">
-              <text class="tx-amount" :class="amountClass(tx.type)">
-                {{ formatTxAmount(tx) }}
-              </text>
-              <text
-                v-if="tx.sync_status === 'pending'"
-                class="tx-sync-badge tx-sync-pending"
-                >待同步</text
-              >
-              <text
-                v-if="tx.sync_status === 'failed'"
-                class="tx-sync-badge tx-sync-failed"
-                >同步失败</text
-              >
+            <view class="tx-info">
+              <text class="tx-category">{{
+                getCategoryName(tx.type, tx.category_id)
+              }}</text>
+              <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
             </view>
           </view>
-          <template #right>
-            <view class="swipe-delete-btn">
-              <text>删除</text>
-            </view>
-          </template>
-        </wd-swipe-action>
+          <view class="tx-right">
+            <text class="tx-amount" :class="amountClass(tx.type)">
+              {{ formatTxAmount(tx) }}
+            </text>
+            <text
+              v-if="tx.sync_status === 'pending'"
+              class="tx-sync-badge tx-sync-pending"
+              >待同步</text
+            >
+            <text
+              v-if="tx.sync_status === 'failed'"
+              class="tx-sync-badge tx-sync-failed"
+              >同步失败</text
+            >
+          </view>
+        </view>
       </view>
 
       <view class="list-bottom" v-if="dayGroups.length > 0">
@@ -144,6 +140,8 @@
     <view class="fab" @click="onAdd">
       <wd-icon name="plus" size="48rpx" color="var(--text-inverse)" />
     </view>
+
+    <wd-dialog selector="delete-confirm" />
 
     <TransactionEditor
       :visible="editorVisible"
@@ -172,6 +170,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
+import { useDialog } from "@wot-ui/ui/components/wd-dialog/index";
 import TransactionEditor from "@/components/TransactionEditor.vue";
 import NavBar from "@/components/NavBar.vue";
 import Sidebar from "@/components/Sidebar.vue";
@@ -183,6 +182,7 @@ import { useCategories } from "@/stores/categoryStore";
 import {
   isLoggedIn,
   getToken,
+  getRefreshToken,
   logout,
   getUserInfo,
   getCurrentBookId,
@@ -193,6 +193,7 @@ import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
 import {
   getAccountBooks,
   createAccountBook,
+  logoutApi,
   type UserInfo,
   type AccountBook,
 } from "@/api/common";
@@ -203,9 +204,10 @@ const {
   update,
   delete: removeTx,
   getByDate,
+  clear: clearTransactions,
 } = useTransactions();
 
-const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
+const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories, clear: clearCategories } =
   useCategories();
 
 const currentYear = ref(new Date().getFullYear());
@@ -306,8 +308,14 @@ function onEditTx(tx: LocalTransaction) {
   editorVisible.value = true;
 }
 
-function onSwipeAction(event: { value: string }, tx: LocalTransaction) {
-  if (event.value === "right") {
+const dialog = useDialog("delete-confirm");
+
+async function onLongPressDelete(tx: LocalTransaction) {
+  const result = await dialog.confirm({
+    title: "确认删除",
+    msg: `确定要删除这笔账单吗？`,
+  });
+  if (result.action === "confirm") {
     removeTx(tx.id);
     uni.showToast({ title: "已删除", icon: "success" });
   }
@@ -380,8 +388,14 @@ function onImportExport() {
 
 function onLogout() {
   showSidebar.value = false;
-  logout();
+  const refreshToken = getRefreshToken();
+  if (refreshToken) {
+    logoutApi({ refresh_token: refreshToken }).catch(() => {});
+  }
   stopSync();
+  clearTransactions();
+  clearCategories();
+  logout();
   uni.reLaunch({ url: "/pages/login/index" });
 }
 
@@ -419,6 +433,10 @@ onShow(async () => {
       }
     } else {
       books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
+    }
+    if (!books.value.find((b) => b.id === currentBookId.value) && books.value.length > 0) {
+      currentBookId.value = books.value[0].id;
+      setCurrentBookId(currentBookId.value);
     }
   }
 });
@@ -542,11 +560,8 @@ onShow(async () => {
   flex: 1;
   min-height: 0;
   padding: 0 20rpx 60rpx;
-  :deep() {
-    .uni-scroll-view {
-      border-radius: var(--radius-lg);
-    }
-  }
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .empty-state {
@@ -586,6 +601,10 @@ onShow(async () => {
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+
+  &:first-child {
+    margin-top: 0;
+  }
 }
 
 .day-header {
@@ -735,21 +754,6 @@ onShow(async () => {
   &.tx-sync-failed {
     color: var(--color-expense);
     background: rgba(255, 59, 48, 0.1);
-  }
-}
-
-.swipe-delete-btn {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 36rpx;
-  background: var(--color-expense);
-
-  text {
-    font-size: 28rpx;
-    color: var(--text-inverse);
-    font-weight: 600;
   }
 }
 

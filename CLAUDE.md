@@ -75,10 +75,25 @@ mvn spotless:apply               # 代码格式化
 - **前端页**: `pages/import-export/index`，两个 tab（导出/导入），导出触发浏览器下载（fetch blob + `<a>` 标签），导入走 `uni.chooseFile` + `request.upload`
 - **通道**: `request.download(url, params)` — fetch + blob + download link；`request.upload(url, filePath, formData)` — `uni.uploadFile` 封装
 
+### 邮件发送
+
+- **MailService**: `sendResetCode(toEmail, code)` 发送密码重置验证码，QQ SMTP (smtp.qq.com:587)
+- **关键配置**: `spring.mail.username` 和 `mail.smtp.from` 必须一致（均为 QQ 邮箱地址），否则 501 "Mail from address must be same as authorization user"
+- **发送顺序**: 先 `mailSender.send(msg)` 发送成功后再 `stringRedisTemplate` 存 Redis，避免发送失败导致验证码被占用无法重试
+- **配置位置**: `application-local.yaml` 覆盖 `application.yaml` 中的占位符（`${MAIL_USERNAME:}` → 实际值）
+
+### 异常处理
+
+- **GlobalExceptionHandler**: `@RestControllerAdvice`，所有异常返回 HTTP 200 + `Result.fail(code, message)`，不设 `@ResponseStatus`（避免 HTTP 状态码触发前端 HttpError 分支吞掉业务错误信息）
+- **BizException**: 返回业务错误码和消息，前端 `request.ts` BusinessError 分支读取 `data.message` 并 toast
+- **RuntimeException**: code=400，透传 message
+- **Exception**: code=500，"服务器内部错误"，不泄露异常细节
+- **前端 request.ts 拦截器**: HTTP status ≥ 300 → HttpError 路径（状态码错误）；HTTP 200 + `data.code !== 0` → BusinessError 路径（显示 `data.message`）
+
 ### 缓存策略
 
-- **交易列表缓存**: `getTransactions` → `@Cacheable(value="transactions", key="#bookId + '::' + #month")`，30min TTL
-- **写操作淘汰**: `create/createBatch/batchDelete` → `@CacheEvict(value="transactions", allEntries=true)`，清空全部交易缓存
+- **交易列表缓存**: `TransactionServiceImpl.list()` → `@Cacheable(value="transactions", key="T(...AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month")`，key 含 userId 实现租户隔离，30min TTL
+- **写操作淘汰**: `create/createBatch/import/batchDelete` → 程序化 `evictTransactionCache(bookId)` 精确淘汰当前用户的当月缓存，不再用 `@CacheEvict(allEntries=true)`（会清空所有用户缓存）
 - **配置**: `spring.cache.type=redis`，`RedisCacheManager` Bean 配置自定义 `JacksonSerializer`（`@type`/`@value` JSON 包装，解决 Jackson `@class` 类型信息缺失问题）
 - **序列化**: `TransactionListResponse` record 实现 `Serializable`，缓存值以 JSON 存入 Redis
 - **分类 ETag 缓存**: `GET /categories` 响应 `ETag` 头，前端 `If-None-Match` 协商缓存，`categoryStore` 本地 storage 缓存 + ETag 双重缓存。注意：`fetchFromServer` 用原始 `uni.request`，需手动加 Authorization header
@@ -87,20 +102,23 @@ mvn spotless:apply               # 代码格式化
 
 - **金额存储**: 一律用 `INT` 存储"分"（避免浮点精度问题），前后端传输时注意 ×100/÷100 转换
 - **API 规范**: RESTful，JSON，版本前缀 `/api/v1/`，JWT Bearer token
-- **多账本隔离**: 交易数据通过 `bookId` 参数隔离，分类全局共享不绑账本
+- **多账本隔离**: 交易数据通过 `bookId` 参数隔离 + `book_id` 归属权校验（防止水平越权）。BookId 随机生成（8-12 位数字，`IdType.INPUT`），避免自增泄露账本数量
 - **逻辑删除**: 核心表用 `deleted` 字段标记，不物理删除。MyBatis-Plus 自动处理，查询/更新自动追加 `deleted=0`
 - **交易时间**: `trans_time` 精确到秒。前端 `TransactionEditor` 构造 `YYYY-MM-DDThh:mm:ss`（当前时分秒），后端 `toEntity` 解析 `LocalDateTime.parse(time.replace(" ", "T").substring(0, 19))`
 - **RSA 加密**: 前端获取公钥 → Web Crypto API (RSA-OAEP SHA-256) 加密 → 后端 RSA 解密 → BCrypt 验证。`GET /api/v1/auth/public-key`。密钥持久化到 `data/`，前端 `cachedPublicKey` 缓存（重启后需清除）
 
-### 分类管理
+### 分类管理（用户隔离架构）
 
-- **全局共享**: 分类不绑定账本，所有账本共用同一套分类
-- **系统分类**: `is_system=1`，不可编辑名称/图标/颜色、不可删除，可调整排序和可见性
-- **自定义分类**: `is_system=0`，用户可增删改、排序、切换可见性
-- **排序**: `sort_order` 字段，`listAll()` 按 `sort_order ASC` 排序，`PUT /categories/reorder` 批量更新排序
+- **双表设计**: `category` 表仅存系统模板（16 条，不可变），`user_category` 表存每用户独立数据（可见性、排序、自定义分类）
+- **延迟初始化**: 用户首次请求分类时 `UserCategoryServiceImpl.initForUser(userId)` 从 `category` 模板复制到 `user_category`，`source_id` 指向模板 ID
+- **系统分类**: `is_system=1`，不可编辑名称/图标/颜色、不可删除，可调整排序和可见性（仅改 `user_category` 表）
+- **自定义分类**: `is_system=0, source_id=null`，用户可增删改、排序、切换可见性。删除按 ID 精确删除，不按名称
+- **租户隔离**: 所有 `user_category` 查询/更新/删除均带 `user_id` 条件，用户操作不影响其他用户
+- **排序**: `sort_order` 字段，`listAll()` 按 `sort_order ASC` 排序，`PUT /categories/reorder` 批量更新排序（仅更新当前用户的记录）
 - **可见性**: `visible` 字段，`visible=0` 的分类在记账页不显示，分类管理页半透明标示
-- **数据初始化**: `DataInitializer` 在空表时插入 16 个系统分类（10 支出 + 6 收入），ID 与前端 `DEFAULT_CATEGORIES` 一致
+- **数据初始化**: `DataInitializer` 在 `category` 空表时插入 16 个系统分类（10 支出 + 6 收入），ID 与前端 `DEFAULT_CATEGORIES` 一致
 - **离线兜底**: `DEFAULT_CATEGORIES` 在服务端获取失败时作 fallback，正常流程走 `categoryStore.loadCategories()` + ETag 协商缓存
+- **Service 层**: `IUserCategoryService` / `UserCategoryServiceImpl` 处理所有分类业务，`ICategoryService` / `CategoryServiceImpl` 仅用于 DataInitializer 初始化模板
 
 ## 规范
 
@@ -142,10 +160,13 @@ pushDeletes → pushPending → pullFromServer
 - `lambdaQuery()` 链式调用替代手动构建 QueryWrapper
 - 批量插入使用 `saveBatch()`，批量更新使用 `UpdateWrapper` + `update(wrapper)`
 
-### 数据隔离
+### 数据隔离与安全
 
-- 交易接口通过 `book_id` 隔离数据
-- 分类接口全局共享，不传 `book_id`
-- 前端 `dayGroups` 计算属性按 `currentBookId` 过滤
+- **交易归属校验**: `TransactionServiceImpl` 所有接口（create/list/export/import/batchDelete）均校验 `book_id` 归属当前用户（`validateBookOwnership`），防止水平越权（IDOR）
+- **账户归属校验**: `AccountServiceImpl.listByBookId` 校验账本 `ownerId` 匹配当前用户
+- **BookId 随机化**: `AccountBook.id` 用 `IdType.INPUT` + `ThreadLocalRandom` 生成 8-12 位随机数字，避免自增泄露账本数量。`generateBookId()` 循环检查唯一性
+- **分类接口**: 通过 `user_category` 表 `user_id` 隔离，不传 `book_id`
+- **前端退出清理**: `logout()` → `clearAllData()` 清除全部 8 个 storage key（token/refresh_token/user/book/transactions/category_cache/category_etag/sync_last_at），切换账号数据不残留
+- **前端 `currentBookId` 校验**: 首页 onShow 检查当前 bookId 是否仍在 books 列表中，不在则回退到第一个账本
+- **前端 `dayGroups`** 计算属性按 `currentBookId` 过滤
 - `currentBookId` 持久化到 storage，下次启动恢复
-- 记账时 `book_id` 取自当前选中账本
