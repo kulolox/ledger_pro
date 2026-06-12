@@ -19,8 +19,10 @@ public class RedisConfig {
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(30))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
-                        new JacksonSerializer(mapper)));
-        return RedisCacheManager.builder(connectionFactory).cacheDefaults(config).build();
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(new JacksonSerializer(mapper)));
+        return RedisCacheManager.builder(connectionFactory)
+                .cacheDefaults(config)
+                .build();
     }
 }

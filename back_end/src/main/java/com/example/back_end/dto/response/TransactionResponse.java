@@ -13,7 +13,8 @@ public record TransactionResponse(
         Long category_id,
         String remark,
         String trans_time,
-        String created_at) implements Serializable {
+        String created_at)
+        implements Serializable {
     public static TransactionResponse from(Transaction tx) {
         return new TransactionResponse(
                 tx.getId(),

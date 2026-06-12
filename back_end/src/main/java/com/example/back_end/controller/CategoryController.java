@@ -55,9 +55,23 @@ public class CategoryController {
     private String computeEtag(List<CategoryResponse> categories) {
         StringBuilder sb = new StringBuilder();
         for (CategoryResponse c : categories) {
-            sb.append(c.id()).append(':').append(c.name()).append(':').append(c.type()).append(':')
-                    .append(c.icon()).append(':').append(c.color()).append(':').append(c.parent_id())
-                    .append(':').append(c.is_system()).append(':').append(c.sort_order()).append(':').append(c.visible())
+            sb.append(c.id())
+                    .append(':')
+                    .append(c.name())
+                    .append(':')
+                    .append(c.type())
+                    .append(':')
+                    .append(c.icon())
+                    .append(':')
+                    .append(c.color())
+                    .append(':')
+                    .append(c.parent_id())
+                    .append(':')
+                    .append(c.is_system())
+                    .append(':')
+                    .append(c.sort_order())
+                    .append(':')
+                    .append(c.visible())
                     .append(',');
         }
         return String.valueOf(Math.abs(sb.toString().hashCode()));

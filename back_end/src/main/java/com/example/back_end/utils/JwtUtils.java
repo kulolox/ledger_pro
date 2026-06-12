@@ -64,7 +64,8 @@ public class JwtUtils {
     public boolean validateRefreshToken(String token) {
         try {
             Claims claims = parseClaims(token);
-            return "refresh".equals(claims.get("type", String.class));
+            String type = claims.get("type", String.class);
+            return type == null || "refresh".equals(type);
         } catch (Exception e) {
             return false;
         }

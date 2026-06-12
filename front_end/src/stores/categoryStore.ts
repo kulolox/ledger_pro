@@ -44,6 +44,10 @@ function fetchFromServer(
 
   return new Promise((resolve, reject) => {
     const header: Record<string, string> = {};
+    const token = uni.getStorageSync("token");
+    if (token) {
+      header["Authorization"] = `Bearer ${token}`;
+    }
     if (etag) {
       header["If-None-Match"] = etag;
     }
