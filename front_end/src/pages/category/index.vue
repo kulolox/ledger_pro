@@ -1,16 +1,20 @@
 <template>
   <view class="category-page">
-    <view class="page-header">
-      <view class="nav-bar">
+    <NavBar rightWidth="auto">
+      <template #left>
         <view class="nav-back" @click="goBack">
           <wd-icon name="left" size="24px" color="var(--text-secondary)" />
         </view>
+      </template>
+      <template #center>
         <text class="nav-title">分类管理</text>
+      </template>
+      <template #right>
         <view class="nav-sort" :class="{ active: sortMode }" @click="sortMode = !sortMode">
           <text>{{ sortMode ? '完成' : '排序' }}</text>
         </view>
-      </view>
-    </view>
+      </template>
+    </NavBar>
 
     <view class="tab-bar">
       <view
@@ -154,6 +158,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
+import NavBar from "@/components/NavBar.vue";
 import { useCategories } from "@/stores/categoryStore";
 import type { Category } from "@/constants/categories";
 import Sortable from "sortablejs";
@@ -340,17 +345,6 @@ onShow(() => {
   background: var(--bg-primary);
 }
 
-.page-header {
-  padding: 0 32rpx;
-}
-
-.nav-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 28rpx;
-}
-
 .nav-back {
   width: 64rpx;
   height: 64rpx;
@@ -358,21 +352,20 @@ onShow(() => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default);
 
   &:active {
     transform: scale(0.92);
   }
-
 }
 
 .nav-title {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: var(--text-primary);
+  text-align: center;
 }
 
 .nav-sort {
@@ -381,9 +374,8 @@ onShow(() => {
   font-size: 26rpx;
   color: var(--color-primary);
   font-weight: 500;
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.15s;
+  background: var(--bg-primary);
+  flex-shrink: 0;
 
   &:active {
     transform: scale(0.92);

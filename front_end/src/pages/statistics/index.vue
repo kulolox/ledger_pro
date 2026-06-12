@@ -1,10 +1,12 @@
 <template>
   <view class="stats-page">
-    <view class="stats-header">
-      <view class="nav-bar">
+    <NavBar>
+      <template #left>
         <view class="nav-left" @click="goBack">
           <wd-icon name="left" size="24px" color="var(--text-secondary)" />
         </view>
+      </template>
+      <template #center>
         <view class="nav-center">
           <view class="nav-arrow" @click="prevMonth">
             <wd-icon name="left" size="24px" color="var(--text-secondary)" />
@@ -14,9 +16,11 @@
             <wd-icon name="right" size="24px" color="var(--text-secondary)" />
           </view>
         </view>
+      </template>
+      <template #right>
         <view class="nav-right" />
-      </view>
-    </view>
+      </template>
+    </NavBar>
 
     <view class="month-summary">
       <view class="summary-item expense-card">
@@ -103,6 +107,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { onShow } from "@dcloudio/uni-app";
+import NavBar from "@/components/NavBar.vue";
 import EChart from "@/components/EChart.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
@@ -346,19 +351,6 @@ onShow(async () => {
   flex-direction: column;
   background: var(--bg-primary);
   overflow: hidden;
-}
-
-.stats-header {
-  padding: 0 32rpx;
-  background: var(--bg-secondary);
-  border-bottom: 1rpx solid var(--border-primary);
-}
-
-.nav-bar {
-  display: grid;
-  grid-template-columns: 64rpx 1fr 64rpx;
-  align-items: center;
-  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 20rpx;
 }
 
 .nav-left {

@@ -1,36 +1,28 @@
 <template>
   <view class="home-page">
-    <view class="home-header">
-      <view class="nav-bar">
+    <NavBar>
+      <template #left>
         <view class="menu-btn" @click="showSidebar = true">
           <wd-icon name="menu" size="32rpx" color="var(--text-secondary)" />
         </view>
+      </template>
+      <template #center>
         <view class="month-nav">
           <view class="nav-arrow" @click="prevMonth">
-            <wd-icon
-              name="left"
-              size="24px"
-              color="var(--text-secondary)"
-            />
+            <wd-icon name="left" size="24px" color="var(--text-secondary)" />
           </view>
           <text class="month-label">{{ monthLabel }}</text>
           <view class="nav-arrow" @click="nextMonth">
-            <wd-icon
-              name="right"
-              size="24px"
-              color="var(--text-secondary)"
-            />
+            <wd-icon name="right" size="24px" color="var(--text-secondary)" />
           </view>
         </view>
+      </template>
+      <template #right>
         <view class="stats-btn" @click="goStats">
-          <wd-icon
-            name="dashboard"
-            size="32rpx"
-            color="var(--text-secondary)"
-          />
+          <wd-icon name="dashboard" size="32rpx" color="var(--text-secondary)" />
         </view>
-      </view>
-    </view>
+      </template>
+    </NavBar>
 
     <view class="month-summary">
       <view class="summary-item expense-card">
@@ -181,6 +173,7 @@
 import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import TransactionEditor from "@/components/TransactionEditor.vue";
+import NavBar from "@/components/NavBar.vue";
 import Sidebar from "@/components/Sidebar.vue";
 import {
   useTransactions,
@@ -439,19 +432,6 @@ onShow(async () => {
   position: relative;
   background: var(--bg-primary);
   overflow: hidden;
-}
-
-.home-header {
-  padding: 0 32rpx;
-  background: var(--bg-secondary);
-  border-bottom: 1rpx solid var(--border-primary);
-}
-
-.nav-bar {
-  display: grid;
-  grid-template-columns: 64rpx 1fr 64rpx;
-  align-items: center;
-  padding: calc(var(--status-bar-height, 44px) + 16rpx) 0 20rpx;
 }
 
 .month-nav {

@@ -1,12 +1,15 @@
 <template>
   <view class="page">
-    <view class="nav-bar">
-      <view class="back-btn" @click="goBack">
-        <wd-icon name="left" size="24px" color="var(--text-secondary)" />
-      </view>
-      <text class="nav-title">导入导出</text>
-      <view class="nav-placeholder" />
-    </view>
+    <NavBar>
+      <template #left>
+        <view class="back-btn" @click="goBack">
+          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+        </view>
+      </template>
+      <template #center>
+        <text class="nav-title">导入导出</text>
+      </template>
+    </NavBar>
 
     <view class="tabs">
       <view class="tab" :class="{ active: activeTab === 'export' }" @click="activeTab = 'export'">
@@ -130,6 +133,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
+import NavBar from "@/components/NavBar.vue";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { getAccountBooks, exportTransactions, importTransactions, type AccountBook } from "@/api/common";
 
@@ -339,13 +343,6 @@ onShow(async () => {
   padding-bottom: calc(var(--safe-area-bottom, 0px) + 40rpx);
 }
 
-.nav-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: calc(var(--status-bar-height, 44px) + 16rpx) 32rpx 20rpx;
-}
-
 .back-btn {
   width: 64rpx;
   height: 64rpx;
@@ -353,7 +350,7 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
 
@@ -363,13 +360,15 @@ onShow(async () => {
 }
 
 .nav-title {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: var(--text-primary);
+  text-align: center;
 }
 
 .nav-placeholder {
   width: 64rpx;
+  height: 64rpx;
 }
 
 .tabs {

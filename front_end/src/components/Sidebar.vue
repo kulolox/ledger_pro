@@ -22,7 +22,7 @@
         <view class="section-header">
           <text class="section-title">我的账本</text>
           <view
-            v-if="books.length < 4 && !showAddInput"
+            v-if="books.length < 4"
             class="section-add-btn"
             @click="showAddInput = true"
           >
@@ -30,16 +30,32 @@
           </view>
         </view>
 
-        <view v-if="showAddInput" class="add-book-inline">
-          <input
-            class="add-book-input"
-            v-model="newBookName"
-            placeholder="输入账本名称"
-            :focus="showAddInput"
-            @confirm="onAddBook"
-          />
-          <text class="add-book-cancel" @click="onAddCancel">取消</text>
-        </view>
+        <wd-popup
+          :model-value="showAddInput"
+          position="center"
+          custom-class="add-book-dialog"
+          :close-on-click-modal="true"
+          @update:model-value="onAddCancel"
+        >
+          <view class="add-book-dialog-content">
+            <text class="dialog-title">新增账本</text>
+            <input
+              class="dialog-input"
+              v-model="newBookName"
+              placeholder="输入账本名称"
+              :focus="showAddInput"
+              @confirm="onAddBook"
+            />
+            <view class="dialog-actions">
+              <view class="dialog-btn cancel" @click="onAddCancel">
+                <text>取消</text>
+              </view>
+              <view class="dialog-btn confirm" @click="onAddBook">
+                <text>确定</text>
+              </view>
+            </view>
+          </view>
+        </wd-popup>
 
         <view class="book-list" v-if="books.length > 0">
           <view
@@ -303,28 +319,58 @@ function getBookLetter(name: string): string {
   }
 }
 
-.add-book-inline {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  padding: 0 36rpx 16rpx;
+.add-book-dialog-content {
+  width: 560rpx;
+  padding: 48rpx 40rpx 32rpx;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
 }
 
-.add-book-input {
-  flex: 1;
-  height: 64rpx;
+.dialog-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 36rpx;
+}
+
+.dialog-input {
+  width: 100%;
+  height: 80rpx;
   border-radius: 12rpx;
   background: var(--bg-primary);
-  padding: 0 20rpx;
+  padding: 0 24rpx;
   font-size: 28rpx;
   color: var(--text-primary);
   box-sizing: border-box;
 }
 
-.add-book-cancel {
-  font-size: 26rpx;
-  color: var(--text-muted);
-  flex-shrink: 0;
+.dialog-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 36rpx;
+}
+
+.dialog-btn {
+  flex: 1;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  font-size: 30rpx;
+  font-weight: 600;
+
+  &.cancel {
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+  }
+
+  &.confirm {
+    background: var(--color-primary);
+    color: var(--text-inverse);
+  }
 }
 
 .sidebar-actions {
