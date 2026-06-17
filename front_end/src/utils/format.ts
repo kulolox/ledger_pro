@@ -18,13 +18,16 @@ export function getTodayStr(): string {
 }
 
 export function formatDayHeader(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
+  const parts = dateStr.split("-");
+  const month = parseInt(parts[1]);
+  const day = parseInt(parts[2]);
+  return `${month}月${day}日`;
 }
 
 export function formatWeekday(dateStr: string): string {
   const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-  const d = new Date(dateStr);
+  const parts = dateStr.split("-");
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   return weekdays[d.getDay()];
 }
 

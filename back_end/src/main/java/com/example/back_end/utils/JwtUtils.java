@@ -15,7 +15,10 @@ public class JwtUtils {
     private final long accessExpireMs = 24 * 60 * 60 * 1000;
     private final long refreshExpireMs = 7 * 24 * 60 * 60 * 1000;
 
-    public JwtUtils(@Value("${app.jwt.secret:ledger-pro-default-secret-key-2026}") String secret) {
+    public JwtUtils(@Value("${app.jwt.secret:}") String secret) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET 环境变量未配置，请在启动前设置 JWT_SECRET");
+        }
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             byte[] padded = new byte[32];
@@ -55,7 +58,7 @@ public class JwtUtils {
     public boolean validateToken(String token) {
         try {
             Claims claims = parseClaims(token);
-            return !"refresh".equals(claims.get("type", String.class));
+            return "access".equals(claims.get("type", String.class));
         } catch (Exception e) {
             return false;
         }
@@ -64,8 +67,7 @@ public class JwtUtils {
     public boolean validateRefreshToken(String token) {
         try {
             Claims claims = parseClaims(token);
-            String type = claims.get("type", String.class);
-            return type == null || "refresh".equals(type);
+            return "refresh".equals(claims.get("type", String.class));
         } catch (Exception e) {
             return false;
         }

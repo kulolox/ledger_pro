@@ -58,11 +58,11 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private String getClientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
+        if (xff != null && !xff.isBlank() && "true".equals(System.getenv("TRUST_PROXY_HEADERS"))) {
             return xff.split(",")[0].trim();
         }
         String xri = request.getHeader("X-Real-IP");
-        if (xri != null && !xri.isBlank()) {
+        if (xri != null && !xri.isBlank() && "true".equals(System.getenv("TRUST_PROXY_HEADERS"))) {
             return xri;
         }
         return request.getRemoteAddr();

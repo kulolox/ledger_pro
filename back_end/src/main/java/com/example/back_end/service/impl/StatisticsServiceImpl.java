@@ -3,9 +3,13 @@ package com.example.back_end.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.back_end.dto.response.StatisticsResponse;
+import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.Transaction;
+import com.example.back_end.exception.BizException;
+import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.TransactionMapper;
 import com.example.back_end.service.IStatisticsService;
+import com.example.back_end.utils.AuthUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +19,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transaction> implements IStatisticsService {
 
+    private final AccountBookMapper accountBookMapper;
+
+    public StatisticsServiceImpl(AccountBookMapper accountBookMapper) {
+        this.accountBookMapper = accountBookMapper;
+    }
+
     public StatisticsResponse monthly(Long bookId, String month) {
+        validateBookOwnership(bookId);
         LocalDateTime monthStart = LocalDateTime.parse(month + "-01T00:00:00");
         LocalDateTime monthEnd = monthStart.plusMonths(1);
 
@@ -53,5 +64,12 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
         }
 
         return new StatisticsResponse(totalExpense, totalIncome, expenseItems, incomeItems);
+    }
+
+    private void validateBookOwnership(Long bookId) {
+        AccountBook book = accountBookMapper.selectById(bookId);
+        if (book == null || !book.getOwnerId().equals(AuthUtils.getCurrentUserId())) {
+            throw new BizException("无权访问该账本");
+        }
     }
 }

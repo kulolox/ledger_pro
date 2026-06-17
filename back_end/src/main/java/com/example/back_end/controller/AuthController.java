@@ -37,8 +37,14 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public Result<Map<String, String>> logout(@RequestBody Map<String, String> params) {
-        authService.logout(params.get("refresh_token"));
+    public Result<Map<String, String>> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, String> params) {
+        String accessToken = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            accessToken = authHeader.substring(7);
+        }
+        authService.logout(accessToken, params.get("refresh_token"));
         return Result.ok("已退出登录", Map.of());
     }
 

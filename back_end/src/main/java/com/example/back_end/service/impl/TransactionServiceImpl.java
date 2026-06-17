@@ -77,13 +77,25 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 .toList();
     }
 
-    private void evictTransactionCache(Long bookId) {
+    private String formatCacheKey(Long userId, Long bookId, String month) {
+        return userId + "::" + bookId + "::" + month;
+    }
+
+    private void evictTransactionCache(Long bookId, String... months) {
         Cache cache = cacheManager.getCache("transactions");
         if (cache != null) {
             Long userId = AuthUtils.getCurrentUserId();
-            String month = java.time.YearMonth.now().toString();
-            cache.evict(userId + "::" + bookId + "::" + month);
+            for (String month : months) {
+                cache.evict(formatCacheKey(userId, bookId, month));
+            }
         }
+    }
+
+    private String extractMonth(String transTime) {
+        if (transTime != null && transTime.length() >= 7) {
+            return transTime.substring(0, 7);
+        }
+        return java.time.YearMonth.now().toString();
     }
 
     @Transactional
@@ -91,7 +103,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         validateBookOwnership(req.book_id());
         Transaction tx = toEntity(req);
         save(tx);
-        evictTransactionCache(req.book_id());
+        evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));
         return TransactionResponse.from(tx);
     }
 
@@ -110,7 +122,14 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             txs.add(toEntity(params));
         }
         saveBatch(txs);
-        bookIds.forEach(this::evictTransactionCache);
+        bookIds.forEach(bid -> {
+            List<String> months = txs.stream()
+                    .filter(tx -> tx.getBookId().equals(bid))
+                    .map(tx -> extractMonth(tx.getTransTime().toString()))
+                    .distinct()
+                    .toList();
+            evictTransactionCache(bid, months.toArray(new String[0]));
+        });
         List<TransactionResponse> list =
                 txs.stream().map(TransactionResponse::from).toList();
         return Map.of("list", list, "count", list.size());
@@ -134,9 +153,14 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         }
         UpdateWrapper<Transaction> wrapper = new UpdateWrapper<>();
         wrapper.in("id", body.ids()).in("book_id", ownedBookIds).set("deleted", 1).set("updated_at", LocalDateTime.now());
-        update(wrapper);
-        affectedBookIds.forEach(this::evictTransactionCache);
-        return body.ids().size();
+        int actualDeleted = baseMapper.update(null, wrapper);
+        var evictMonths = txs.stream()
+                .filter(tx -> ownedBookIds.contains(tx.getBookId()))
+                .map(tx -> extractMonth(tx.getTransTime().toString()))
+                .distinct()
+                .toList();
+        affectedBookIds.forEach(bid -> evictTransactionCache(bid, evictMonths.toArray(new String[0])));
+        return actualDeleted;
     }
 
     @Cacheable(value = "transactions", key = "T(com.example.back_end.utils.AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month", unless = "#result == null")
@@ -208,7 +232,11 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             }
 
             saveBatch(txs);
-            evictTransactionCache(bookId);
+            var importMonths = txs.stream()
+                    .map(tx -> extractMonth(tx.getTransTime().toString()))
+                    .distinct()
+                    .toList();
+            evictTransactionCache(bookId, importMonths.toArray(new String[0]));
             return Map.of("imported", txs.size(), "errors", errors, "total", items.size());
         } catch (BizException e) {
             throw e;
@@ -254,8 +282,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     private Integer parseType(String s) {
         if (s == null || s.isBlank()) return 0;
         String trimmed = s.trim();
-        if (trimmed.equals("收入") || trimmed.equals("收入")) return 1;
-        if (trimmed.equals("支出") || trimmed.equals("支出")) return 0;
+        if (trimmed.equals("收入") || trimmed.equalsIgnoreCase("income")) return 1;
+        if (trimmed.equals("支出") || trimmed.equalsIgnoreCase("expense")) return 0;
         try {
             return Integer.parseInt(trimmed);
         } catch (NumberFormatException e) {
@@ -266,7 +294,11 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     private Integer parseAmount(String s) {
         if (s == null || s.isBlank()) return 0;
         try {
-            return (int) Math.round(Double.parseDouble(s.trim()) * 100);
+            double yuan = Double.parseDouble(s.trim());
+            if (yuan < 0) return 0;
+            double cents = yuan * 100;
+            if (cents > Integer.MAX_VALUE) return Integer.MAX_VALUE;
+            return (int) Math.round(cents);
         } catch (NumberFormatException e) {
             return 0;
         }

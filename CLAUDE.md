@@ -53,7 +53,7 @@ mvn spotless:apply               # 代码格式化
 - **数据库**: MySQL 8.0 (jdbc:mysql://localhost:3306/ledger_pro, root/123456)
 - **缓存**: Redis 7 (localhost:6379, Lettuce 连接池), Spring Cache 抽象，自定义 `JacksonSerializer` JSON 序列化（`@type`/`@value` 包装格式，类白名单反序列化）
 - **ORM**: MyBatis-Plus，逻辑删除由 `global-config.db-config.logic-delete-field` 自动处理
-- **认证**: JWT (jjwt 0.12.5, HS256)，access token 24h + refresh token 7d 滑动过期，`type` claim 区分。`validateToken` 拒绝 type=refresh 的 token，`validateRefreshToken` 接受 type=refresh 或老系统无 type 的 token（向后兼容）
+- **认证**: JWT (jjwt 0.12.5, HS256)，access token 24h + refresh token 7d 滑动过期，`type` claim 严格区分。`validateToken` 要求 type="access"，`validateRefreshToken` 要求 type="refresh"。JWT_SECRET 必须通过环境变量配置（无默认值，未配置则启动报错）。退出登录时同时拉黑 access token 和 refresh token，JwtAuthFilter 每次请求校验黑名单
 - **密码**: BCrypt + RSA 加密传输 (前端公钥加密 → 后端私钥解密 → BCrypt)。RSA 密钥对持久化到 `back_end/data/`（首次启动生成，后续复用），已加入 `.gitignore`
 - **代码格式**: Spotless (Palantir Java Format) + EditorConfig，`mvn spotless:apply` 手动格式化
 - **分层**: Controller → Service Interface (IService) → Service Impl (ServiceImpl) → Mapper (BaseMapper)

@@ -29,7 +29,8 @@ export function loadTransactions() {
       const parsed = JSON.parse(raw) as LocalTransaction[];
       transactions.value = parsed;
       if (parsed.length > 0) {
-        nextLocalId = Math.min(...parsed.map((t) => t.id)) - 1;
+        const minId = Math.min(...parsed.map((t) => t.id));
+        nextLocalId = minId < 0 ? minId - 1 : -1;
       }
     }
   } catch {

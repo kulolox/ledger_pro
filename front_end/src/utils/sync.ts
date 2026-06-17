@@ -104,15 +104,29 @@ export async function pushPending(): Promise<{ success: number; fail: number }> 
       data: { items },
     })) as any;
 
-    const count = result?.count || items.length;
+    const serverList = result?.list || [];
     const syncedIds = new Set(pending.map((t) => t.id));
-    const remaining = localList.filter((t) => !syncedIds.has(t.id));
-    setLocalTransactions(remaining);
+    const localToServerId = new Map<number, number>();
+    for (let i = 0; i < pending.length; i++) {
+      if (serverList[i]) {
+        localToServerId.set(pending[i].id, serverList[i].id);
+      }
+    }
+
+    const updated = localList.map((t) => {
+      const serverId = localToServerId.get(t.id);
+      if (serverId !== undefined) {
+        return { ...t, sync_status: "synced" as const, server_id: serverId, deleted: 0 };
+      }
+      return t;
+    });
+    setLocalTransactions(updated);
     loadTransactions();
     setLastSyncTime();
 
-    return { success: count, fail: 0 };
-  } catch {
+    return { success: result?.count || items.length, fail: 0 };
+  } catch (e) {
+    console.error("[sync] pushPending failed:", e);
     return { success: 0, fail: pending.length };
   }
 }
@@ -139,7 +153,8 @@ export async function pushDeletes(): Promise<number> {
     loadTransactions();
 
     return ids.length;
-  } catch {
+  } catch (e) {
+    console.error("[sync] pushDeletes failed:", e);
     return 0;
   }
 }
@@ -162,30 +177,31 @@ export async function pullFromServer(bookId: number): Promise<number> {
     if (!Array.isArray(serverList) || serverList.length === 0) return 0;
 
     const localList = getLocalTransactions();
+    const existingIds = new Set<number>();
+    const existingServerIds = new Set<number>();
+    for (const t of localList) {
+      existingIds.add(t.id);
+      if (t.server_id) existingServerIds.add(t.server_id);
+    }
 
-    // 按 server_id 或 id 去重，防止重复写入
     for (const item of serverList) {
-      const exists = localList.find(
-        (t) => t.server_id === item.id || t.id === item.id,
-      );
-      if (!exists) {
-        localList.unshift({
-          id: item.id,
-          server_id: item.id,
-          book_id: item.book_id,
-          type: item.type,
-          amount: item.amount,
-          account_id: item.account_id,
-          to_account_id: item.to_account_id,
-          category_id: item.category_id,
-          remark: item.remark || "",
-          trans_time: item.trans_time,
-          sync_status: "synced",
-          deleted: 0,
-          created_at: item.created_at || item.trans_time,
-          updated_at: item.updated_at || item.trans_time,
-        });
-      }
+      if (existingIds.has(item.id) || existingServerIds.has(item.id)) continue;
+      localList.unshift({
+        id: item.id,
+        server_id: item.id,
+        book_id: item.book_id,
+        type: item.type,
+        amount: item.amount,
+        account_id: item.account_id,
+        to_account_id: item.to_account_id,
+        category_id: item.category_id,
+        remark: item.remark || "",
+        trans_time: item.trans_time,
+        sync_status: "synced",
+        deleted: 0,
+        created_at: item.created_at || item.trans_time,
+        updated_at: item.updated_at || item.trans_time,
+      });
     }
 
     setLocalTransactions(localList);
@@ -193,7 +209,8 @@ export async function pullFromServer(bookId: number): Promise<number> {
     setLastSyncTime();
 
       return serverList.length;
-    } catch {
+    } catch (e) {
+      console.error("[sync] pullFromServer failed:", e);
       return 0;
     } finally {
       pullPromise = null;

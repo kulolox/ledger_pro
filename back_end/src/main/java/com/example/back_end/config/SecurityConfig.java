@@ -1,5 +1,6 @@
 package com.example.back_end.config;
 
+import com.example.back_end.service.ITokenBlacklistService;
 import com.example.back_end.utils.JwtUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Arrays;
@@ -22,8 +23,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    public JwtAuthFilter jwtAuthFilter(JwtUtils jwtUtils) {
-        return new JwtAuthFilter(jwtUtils);
+    public JwtAuthFilter jwtAuthFilter(JwtUtils jwtUtils, ITokenBlacklistService tokenBlacklistService) {
+        return new JwtAuthFilter(jwtUtils, tokenBlacklistService);
     }
 
     @Bean
@@ -44,7 +45,9 @@ public class SecurityConfig {
                 .headers(headers -> headers.xssProtection(
                                 xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
                         .contentTypeOptions(cfg -> {})
-                        .frameOptions(cfg -> cfg.deny()));
+                        .frameOptions(cfg -> cfg.deny())
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'")));
         return http.build();
     }
 

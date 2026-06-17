@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, onUnmounted } from "vue";
 import { sendResetCode, resetPassword } from "@/api/common";
 
 const formData = reactive({
@@ -79,6 +79,14 @@ const formData = reactive({
 const loading = ref(false);
 const sending = ref(false);
 const countdown = ref(0);
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+});
 
 const handleSendCode = async () => {
   if (!formData.email) {
@@ -90,13 +98,18 @@ const handleSendCode = async () => {
     await sendResetCode({ email: formData.email });
     uni.showToast({ title: "验证码已发送", icon: "success" });
     countdown.value = 60;
-    const timer = setInterval(() => {
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
       countdown.value--;
       if (countdown.value <= 0) {
-        clearInterval(timer);
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
       }
     }, 1000);
   } catch (_e) {
+    uni.showToast({ title: "发送失败，请稍后重试", icon: "error" });
   } finally {
     sending.value = false;
   }
@@ -128,6 +141,7 @@ const handleReset = async () => {
       uni.navigateBack();
     }, 800);
   } catch (_e) {
+    uni.showToast({ title: "重置失败，请检查验证码是否正确", icon: "error" });
   } finally {
     loading.value = false;
   }

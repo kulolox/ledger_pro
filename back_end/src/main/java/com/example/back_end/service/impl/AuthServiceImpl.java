@@ -104,7 +104,12 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
     }
 
     @Override
-    public void logout(String refreshToken) {
+    public void logout(String accessToken, String refreshToken) {
+        if (accessToken != null && jwtUtils.validateToken(accessToken)) {
+            Date exp = jwtUtils.getExpiration(accessToken);
+            long ttl = Duration.between(Instant.now(), exp.toInstant()).toSeconds();
+            tokenBlacklistService.blacklist(accessToken, ttl);
+        }
         if (refreshToken != null && jwtUtils.validateRefreshToken(refreshToken)) {
             Date exp = jwtUtils.getExpiration(refreshToken);
             long ttl = Duration.between(Instant.now(), exp.toInstant()).toSeconds();

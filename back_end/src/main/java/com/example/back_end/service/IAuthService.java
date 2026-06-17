@@ -9,7 +9,7 @@ public interface IAuthService {
 
     LoginResponse login(LoginRequest req);
 
-    void logout(String refreshToken);
+    void logout(String accessToken, String refreshToken);
 
     void sendResetCode(String email);
 

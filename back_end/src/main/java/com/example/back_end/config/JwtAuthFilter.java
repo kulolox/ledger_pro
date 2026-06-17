@@ -1,5 +1,6 @@
 package com.example.back_end.config;
 
+import com.example.back_end.service.ITokenBlacklistService;
 import com.example.back_end.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,9 +15,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private final ITokenBlacklistService tokenBlacklistService;
 
-    public JwtAuthFilter(JwtUtils jwtUtils) {
+    public JwtAuthFilter(JwtUtils jwtUtils, ITokenBlacklistService tokenBlacklistService) {
         this.jwtUtils = jwtUtils;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Override
@@ -25,7 +28,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (jwtUtils.validateToken(token)) {
+            if (jwtUtils.validateToken(token) && !tokenBlacklistService.isBlacklisted(token)) {
                 String email = jwtUtils.getEmailFromToken(token);
                 Long userId = jwtUtils.getUserIdFromToken(token);
                 UsernamePasswordAuthenticationToken auth =

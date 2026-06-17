@@ -26,7 +26,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         this.categoryMapper = categoryMapper;
     }
 
-    public List<CategoryResponse> listAll() {
+    public synchronized List<CategoryResponse> listAll() {
         Long userId = AuthUtils.getCurrentUserId();
         List<UserCategory> list = lambdaQuery()
                 .eq(UserCategory::getUserId, userId)

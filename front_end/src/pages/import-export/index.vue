@@ -241,13 +241,10 @@ function parsePreviewType(val: string): number {
 
 function parsePreviewAmount(val: string): number {
   if (!val) return 0;
-  const trimmed = val.trim();
-  if (trimmed.includes(".")) {
-    return Math.round(parseFloat(trimmed) * 100);
-  }
-  const n = parseInt(trimmed);
+  const n = parseFloat(val.trim());
   if (isNaN(n)) return 0;
-  return n > 100000 ? n : Math.round(n * 100);
+  if (n < 0) return 0;
+  return Math.round(n * 100);
 }
 
 function previewFile(filePath: string) {
