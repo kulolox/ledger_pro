@@ -1,0 +1,45 @@
+import { test as base } from "@playwright/test";
+import { createTestUser, destroyTestUser, type TestUserRow } from "../utils/db";
+import { TEST_USER } from "../utils/test-data";
+
+export type TestFixtures = {
+  testUser: TestUserRow;
+  authenticatedPage: Awaited<ReturnType<typeof loginAs>>;
+};
+
+export type WorkerFixtures = {
+  workerUser: TestUserRow;
+};
+
+async function loginAs(page: any, email: string, password: string) {
+  await page.goto("/#/pages/login/index");
+  await page.waitForSelector(".form-input", { timeout: 10000 });
+  const inputs = page.locator(".form-input input");
+  await inputs.first().fill(email);
+  await inputs.nth(1).fill(password);
+  await page.locator(".login-btn").click();
+  await page.waitForSelector(".home-page", { timeout: 15000 });
+  return page;
+}
+
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  workerUser: [
+    async ({}, use) => {
+      const user = await createTestUser();
+      await use(user);
+      await destroyTestUser(user.userId, user.bookId);
+    },
+    { scope: "worker" },
+  ],
+
+  testUser: async ({ workerUser }, use) => {
+    await use(workerUser);
+  },
+
+  authenticatedPage: async ({ page, testUser }, use) => {
+    const authed = await loginAs(page, TEST_USER.email, TEST_USER.password);
+    await use(authed);
+  },
+});
+
+export { expect } from "@playwright/test";

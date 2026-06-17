@@ -4,21 +4,15 @@ import { isLoggedIn } from "@/utils/storage";
 
 onLaunch(() => {
   console.log("App Launch");
-  // const { statusBarHeight, safeAreaInsets } = uni.getSystemInfoSync();
-  // document.documentElement.style.setProperty(
-  //   "--status-bar-height",
-  //   `${statusBarHeight || 0}px`,
-  // );
-  // document.documentElement.style.setProperty(
-  //   "--safe-area-bottom",
-  //   `${safeAreaInsets?.bottom || 0}px`,
-  // );
   const pages = getCurrentPages();
   if (pages.length === 0) {
-    if (isLoggedIn()) {
-      uni.reLaunch({ url: "/pages/index/index" });
-    } else {
-      uni.reLaunch({ url: "/pages/login/index" });
+    const hash = window.location.hash;
+    if (!hash || hash === "#/" || hash === "#") {
+      if (isLoggedIn()) {
+        uni.reLaunch({ url: "/pages/index/index" });
+      } else {
+        uni.reLaunch({ url: "/pages/login/index" });
+      }
     }
   }
 });
