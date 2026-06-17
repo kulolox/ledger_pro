@@ -1,5 +1,5 @@
 {
-  "name": "daily-ledger-front-end",
+  "name": "ledger-pro-front-end",
   "version": "0.0.1",
   "scripts": {
     "dev:custom": "uni -p",

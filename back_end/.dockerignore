@@ -1,0 +1,10 @@
+.git/
+.gitignore
+.editorconfig
+.idea/
+.env
+.env.*
+*.md
+data/
+docker/
+nginx/

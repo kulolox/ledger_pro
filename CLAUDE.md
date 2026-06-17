@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 记账软件 LedgerPro。前端 uni-app (Vue 3 + TS + Vite)，后端 Spring Boot + MyBatis-Plus + MySQL + Redis，JWT 双 token 认证，RSA 密码加密。
 
 ```
-daily_ledger/
+ledger_pro/
 ├── document/          # 产品需求、技术方案、迭代计划
 ├── front_end/         # uni-app 前端工程
 └── back_end/          # Spring Boot 后端工程
