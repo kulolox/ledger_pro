@@ -14,6 +14,8 @@ public class User {
     private String email = "";
     private String passwordHash = "";
     private String dataKeySalt;
+    private String resetCode;
+    private LocalDateTime resetCodeExpiresAt;
 
     @TableField(updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -75,6 +77,22 @@ public class User {
 
     public void setDataKeySalt(String dataKeySalt) {
         this.dataKeySalt = dataKeySalt;
+    }
+
+    public String getResetCode() {
+        return resetCode;
+    }
+
+    public void setResetCode(String resetCode) {
+        this.resetCode = resetCode;
+    }
+
+    public LocalDateTime getResetCodeExpiresAt() {
+        return resetCodeExpiresAt;
+    }
+
+    public void setResetCodeExpiresAt(LocalDateTime resetCodeExpiresAt) {
+        this.resetCodeExpiresAt = resetCodeExpiresAt;
     }
 
     public LocalDateTime getCreatedAt() {
