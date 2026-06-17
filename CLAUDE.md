@@ -51,7 +51,7 @@ mvn spotless:apply               # 代码格式化
 
 - **框架**: Spring Boot 4.0.6 + Java 21 + MyBatis-Plus 3.5.16 + Spring Security
 - **数据库**: MySQL 8.0 (jdbc:mysql://localhost:3306/ledger_pro, root/123456)
-- **缓存**: Redis 7 (localhost:6379, Lettuce 连接池), Spring Cache 抽象，自定义 `JacksonSerializer` JSON 序列化（`@type`/`@value` 包装格式）
+- **缓存**: Redis 7 (localhost:6379, Lettuce 连接池), Spring Cache 抽象，自定义 `JacksonSerializer` JSON 序列化（`@type`/`@value` 包装格式，类白名单反序列化）
 - **ORM**: MyBatis-Plus，逻辑删除由 `global-config.db-config.logic-delete-field` 自动处理
 - **认证**: JWT (jjwt 0.12.5, HS256)，access token 24h + refresh token 7d 滑动过期，`type` claim 区分。`validateToken` 拒绝 type=refresh 的 token，`validateRefreshToken` 接受 type=refresh 或老系统无 type 的 token（向后兼容）
 - **密码**: BCrypt + RSA 加密传输 (前端公钥加密 → 后端私钥解密 → BCrypt)。RSA 密钥对持久化到 `back_end/data/`（首次启动生成，后续复用），已加入 `.gitignore`
@@ -80,15 +80,17 @@ mvn spotless:apply               # 代码格式化
 - **MailService**: `sendResetCode(toEmail, code)` 发送密码重置验证码，QQ SMTP (smtp.qq.com:587)
 - **关键配置**: `spring.mail.username` 和 `mail.smtp.from` 必须一致（均为 QQ 邮箱地址），否则 501 "Mail from address must be same as authorization user"
 - **发送顺序**: 先 `mailSender.send(msg)` 发送成功后再 `stringRedisTemplate` 存 Redis，避免发送失败导致验证码被占用无法重试
-- **配置位置**: `application-local.yaml` 覆盖 `application.yaml` 中的占位符（`${MAIL_USERNAME:}` → 实际值）
+- **配置位置**: 敏感值（DB/邮件/JWT）通过环境变量注入，`application.yaml` 用 `${VAR:}` 占位符引用
 
 ### 异常处理
 
 - **GlobalExceptionHandler**: `@RestControllerAdvice`，所有异常返回 HTTP 200 + `Result.fail(code, message)`，不设 `@ResponseStatus`（避免 HTTP 状态码触发前端 HttpError 分支吞掉业务错误信息）
 - **BizException**: 返回业务错误码和消息，前端 `request.ts` BusinessError 分支读取 `data.message` 并 toast
-- **RuntimeException**: code=400，透传 message
+- **MethodArgumentNotValidException**: 校验失败，返回字段级错误详情（需 `@Valid` + Jakarta 约束注解）
+- **RuntimeException**: code=400，返回通用提示，不泄露 `e.getMessage()`，通过 SLF4J 记录完整堆栈
 - **Exception**: code=500，"服务器内部错误"，不泄露异常细节
 - **前端 request.ts 拦截器**: HTTP status ≥ 300 → HttpError 路径（状态码错误）；HTTP 200 + `data.code !== 0` → BusinessError 路径（显示 `data.message`）
+- **429 限流响应**: 速率限制拦截器返回 `{"code":429,"message":"请求过于频繁，请稍后再试"}`，前端 BusinessError 分支统一 toast
 
 ### 缓存策略
 
@@ -119,6 +121,20 @@ mvn spotless:apply               # 代码格式化
 - **数据初始化**: `DataInitializer` 在 `category` 空表时插入 16 个系统分类（10 支出 + 6 收入），ID 与前端 `DEFAULT_CATEGORIES` 一致
 - **离线兜底**: `DEFAULT_CATEGORIES` 在服务端获取失败时作 fallback，正常流程走 `categoryStore.loadCategories()` + ETag 协商缓存
 - **Service 层**: `IUserCategoryService` / `UserCategoryServiceImpl` 处理所有分类业务，`ICategoryService` / `CategoryServiceImpl` 仅用于 DataInitializer 初始化模板
+
+### 安全配置
+
+- **输入验证**: `spring-boot-starter-validation`，所有 request DTO 使用 Jakarta 约束注解（`@NotBlank/@Email/@Size/@NotNull/@NotEmpty`），Controller 参数加 `@Valid`
+- **速率限制**: `RateLimitInterceptor` + Redis 计数器，按 IP 限流 `/auth/**`（login 10/min, register 5/min, reset-code 3/min, reset-pwd 5/min），`WebMvcConfig` 注册
+- **CORS**: `SecurityConfig.corsConfigurationSource()` Bean，允许所有来源（`*`），`GET/POST/PUT/DELETE/OPTIONS`
+- **安全响应头**: `X-XSS-Protection: 1; mode=block`、`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`
+- **XSS 防护**: `SanitizeUtils.escapeHtml()` 对用户输入（remark/nickname/category name/icon/color）HTML 实体转义后存储
+- **CSV 注入防护**: `SanitizeUtils.sanitizeCsvCell()` 对 `=`/`+`/`-`/`@` 开头的导出单元格加单引号前缀
+- **路径遍历防护**: 导出文件名中 `\ / : * ? \" < > |` 替换为 `_`
+- **复位码恒定时间比较**: `MessageDigest.isEqual()` 防止时序攻击
+- **JacksonSerializer 白名单**: 反序列化仅允许 `TransactionListResponse` / `TransactionResponse` 类型，拒绝未知类
+- **文件上传限制**: `spring.servlet.multipart.max-file-size=5MB, max-request-size=10MB`
+- **密钥管理**: 所有敏感值通过环境变量注入（`DB_USERNAME/DB_PASSWORD/MAIL_USERNAME/MAIL_PASSWORD/MAIL_FROM/JWT_SECRET`），`application.yaml` 用 `${VAR:}` 占位符
 
 ## 规范
 
