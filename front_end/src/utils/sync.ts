@@ -81,9 +81,6 @@ function silentRequest<T = any>(options: {
 
 // 将本地 pending 状态的记录批量推送到服务端，成功则清除本地记录
 export async function pushPending(): Promise<{ success: number; fail: number }> {
-  const token = getToken();
-  if (!token || token === "dev-mock-token") return { success: 0, fail: 0 };
-
   const localList = getLocalTransactions();
   const pending = localList.filter((t) => t.sync_status === "pending");
   if (pending.length === 0) return { success: 0, fail: 0 };
@@ -123,9 +120,6 @@ export async function pushPending(): Promise<{ success: number; fail: number }> 
 // 拉取当月全量数据，合并到本地，跳过已存在的记录
 // 将本地已删除且有 server_id 的记录批量同步到服务端做软删除
 export async function pushDeletes(): Promise<number> {
-  const token = getToken();
-  if (!token || token === "dev-mock-token") return 0;
-
   const pending = getPendingDeletes();
   if (pending.length === 0) return 0;
 
@@ -152,9 +146,6 @@ export async function pushDeletes(): Promise<number> {
 
 export async function pullFromServer(bookId: number): Promise<number> {
   if (pullPromise) return pullPromise;
-
-  const token = getToken();
-  if (!token || token === "dev-mock-token") return 0;
 
   pullPromise = (async () => {
     try {
@@ -217,8 +208,6 @@ export async function runSyncCycle(bookId: number, silent = true): Promise<{
   pushed: number;
   pulled: number;
 }> {
-  const token = getToken();
-  if (!token || token === "dev-mock-token") return { pushed: 0, pulled: 0 };
   if (syncing) return { pushed: 0, pulled: 0 };
 
   syncing = true;

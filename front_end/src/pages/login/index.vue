@@ -46,9 +46,6 @@
         <text class="link" @click="goForgotPassword">忘记密码？</text>
       </view>
 
-      <view v-if="isDev" class="dev-bypass" @click="handleDevBypass">
-        <text>跳过登录 (开发)</text>
-      </view>
     </view>
   </view>
 </template>
@@ -64,8 +61,6 @@ const formData = reactive({
 });
 
 const loading = ref(false);
-const isDev = import.meta.env.DEV;
-
 const handleLogin = async () => {
   if (!formData.email) {
     uni.showToast({ title: "请输入邮箱", icon: "none" });
@@ -104,18 +99,6 @@ const goForgotPassword = () => {
   uni.navigateTo({ url: "/pages/forgot-password/index" });
 };
 
-const handleDevBypass = () => {
-  setToken("dev-mock-token");
-  setUserInfo({
-    id: 1,
-    nickname: "管理员",
-    avatar: "",
-    email: "admin@ledgerpro.dev",
-    phone: "",
-    role: "admin",
-  });
-  uni.reLaunch({ url: "/pages/index/index" });
-};
 </script>
 
 <style lang="scss" scoped>

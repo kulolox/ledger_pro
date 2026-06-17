@@ -181,7 +181,6 @@ import {
 import { useCategories } from "@/stores/categoryStore";
 import {
   isLoggedIn,
-  getToken,
   getRefreshToken,
   logout,
   getUserInfo,
@@ -207,16 +206,19 @@ const {
   clear: clearTransactions,
 } = useTransactions();
 
-const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories, clear: clearCategories } =
-  useCategories();
+const {
+  getCategoryName,
+  getCategoryColor,
+  getCategoryIcon,
+  loadCategories,
+  clear: clearCategories,
+} = useCategories();
 
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const editorVisible = ref(false);
 const editingTx = ref<LocalTransaction | null>(null);
 const refreshing = ref(false);
-
-const isMockMode = getToken() === "dev-mock-token";
 
 const showSidebar = ref(false);
 const userInfo = ref<UserInfo | null>(null);
@@ -336,10 +338,8 @@ function onSwitchBook(bookId: number) {
   setCurrentBookId(bookId);
   showSidebar.value = false;
   load();
-  if (!isMockMode) {
-    scheduleSync(bookId);
-    pullFromServer(bookId);
-  }
+  scheduleSync(bookId);
+  pullFromServer(bookId);
 }
 
 async function onSync() {
@@ -401,10 +401,8 @@ function onLogout() {
 
 async function onRefresh() {
   refreshing.value = true;
-  if (!isMockMode) {
-    const { runSyncCycle } = await import("@/utils/sync");
-    await runSyncCycle(currentBookId.value, false);
-  }
+  const { runSyncCycle } = await import("@/utils/sync");
+  await runSyncCycle(currentBookId.value, false);
   refreshing.value = false;
 }
 
@@ -417,28 +415,28 @@ onShow(async () => {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
   }
-  load();
-  pullFromServer(currentBookId.value);
 
   if (!pageReady) {
     pageReady = true;
     userInfo.value = getUserInfo();
-    scheduleSync(currentBookId.value);
     loadCategories();
-    if (!isMockMode) {
-      try {
-        books.value = await getAccountBooks();
-      } catch {
-        books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
-      }
-    } else {
-      books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
+    try {
+      books.value = await getAccountBooks();
+    } catch {
+      books.value = [];
     }
-    if (!books.value.find((b) => b.id === currentBookId.value) && books.value.length > 0) {
+    if (
+      !books.value.find((b) => b.id === currentBookId.value) &&
+      books.value.length > 0
+    ) {
       currentBookId.value = books.value[0].id;
       setCurrentBookId(currentBookId.value);
     }
+    scheduleSync(currentBookId.value);
   }
+
+  load();
+  pullFromServer(currentBookId.value);
 });
 </script>
 

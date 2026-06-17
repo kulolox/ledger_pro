@@ -179,13 +179,6 @@ class Request {
     this.errorInterceptors.use((error) => {
       console.error("请求错误:", error);
 
-      const token = uni.getStorageSync("token");
-      const isMock = token === "dev-mock-token";
-
-      if (isMock) {
-        return Promise.reject(error);
-      }
-
       // 处理不同类型的错误
       if (error.name === "BusinessError") {
         // 业务错误
@@ -312,9 +305,7 @@ class Request {
     } catch (error) {
       const err: any = error;
       const is401 = err?.code === 401 || err?.statusCode === 401;
-      const token = uni.getStorageSync("token");
-      const isMock = token === "dev-mock-token";
-      if (is401 && !config._retry && !isMock) {
+      if (is401 && !config._retry) {
         const refreshed = await tryRefreshToken();
         if (refreshed) {
           return this.request({ ...config, _retry: true });

@@ -328,7 +328,7 @@ onShow(async () => {
   try {
     books.value = await getAccountBooks();
   } catch {
-    books.value = [{ id: 1, name: "默认账本", coverIcon: "", type: 0 }];
+    books.value = [];
   }
   if (!currentBookId.value && books.value.length > 0) {
     currentBookId.value = books.value[0].id;

@@ -42,7 +42,7 @@ export const removeUserInfo = (): void => {
 const BOOK_KEY = "currentBookId";
 
 export const getCurrentBookId = (): number => {
-  return uni.getStorageSync(BOOK_KEY) || 1;
+  return uni.getStorageSync(BOOK_KEY);
 };
 
 export const setCurrentBookId = (bookId: number): void => {

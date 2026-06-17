@@ -121,7 +121,6 @@ const { getCategoryName, getCategoryColor, loadCategories } = useCategories();
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const statsData = ref<MonthlyStats | null>(null);
-const isMockMode = ref(false);
 const activeTab = ref(0);
 
 const monthLabel = computed(
@@ -320,11 +319,7 @@ function calcLocalStats(bookId: number) {
 }
 
 watch([currentYear, currentMonth], () => {
-  if (isMockMode.value) {
-    calcLocalStats(getCurrentBookId());
-  } else {
-    fetchStats();
-  }
+  fetchStats();
 });
 
 onShow(async () => {
@@ -332,15 +327,9 @@ onShow(async () => {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
   }
-  const token = uni.getStorageSync("token");
-  isMockMode.value = token === "dev-mock-token";
   load();
   loadCategories();
-  if (isMockMode.value) {
-    calcLocalStats(getCurrentBookId());
-  } else {
-    await fetchStats();
-  }
+  await fetchStats();
 });
 </script>
 
