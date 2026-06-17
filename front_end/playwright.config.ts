@@ -12,6 +12,8 @@ export default defineConfig({
     channel: "chrome",
     baseURL: "http://localhost:5173",
     headless: true,
+    isMobile: true,
+    hasTouch: true,
     viewport: { width: 390, height: 844 },
     ignoreHTTPSErrors: true,
     screenshot: "only-on-failure",

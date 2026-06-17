@@ -22,6 +22,8 @@ async function loginAs(page: any, email: string, password: string) {
   return page;
 }
 
+let cachedStorageState: any = null;
+
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   workerUser: [
     async ({}, use) => {
@@ -36,9 +38,22 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(workerUser);
   },
 
-  authenticatedPage: async ({ page, testUser }, use) => {
-    const authed = await loginAs(page, TEST_USER.email, TEST_USER.password);
-    await use(authed);
+  authenticatedPage: async ({ browser, testUser }, use) => {
+    const context = cachedStorageState
+      ? await browser.newContext({ storageState: cachedStorageState })
+      : await browser.newContext();
+    const page = await context.newPage();
+
+    if (!cachedStorageState) {
+      await loginAs(page, TEST_USER.email, TEST_USER.password);
+      cachedStorageState = await context.storageState();
+    } else {
+      await page.goto("/#/pages/index/index");
+      await page.waitForSelector(".home-page", { timeout: 10000 });
+    }
+
+    await use(page);
+    await context.close();
   },
 });
 
