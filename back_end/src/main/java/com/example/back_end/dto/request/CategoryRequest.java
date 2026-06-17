@@ -1,4 +1,14 @@
 package com.example.back_end.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 public record CategoryRequest(
-        String name, Integer type, String icon, String color, Long parent_id, Integer sort_order, Integer visible) {}
+        @NotBlank @Size(max = 20) String name,
+        @NotNull Integer type,
+        @Size(max = 50) String icon,
+        @Size(max = 20) String color,
+        Long parent_id,
+        Integer sort_order,
+        Integer visible) {}

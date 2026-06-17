@@ -21,6 +21,6 @@ back_end/.mvn/wrapper/maven-wrapper.jar
 .claude/
 
 # env
+.env
 .env.local
 .env.*.local
-application-local.yaml

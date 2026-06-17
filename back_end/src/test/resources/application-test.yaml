@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+  mail:
+    username: ${MAIL_USERNAME:test@test.com}
+    password: ${MAIL_PASSWORD:test}
+    properties:
+      mail.smtp.from: ${MAIL_FROM:test@test.com}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:test-jwt-secret-for-testing-only-32byte}

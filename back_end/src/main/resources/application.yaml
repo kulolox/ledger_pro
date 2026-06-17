@@ -14,8 +14,6 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
-  profiles:
-    active: local
   datasource:
     url: jdbc:mysql://localhost:3306/ledger_pro?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -29,6 +27,10 @@ spring:
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
@@ -47,4 +49,4 @@ app:
 server:
   port: 8080
   servlet:
-    context-path: /api/v1 # 接口的全局通用前缀
+    context-path: /api/v1

@@ -8,6 +8,7 @@ import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.service.ITransactionService;
 import com.example.back_end.utils.Result;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,17 +23,17 @@ public class TransactionController {
     }
 
     @PostMapping
-    public Result<TransactionResponse> create(@RequestBody TransactionRequest req) {
+    public Result<TransactionResponse> create(@Valid @RequestBody TransactionRequest req) {
         return Result.ok("记账成功", transactionService.create(req));
     }
 
     @PostMapping("/batch")
-    public Result<Map<String, Object>> createBatch(@RequestBody BatchCreateRequest req) {
+    public Result<Map<String, Object>> createBatch(@Valid @RequestBody BatchCreateRequest req) {
         return Result.ok("批量记账成功", transactionService.createBatch(req));
     }
 
     @PostMapping("/batch-delete")
-    public Result<Map<String, Object>> batchDelete(@RequestBody BatchDeleteRequest req) {
+    public Result<Map<String, Object>> batchDelete(@Valid @RequestBody BatchDeleteRequest req) {
         return Result.ok(Map.of("count", transactionService.batchDelete(req)));
     }
 

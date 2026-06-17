@@ -1,11 +1,15 @@
 package com.example.back_end.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 public record TransactionRequest(
-        Long book_id,
-        Integer type,
-        Integer amount,
-        Long account_id,
+        @NotNull Long book_id,
+        @NotNull Integer type,
+        @NotNull Integer amount,
+        @NotNull Long account_id,
         Long to_account_id,
-        Long category_id,
-        String remark,
-        String trans_time) {}
+        @NotNull Long category_id,
+        @Size(max = 500) String remark,
+        @NotBlank String trans_time) {}

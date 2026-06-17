@@ -15,6 +15,7 @@ import com.example.back_end.mapper.UserMapper;
 import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.AuthUtils;
 import com.example.back_end.utils.JwtUtils;
+import com.example.back_end.utils.SanitizeUtils;
 import java.time.LocalDateTime;
 import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -48,7 +49,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         User user = new User();
         user.setEmail(req.email());
         user.setPasswordHash(passwordEncoder.encode(req.password()));
-        user.setNickname(req.nickname() != null ? req.nickname() : "");
+        user.setNickname(req.nickname() != null ? SanitizeUtils.escapeHtml(req.nickname()) : "");
         save(user);
 
         AccountBook book = new AccountBook();
@@ -104,8 +105,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             throw new BizException("用户不存在");
         }
 
-        if (req.nickname() != null) user.setNickname(req.nickname());
-        if (req.avatar() != null) user.setAvatarUrl(req.avatar());
+        if (req.nickname() != null) user.setNickname(SanitizeUtils.escapeHtml(req.nickname()));
+        if (req.avatar() != null) user.setAvatarUrl(SanitizeUtils.escapeHtml(req.avatar()));
         if (req.phone() != null) user.setPhone(req.phone());
         user.setUpdatedAt(LocalDateTime.now());
 

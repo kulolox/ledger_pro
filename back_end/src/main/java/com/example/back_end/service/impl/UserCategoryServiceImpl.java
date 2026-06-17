@@ -10,6 +10,7 @@ import com.example.back_end.mapper.CategoryMapper;
 import com.example.back_end.mapper.UserCategoryMapper;
 import com.example.back_end.service.IUserCategoryService;
 import com.example.back_end.utils.AuthUtils;
+import com.example.back_end.utils.SanitizeUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,10 +49,10 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         Long userId = AuthUtils.getCurrentUserId();
         UserCategory uc = new UserCategory();
         uc.setUserId(userId);
-        uc.setName(req.name());
+        uc.setName(SanitizeUtils.escapeHtml(req.name()));
         uc.setType(req.type());
-        uc.setIcon(req.icon() != null ? req.icon() : "");
-        uc.setColor(req.color() != null ? req.color() : "");
+        uc.setIcon(req.icon() != null ? SanitizeUtils.escapeHtml(req.icon()) : "");
+        uc.setColor(req.color() != null ? SanitizeUtils.escapeHtml(req.color()) : "");
         uc.setParentId(req.parent_id() != null ? req.parent_id() : 0L);
         uc.setIsSystem(0);
         uc.setSourceId(null);
@@ -74,9 +75,9 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
             throw new BizException("系统分类不可编辑");
         }
         if (!isSystem && hasIdentityChange) {
-            if (req.name() != null) uc.setName(req.name());
-            if (req.icon() != null) uc.setIcon(req.icon());
-            if (req.color() != null) uc.setColor(req.color());
+            if (req.name() != null) uc.setName(SanitizeUtils.escapeHtml(req.name()));
+            if (req.icon() != null) uc.setIcon(SanitizeUtils.escapeHtml(req.icon()));
+            if (req.color() != null) uc.setColor(SanitizeUtils.escapeHtml(req.color()));
         }
         if (req.visible() != null) uc.setVisible(req.visible());
         if (req.sort_order() != null) uc.setSortOrder(req.sort_order());

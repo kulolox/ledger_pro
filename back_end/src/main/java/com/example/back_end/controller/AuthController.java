@@ -11,6 +11,8 @@ import com.example.back_end.service.impl.MailService;
 import com.example.back_end.utils.JwtUtils;
 import com.example.back_end.utils.Result;
 import com.example.back_end.utils.RsaUtils;
+import jakarta.validation.Valid;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -55,14 +57,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public Result<LoginResponse> register(@RequestBody RegisterRequest req) {
+    public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest req) {
         String rawPassword = rsaUtils.decrypt(req.password());
         RegisterRequest decryptedReq = new RegisterRequest(req.email(), rawPassword, req.nickname());
         return Result.ok("注册成功", userService.register(decryptedReq));
     }
 
     @PostMapping("/login")
-    public Result<LoginResponse> login(@RequestBody LoginRequest req) {
+    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         String rawPassword = rsaUtils.decrypt(req.password());
         return Result.ok("登录成功", userService.login(req.email(), rawPassword));
     }
@@ -118,7 +120,8 @@ public class AuthController {
 
         String redisKey = RESET_CODE_PREFIX + email;
         String storedCode = stringRedisTemplate.opsForValue().get(redisKey);
-        if (storedCode == null || !storedCode.equals(code)) {
+        if (storedCode == null
+                || !MessageDigest.isEqual(storedCode.getBytes(java.nio.charset.StandardCharsets.UTF_8), code.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             throw new BizException("验证码错误或已过期");
         }
 

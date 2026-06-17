@@ -16,6 +16,7 @@ import com.example.back_end.mapper.TransactionMapper;
 import com.example.back_end.service.ITransactionService;
 import com.example.back_end.service.IUserCategoryService;
 import com.example.back_end.utils.AuthUtils;
+import com.example.back_end.utils.SanitizeUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
@@ -150,7 +151,9 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         List<TransactionResponse> txs = result.list();
         Map<Long, String> categoryMap = categoryNameMap();
 
-        String filename = "transactions_" + month + "." + format;
+        String safeMonth = month.replaceAll("[\\\\/:*?\"<>|]", "_");
+        String safeFormat = format.replaceAll("[\\\\/:*?\"<>|]", "_");
+        String filename = "transactions_" + safeMonth + "." + safeFormat;
         response.setCharacterEncoding("UTF-8");
 
         try {
@@ -298,7 +301,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 tx.category_id() != null ? categoryMap.getOrDefault(tx.category_id(), "") : "",
                 tx.account_id() != null ? String.valueOf(tx.account_id()) : "",
                 tx.to_account_id() != null ? String.valueOf(tx.to_account_id()) : "",
-                tx.remark() != null ? tx.remark() : "",
+                SanitizeUtils.sanitizeCsvCell(tx.remark() != null ? tx.remark() : ""),
                 formatTransTime(tx.trans_time())
             });
         }
@@ -330,7 +333,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                     .setCellValue(tx.category_id() != null ? categoryMap.getOrDefault(tx.category_id(), "") : "");
             row.createCell(3).setCellValue(tx.account_id() != null ? tx.account_id() : 0);
             row.createCell(4).setCellValue(tx.to_account_id() != null ? tx.to_account_id() : 0);
-            row.createCell(5).setCellValue(tx.remark() != null ? tx.remark() : "");
+            row.createCell(5).setCellValue(SanitizeUtils.sanitizeCsvCell(tx.remark() != null ? tx.remark() : ""));
             row.createCell(6).setCellValue(formatTransTime(tx.trans_time()));
         }
 
@@ -353,7 +356,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                         "category", tx.category_id() != null ? categoryMap.getOrDefault(tx.category_id(), "") : "",
                         "account_id", tx.account_id(),
                         "to_account_id", tx.to_account_id(),
-                        "remark", tx.remark() != null ? tx.remark() : "",
+                        "remark",
+                                SanitizeUtils.sanitizeCsvCell(tx.remark() != null ? tx.remark() : ""),
                         "trans_time", formatTransTime(tx.trans_time())))
                 .toList();
 
@@ -527,7 +531,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         tx.setAccountId(req.account_id());
         tx.setToAccountId(req.to_account_id());
         tx.setCategoryId(req.category_id());
-        tx.setRemark(req.remark() != null ? req.remark() : "");
+        tx.setRemark(req.remark() != null ? SanitizeUtils.escapeHtml(req.remark()) : "");
         if (req.trans_time() != null && !req.trans_time().isBlank()) {
             tx.setTransTime(
                     LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));

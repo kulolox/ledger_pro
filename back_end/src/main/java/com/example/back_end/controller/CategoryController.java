@@ -4,6 +4,7 @@ import com.example.back_end.dto.request.CategoryRequest;
 import com.example.back_end.dto.response.CategoryResponse;
 import com.example.back_end.service.IUserCategoryService;
 import com.example.back_end.utils.Result;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -31,12 +32,12 @@ public class CategoryController {
     }
 
     @PostMapping
-    public Result<CategoryResponse> create(@RequestBody CategoryRequest req) {
+    public Result<CategoryResponse> create(@Valid @RequestBody CategoryRequest req) {
         return Result.ok("添加成功", userCategoryService.create(req));
     }
 
     @PutMapping("/{id}")
-    public Result<CategoryResponse> update(@PathVariable Long id, @RequestBody CategoryRequest req) {
+    public Result<CategoryResponse> update(@PathVariable Long id, @Valid @RequestBody CategoryRequest req) {
         return Result.ok("修改成功", userCategoryService.update(id, req));
     }
 

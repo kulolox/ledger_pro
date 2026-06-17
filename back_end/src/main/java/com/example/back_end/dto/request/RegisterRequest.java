@@ -1,3 +1,10 @@
 package com.example.back_end.dto.request;
 
-public record RegisterRequest(String email, String password, String nickname) {}
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record RegisterRequest(
+        @NotBlank @Email String email,
+        @NotBlank @Size(min = 6, max = 100) String password,
+        @Size(max = 50) String nickname) {}

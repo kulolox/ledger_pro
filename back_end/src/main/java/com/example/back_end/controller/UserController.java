@@ -4,6 +4,7 @@ import com.example.back_end.dto.request.UpdateUserRequest;
 import com.example.back_end.dto.response.UserInfoResponse;
 import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.Result;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,7 +22,7 @@ public class UserController {
     }
 
     @PutMapping("/info")
-    public Result<UserInfoResponse> updateInfo(@RequestBody UpdateUserRequest req) {
+    public Result<UserInfoResponse> updateInfo(@Valid @RequestBody UpdateUserRequest req) {
         return Result.ok(userService.updateInfo(req));
     }
 }

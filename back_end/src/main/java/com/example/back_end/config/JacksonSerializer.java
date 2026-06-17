@@ -1,5 +1,6 @@
 package com.example.back_end.config;
 
+import java.util.Set;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
 import tools.jackson.databind.JsonNode;
@@ -7,6 +8,10 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 public class JacksonSerializer implements RedisSerializer<Object> {
+
+    private static final Set<String> ALLOWED_TYPES = Set.of(
+            "com.example.back_end.dto.response.TransactionListResponse",
+            "com.example.back_end.dto.response.TransactionResponse");
 
     private final ObjectMapper mapper;
 
@@ -33,8 +38,13 @@ public class JacksonSerializer implements RedisSerializer<Object> {
         try {
             JsonNode wrapper = mapper.readTree(bytes);
             String className = wrapper.get("@type").asText();
+            if (!ALLOWED_TYPES.contains(className)) {
+                throw new SerializationException("Deserialization rejected for type: " + className);
+            }
             Class<?> clazz = Class.forName(className);
             return mapper.treeToValue(wrapper.get("@value"), clazz);
+        } catch (SerializationException e) {
+            throw e;
         } catch (Exception e) {
             throw new SerializationException("Failed to deserialize", e);
         }
