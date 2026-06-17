@@ -51,6 +51,9 @@ cd front_end
 pnpm dev:h5          # 启动 H5 开发服务器
 pnpm build:h5        # 构建 H5 生产包
 pnpm type-check      # TypeScript 类型检查 (vue-tsc --noEmit)
+pnpm test:e2e        # Playwright E2E 测试
+pnpm test:e2e -- --grep "Auth"  # 按名称过滤
+pnpm test:unit       # Vitest 单元测试
 ```
 
 ### 后端 (back_end/)
@@ -215,3 +218,40 @@ pushDeletes → pushPending → pullFromServer
 - **前端 `currentBookId` 校验**: 首页 onShow 检查当前 bookId 是否仍在 books 列表中，不在则回退到第一个账本
 - **前端 `dayGroups`** 计算属性按 `currentBookId` 过滤
 - `currentBookId` 持久化到 storage，下次启动恢复
+
+## Playwright E2E 测试
+
+### 配置
+
+- `playwright.config.ts`: `channel: "chrome"` 使用本地 Chrome，baseURL `http://localhost:5173`，viewport 390×844 (iPhone 14 Pro)
+- `webServer` 自动启动 `npx uni` (端口 5173, `reuseExistingServer` 复用已有服务)
+- `.npmrc` 配置 `playwright_download_host = https://npmmirror.com/mirrors/playwright` 镜像加速
+
+### 目录结构
+
+```
+front_end/tests/
+├── setup.ts                          # 全局 setup
+└── e2e/
+    ├── fixtures/test.fixture.ts      # Worker 级 testUser 创建/销毁, authenticatedPage
+    ├── page-objects/                 # Page Object 模式, 每页一个类
+    │   ├── LoginPage.ts / RegisterPage.ts / ForgotPasswordPage.ts / HomePage.ts
+    │   ├── CategoryPage.ts / StatisticsPage.ts / ImportExportPage.ts
+    ├── specs/                        # 测试用例
+    │   ├── auth.spec.ts              # 13 个: 登录/注册渲染/校验/导航/密码不匹配
+    │   ├── forgot-password.spec.ts   # 5 个: 渲染/发送验证码/空码/返回/完整改密流程
+    │   ├── home-transactions.spec.ts / categories.spec.ts / statistics.spec.ts / import-export.spec.ts / sidebar.spec.ts
+    └── utils/
+        ├── test-data.ts              # TEST_USER (动态 email 避免冲突), API_BASE
+        └── db.ts                     # mysql2 直连: createTestUser/DestroyTestUser/getResetCode
+```
+
+### 关键点
+
+- **路由格式**: uni-app H5 hash 模式，Page Object `goto()` 必须用 `/#/pages/...`，不用 `/pages/...`
+- **App.vue onLaunch**: 只在 hash 为空时 reLaunch，否则覆盖直接访问的 register/forgot-password 页面
+- **DB fixture**: Worker 级 `createTestUser()` → 所有 test 用完 → `destroyTestUser()`。category 表无 `deleted` 字段，不要加 WHERE deleted=0
+- **login 后导航**: `uni.reLaunch("/pages/index/index")` 跳转到 `/#/` (首页是 pages.json 第一个)，waitForSelector(".home-page") 而非 waitForURL
+- **navigateBack**: register/forgot-password 的"返回登录"用 `uni.navigateBack()`，测试需从 login navigateTo 过去才有返回栈
+- **依赖**: `mysql2` (直连 DB) + `bcryptjs` (密码 hash) + `@playwright/test`，全部在 `devDependencies`
+- **运行前提**: 后端容器 (mysql/redis/backend/nginx) 必须全部启动，前端 dev server (pnpm dev:h5) 运行中
