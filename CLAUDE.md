@@ -13,6 +13,35 @@ ledger_pro/
 └── back_end/          # Spring Boot 后端工程
 ```
 
+## Docker 部署
+
+生产环境用 `docker-compose` 管理 4 个容器（mysql/redis/backend/nginx），所有数据挂载到 `D:/data_center/prod/`。
+
+```bash
+cd back_end
+mvn clean package -DskipTests                # 先打 JAR
+docker-compose build --no-cache backend      # 重建 backend 镜像
+docker-compose up -d                         # 启动全部服务
+docker-compose down                          # 停止全部服务
+```
+
+- **nginx** 暴露 80 端口，反向代理 `/api/` → `backend:8080`
+- **MySQL** 数据挂载 `D:/data_center/prod/mysql`，首次启动从 `docker/init.sql` 初始化
+- **Redis** 数据挂载 `D:/data_center/prod/redis`
+- **RSA 密钥** 挂载 `D:/data_center/prod/rsa-keys`
+- **环境变量** 从 `.env` 文件读取（`DB_PASSWORD/JWT_SECRET/MAIL_USERNAME/MAIL_PASSWORD/MAIL_FROM`），参考 `.env.example`
+
+### 编码陷阱
+
+- **MySQL init.sql 客户端编码**: MySQL Docker 初始化脚本由 `mysql` CLI 执行，**CLI 默认 charset=latin1**，必须 `SET NAMES utf8mb4;` 写在 init.sql 最开头，否则中文/emoji 写入时乱码
+- **Alpine JVM 编码**: `eclipse-temurin:21-jre-alpine` 镜像无完整 locale，JVM 默认可能非 UTF-8，Dockerfile 必须 `-Dfile.encoding=UTF-8`
+- **nginx charset**: 加 `charset utf-8;` + `charset_types application/json;` 确保响应头带 charset
+- **Spring 编码**: `server.servlet.encoding.charset=UTF-8` + `force=true` 兜底
+
+### 前端代理配置
+
+开发时 vite proxy `/api` → `http://127.0.0.1`（nginx 80 端口），**target 不要带 `/api` 后缀**，否则路径重复 `/api/api/v1/...` → 404。
+
 ## 常用命令
 
 ### 前端 (front_end/)
@@ -107,7 +136,7 @@ mvn spotless:apply               # 代码格式化
 - **多账本隔离**: 交易数据通过 `bookId` 参数隔离 + `book_id` 归属权校验（防止水平越权）。BookId 随机生成（8-12 位数字，`IdType.INPUT`），避免自增泄露账本数量
 - **逻辑删除**: 核心表用 `deleted` 字段标记，不物理删除。MyBatis-Plus 自动处理，查询/更新自动追加 `deleted=0`
 - **交易时间**: `trans_time` 精确到秒。前端 `TransactionEditor` 构造 `YYYY-MM-DDThh:mm:ss`（当前时分秒），后端 `toEntity` 解析 `LocalDateTime.parse(time.replace(" ", "T").substring(0, 19))`
-- **RSA 加密**: 前端获取公钥 → Web Crypto API (RSA-OAEP SHA-256) 加密 → 后端 RSA 解密 → BCrypt 验证。`GET /api/v1/auth/public-key`。密钥持久化到 `data/`，前端 `cachedPublicKey` 缓存（重启后需清除）
+- **RSA 加密**: 前端获取公钥 → Web Crypto API (RSA-OAEP SHA-256) 加密 → 后端 RSA 解密 → BCrypt 验证。`GET /api/v1/auth/public-key`。密钥持久化到 `data/`，前端 `cachedPublicKey` 缓存（重启后需清除）。RSA-2048 加密后 base64 约 344 字符，`RegisterRequest` 密码字段 `@Size(max=500)` 需预留足够长度
 
 ### 分类管理（用户隔离架构）
 
