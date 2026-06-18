@@ -189,8 +189,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             throw new BizException("请提供 month 或 year 参数");
         }
 
-        String safeFormat = format.replaceAll("[\\\\/:*?\"<>|]", "_");
-        String filename = "transactions_" + safePeriod + "." + safeFormat;
+        String fileExt = format.equals("excel") ? "xlsx" : format;
+        String filename = "transactions_" + safePeriod + "." + fileExt;
         response.setCharacterEncoding("UTF-8");
 
         try {
@@ -577,7 +577,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     }
 
     public void downloadTemplate(String format, HttpServletResponse response) {
-        String filename = "import_template." + format;
+        String fileExt = format.equals("excel") ? "xlsx" : format;
+        String filename = "import_template." + fileExt;
         response.setCharacterEncoding("UTF-8");
 
         try {
