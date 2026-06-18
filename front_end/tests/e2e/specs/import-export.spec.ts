@@ -6,6 +6,8 @@ import {
   cleanupTestTransactions,
   exportTransactionsApi,
   importTransactionsApi,
+  getTransactionCount,
+  getLatestTransactionCategory,
 } from "../utils/db";
 
 test.describe("Import Export", () => {
@@ -127,163 +129,180 @@ test.describe("Import Export", () => {
     const categoryIds = await getCategoryIds(testUser.userId);
     await createTestTransactions(testUser.bookId, testUser.accountId, categoryIds);
 
-    const token = await authenticatedPage.evaluate(() => {
-      const storage = (window as any).__UNI_STORAGE__ || localStorage;
-      return storage.getItem("token") || "";
-    });
+    try {
+      const count = await getTransactionCount(testUser.bookId);
+      expect(count).toBe(3);
 
-    const { status, body, contentType } = await exportTransactionsApi(
-      testUser.bookId,
-      { month: "2025-01", format: "csv" },
-      token,
-    );
+      const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
 
-    expect(status).toBe(200);
-    expect(contentType).toContain("text/csv");
+      const { status, body, contentType } = await exportTransactionsApi(
+        testUser.bookId,
+        { month: "2025-01", format: "csv" },
+        token,
+      );
 
-    const lines = body.trim().split("\n");
-    expect(lines.length).toBeGreaterThanOrEqual(2);
+      expect(status).toBe(200);
+      expect(contentType).toContain("text/csv");
 
-    const header = lines[0];
-    expect(header).toContain("type");
-    expect(header).toContain("amount");
-    expect(header).toContain("category");
+      const lines = body.trim().split("\n");
+      expect(lines.length).toBeGreaterThanOrEqual(2);
 
-    const dataLines = lines.slice(1);
-    expect(dataLines.length).toBe(3);
+      const header = lines[0];
+      expect(header).toContain("type");
+      expect(header).toContain("amount");
+      expect(header).toContain("category");
 
-    await cleanupTestTransactions(testUser.bookId);
+      const dataLines = lines.slice(1);
+      expect(dataLines.length).toBe(3);
+    } finally {
+      await cleanupTestTransactions(testUser.bookId);
+    }
   });
 
   test("export JSON with data returns valid content", async ({ authenticatedPage, testUser }) => {
     const categoryIds = await getCategoryIds(testUser.userId);
     await createTestTransactions(testUser.bookId, testUser.accountId, categoryIds);
 
-    const token = await authenticatedPage.evaluate(() => {
-      const storage = (window as any).__UNI_STORAGE__ || localStorage;
-      return storage.getItem("token") || "";
-    });
+    try {
+      const count = await getTransactionCount(testUser.bookId);
+      expect(count).toBe(3);
 
-    const { status, body } = await exportTransactionsApi(
-      testUser.bookId,
-      { month: "2025-01", format: "json" },
-      token,
-    );
+      const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
 
-    expect(status).toBe(200);
-    const data = JSON.parse(body);
-    expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBe(3);
+      const { status, body } = await exportTransactionsApi(
+        testUser.bookId,
+        { month: "2025-01", format: "json" },
+        token,
+      );
 
-    const first = data[0];
-    expect(first).toHaveProperty("type");
-    expect(first).toHaveProperty("amount");
-    expect(first).toHaveProperty("category");
+      expect(status).toBe(200);
+      const data = JSON.parse(body);
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBe(3);
 
-    await cleanupTestTransactions(testUser.bookId);
+      const first = data[0];
+      expect(first).toHaveProperty("type");
+      expect(first).toHaveProperty("amount");
+      expect(first).toHaveProperty("category");
+    } finally {
+      await cleanupTestTransactions(testUser.bookId);
+    }
   });
 
   test("export year mode returns all 12 months data", async ({ authenticatedPage, testUser }) => {
     const categoryIds = await getCategoryIds(testUser.userId);
     await createTestTransactions(testUser.bookId, testUser.accountId, categoryIds);
 
-    const token = await authenticatedPage.evaluate(() => {
-      const storage = (window as any).__UNI_STORAGE__ || localStorage;
-      return storage.getItem("token") || "";
-    });
+    try {
+      const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
 
-    const { status, body } = await exportTransactionsApi(
-      testUser.bookId,
-      { year: "2025", format: "json" },
-      token,
-    );
+      const { status, body } = await exportTransactionsApi(
+        testUser.bookId,
+        { year: "2025", format: "json" },
+        token,
+      );
 
-    expect(status).toBe(200);
-    const data = JSON.parse(body);
-    expect(data.length).toBeGreaterThanOrEqual(3);
-
-    await cleanupTestTransactions(testUser.bookId);
+      expect(status).toBe(200);
+      const data = JSON.parse(body);
+      expect(data.length).toBeGreaterThanOrEqual(3);
+    } finally {
+      await cleanupTestTransactions(testUser.bookId);
+    }
   });
 
   test("import CSV inserts data into database", async ({ authenticatedPage, testUser }) => {
-    const categoryIds = await getCategoryIds(testUser.userId);
-
-    const token = await authenticatedPage.evaluate(() => {
-      const storage = (window as any).__UNI_STORAGE__ || localStorage;
-      return storage.getItem("token") || "";
-    });
+    const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
 
     const csvContent =
       "type,amount,category,account_id,to_account_id,remark,trans_time\n" +
       `支出,99.50,餐饮,${testUser.accountId},,测试导入午餐,2025-02-10 12:00:00\n` +
       `收入,3000.00,工资,${testUser.accountId},,测试导入工资,2025-02-10 09:00:00`;
 
-    const { status, body } = await importTransactionsApi(
-      testUser.bookId,
-      "csv",
-      csvContent,
-      token,
-    );
+    let imported = 0;
+    try {
+      const { status, body } = await importTransactionsApi(
+        testUser.bookId,
+        "csv",
+        csvContent,
+        token,
+      );
 
-    expect(status).toBe(200);
-    expect(body.code).toBe(200);
-    expect(body.data.imported).toBe(2);
-    expect(body.data.total).toBe(2);
+      expect(status).toBe(200);
+      expect(body.code).toBe(200);
+      expect(body.data.imported).toBe(2);
+      expect(body.data.total).toBe(2);
+      imported = body.data.imported;
 
-    await cleanupTestTransactions(testUser.bookId);
+      const dbCount = await getTransactionCount(testUser.bookId);
+      expect(dbCount).toBe(2);
+    } finally {
+      if (imported > 0) await cleanupTestTransactions(testUser.bookId);
+    }
   });
 
   test("import CSV with unknown category falls back to 其他", async ({ authenticatedPage, testUser }) => {
     const categoryIds = await getCategoryIds(testUser.userId);
-
-    const token = await authenticatedPage.evaluate(() => {
-      const storage = (window as any).__UNI_STORAGE__ || localStorage;
-      return storage.getItem("token") || "";
-    });
+    const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
 
     const csvContent =
       "type,amount,category,account_id,to_account_id,remark,trans_time\n" +
       `支出,50.00,完全不存在的分类,${testUser.accountId},,未知分类测试,2025-03-01 10:00:00`;
 
-    const { status, body } = await importTransactionsApi(
-      testUser.bookId,
-      "csv",
-      csvContent,
-      token,
-    );
+    let imported = 0;
+    try {
+      const { status, body } = await importTransactionsApi(
+        testUser.bookId,
+        "csv",
+        csvContent,
+        token,
+      );
 
-    expect(status).toBe(200);
-    expect(body.code).toBe(200);
-    expect(body.data.imported).toBe(1);
-    expect(body.data.errors).toHaveLength(0);
+      expect(status).toBe(200);
+      expect(body.code).toBe(200);
+      expect(body.data.imported).toBe(1);
+      expect(body.data.errors).toHaveLength(0);
+      imported = body.data.imported;
 
-    await cleanupTestTransactions(testUser.bookId);
+      const dbCount = await getTransactionCount(testUser.bookId);
+      expect(dbCount).toBe(1);
+
+      const categoryId = await getLatestTransactionCategory(testUser.bookId);
+      expect(categoryId).toBe(categoryIds.other);
+    } finally {
+      if (imported > 0) await cleanupTestTransactions(testUser.bookId);
+    }
   });
 
   test("import CSV with empty category falls back to 其他", async ({ authenticatedPage, testUser }) => {
     const categoryIds = await getCategoryIds(testUser.userId);
-
-    const token = await authenticatedPage.evaluate(() => {
-      const storage = (window as any).__UNI_STORAGE__ || localStorage;
-      return storage.getItem("token") || "";
-    });
+    const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
 
     const csvContent =
       "type,amount,category,account_id,to_account_id,remark,trans_time\n" +
       `支出,30.00,,${testUser.accountId},,空分类测试,2025-03-05 14:00:00`;
 
-    const { status, body } = await importTransactionsApi(
-      testUser.bookId,
-      "csv",
-      csvContent,
-      token,
-    );
+    let imported = 0;
+    try {
+      const { status, body } = await importTransactionsApi(
+        testUser.bookId,
+        "csv",
+        csvContent,
+        token,
+      );
 
-    expect(status).toBe(200);
-    expect(body.code).toBe(200);
-    expect(body.data.imported).toBe(1);
-    expect(body.data.errors).toHaveLength(0);
+      expect(status).toBe(200);
+      expect(body.code).toBe(200);
+      expect(body.data.imported).toBe(1);
+      expect(body.data.errors).toHaveLength(0);
+      imported = body.data.imported;
 
-    await cleanupTestTransactions(testUser.bookId);
+      const dbCount = await getTransactionCount(testUser.bookId);
+      expect(dbCount).toBe(1);
+
+      const categoryId = await getLatestTransactionCategory(testUser.bookId);
+      expect(categoryId).toBe(categoryIds.other);
+    } finally {
+      if (imported > 0) await cleanupTestTransactions(testUser.bookId);
+    }
   });
 });

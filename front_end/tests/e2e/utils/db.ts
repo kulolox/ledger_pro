@@ -92,6 +92,30 @@ export async function getCategoryIds(userId: number): Promise<{ expense: number;
   }
 }
 
+export async function getTransactionCount(bookId: number): Promise<number> {
+  const conn = await mysql.createConnection(DB_CONFIG);
+  try {
+    const [rows] = await conn.execute(
+      "SELECT COUNT(*) as cnt FROM `transaction` WHERE book_id = ? AND deleted = 0", [bookId]
+    );
+    return (rows as any[])[0]?.cnt || 0;
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function getLatestTransactionCategory(bookId: number): Promise<number | null> {
+  const conn = await mysql.createConnection(DB_CONFIG);
+  try {
+    const [rows] = await conn.execute(
+      "SELECT category_id FROM `transaction` WHERE book_id = ? AND deleted = 0 ORDER BY id DESC LIMIT 1", [bookId]
+    );
+    return (rows as any[])[0]?.category_id ?? null;
+  } finally {
+    await conn.end();
+  }
+}
+
 export async function cleanupTestTransactions(bookId: number): Promise<void> {
   const conn = await mysql.createConnection(DB_CONFIG);
   try {
