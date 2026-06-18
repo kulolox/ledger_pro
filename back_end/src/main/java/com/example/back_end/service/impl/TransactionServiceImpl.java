@@ -398,15 +398,17 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
 
         List<Map<String, Object>> data = txs.stream()
-                .map(tx -> Map.<String, Object>of(
-                        "type", formatType(tx.type()),
-                        "amount", formatAmount(tx.amount()),
-                        "category", tx.category_id() != null ? categoryMap.getOrDefault(tx.category_id(), "") : "",
-                        "account_id", tx.account_id(),
-                        "to_account_id", tx.to_account_id(),
-                        "remark",
-                                SanitizeUtils.sanitizeCsvCell(tx.remark() != null ? tx.remark() : ""),
-                        "trans_time", formatTransTime(tx.trans_time())))
+                .map(tx -> {
+                    Map<String, Object> map = new java.util.LinkedHashMap<>();
+                    map.put("type", formatType(tx.type()));
+                    map.put("amount", formatAmount(tx.amount()));
+                    map.put("category", tx.category_id() != null ? categoryMap.getOrDefault(tx.category_id(), "") : "");
+                    if (tx.account_id() != null) map.put("account_id", tx.account_id());
+                    if (tx.to_account_id() != null) map.put("to_account_id", tx.to_account_id());
+                    map.put("remark", SanitizeUtils.sanitizeCsvCell(tx.remark() != null ? tx.remark() : ""));
+                    map.put("trans_time", formatTransTime(tx.trans_time()));
+                    return map;
+                })
                 .toList();
 
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(response.getOutputStream(), data);

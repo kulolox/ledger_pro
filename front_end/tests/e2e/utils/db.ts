@@ -55,6 +55,78 @@ export async function createTestUser(): Promise<TestUserRow> {
   }
 }
 
+export async function createTestTransactions(bookId: number, accountId: number, categoryIds: { expense: number; income: number; other: number }): Promise<void> {
+  const conn = await mysql.createConnection(DB_CONFIG);
+  try {
+    await conn.execute(
+      `INSERT INTO transaction (book_id, type, amount, account_id, category_id, remark, trans_time, created_at, updated_at) VALUES
+       (?, 0, 2550, ?, ?, '午餐', '2025-01-15 12:30:00', NOW(), NOW()),
+       (?, 1, 500000, ?, ?, '工资', '2025-01-15 09:00:00', NOW(), NOW()),
+       (?, 0, 1500, ?, ?, '交通费', '2025-01-20 08:00:00', NOW(), NOW())`,
+      [bookId, accountId, categoryIds.expense, bookId, accountId, categoryIds.income, bookId, accountId, categoryIds.expense],
+    );
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function getCategoryIds(userId: number): Promise<{ expense: number; income: number; other: number }> {
+  const conn = await mysql.createConnection(DB_CONFIG);
+  try {
+    const [expenseRows] = await conn.execute(
+      "SELECT id FROM user_category WHERE user_id = ? AND type = 0 AND name != '其他' LIMIT 1", [userId]
+    );
+    const [incomeRows] = await conn.execute(
+      "SELECT id FROM user_category WHERE user_id = ? AND type = 1 AND name != '其他' LIMIT 1", [userId]
+    );
+    const [otherRows] = await conn.execute(
+      "SELECT id FROM user_category WHERE user_id = ? AND type = 0 AND name = '其他' LIMIT 1", [userId]
+    );
+    return {
+      expense: (expenseRows as any[])[0]?.id,
+      income: (incomeRows as any[])[0]?.id,
+      other: (otherRows as any[])[0]?.id,
+    };
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function cleanupTestTransactions(bookId: number): Promise<void> {
+  const conn = await mysql.createConnection(DB_CONFIG);
+  try {
+    await conn.execute("DELETE FROM `transaction` WHERE book_id = ?", [bookId]);
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function exportTransactionsApi(bookId: number, params: Record<string, string>, token: string): Promise<{ status: number; body: string; contentType: string }> {
+  const query = new URLSearchParams({ book_id: String(bookId), ...params }).toString();
+  const url = `http://localhost:8080/api/v1/transactions/export?${query}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const contentType = res.headers.get("content-type") || "";
+  const body = await res.text();
+  return { status: res.status, body, contentType };
+}
+
+export async function importTransactionsApi(bookId: number, format: string, csvContent: string, token: string): Promise<{ status: number; body: any }> {
+  const formData = new FormData();
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  formData.append("file", blob, "test-import.csv");
+  formData.append("book_id", String(bookId));
+  formData.append("format", format);
+
+  const url = `http://localhost:8080/api/v1/transactions/import`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const body = await res.json();
+  return { status: res.status, body };
+}
+
 export async function destroyTestUser(userId: number, bookId: number): Promise<void> {
   const conn = await mysql.createConnection(DB_CONFIG);
   try {

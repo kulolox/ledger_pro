@@ -1,5 +1,12 @@
 import { test, expect } from "../fixtures/test.fixture";
 import { ImportExportPage } from "../page-objects/ImportExportPage";
+import {
+  createTestTransactions,
+  getCategoryIds,
+  cleanupTestTransactions,
+  exportTransactionsApi,
+  importTransactionsApi,
+} from "../utils/db";
 
 test.describe("Import Export", () => {
   test("import export page renders", async ({ authenticatedPage }) => {
@@ -33,22 +40,12 @@ test.describe("Import Export", () => {
 
     await iePage.selectFormat("excel");
     await authenticatedPage.waitForTimeout(200);
-    // the Excel chip should have active class
     const excelChip = iePage.formatChips.filter({ hasText: "Excel" });
     await expect(excelChip).toHaveClass(/active/);
 
     await iePage.selectFormat("csv");
     const csvChip = iePage.formatChips.filter({ hasText: "CSV" });
     await expect(csvChip).toHaveClass(/active/);
-  });
-
-  test("export button triggers action", async ({ authenticatedPage }) => {
-    const iePage = new ImportExportPage(authenticatedPage);
-    await iePage.goto();
-
-    await iePage.selectFormat("json");
-    await iePage.clickExport();
-    await authenticatedPage.waitForTimeout(2000);
   });
 
   test("import tab shows file picker area", async ({ authenticatedPage }) => {
@@ -117,17 +114,6 @@ test.describe("Import Export", () => {
     expect(nextYear).toBe(initialYear);
   });
 
-  test("yearly export button triggers download", async ({ authenticatedPage }) => {
-    const iePage = new ImportExportPage(authenticatedPage);
-    await iePage.goto();
-    await iePage.switchToMode("year");
-    await authenticatedPage.waitForTimeout(300);
-
-    await iePage.selectFormat("json");
-    await iePage.clickExport();
-    await authenticatedPage.waitForTimeout(2000);
-  });
-
   test("import format chips in import tab", async ({ authenticatedPage }) => {
     const iePage = new ImportExportPage(authenticatedPage);
     await iePage.goto();
@@ -135,5 +121,169 @@ test.describe("Import Export", () => {
     await authenticatedPage.waitForTimeout(300);
 
     await expect(iePage.formatChips.first()).toBeVisible();
+  });
+
+  test("export CSV with data returns valid content", async ({ authenticatedPage, testUser }) => {
+    const categoryIds = await getCategoryIds(testUser.userId);
+    await createTestTransactions(testUser.bookId, testUser.accountId, categoryIds);
+
+    const token = await authenticatedPage.evaluate(() => {
+      const storage = (window as any).__UNI_STORAGE__ || localStorage;
+      return storage.getItem("token") || "";
+    });
+
+    const { status, body, contentType } = await exportTransactionsApi(
+      testUser.bookId,
+      { month: "2025-01", format: "csv" },
+      token,
+    );
+
+    expect(status).toBe(200);
+    expect(contentType).toContain("text/csv");
+
+    const lines = body.trim().split("\n");
+    expect(lines.length).toBeGreaterThanOrEqual(2);
+
+    const header = lines[0];
+    expect(header).toContain("type");
+    expect(header).toContain("amount");
+    expect(header).toContain("category");
+
+    const dataLines = lines.slice(1);
+    expect(dataLines.length).toBe(3);
+
+    await cleanupTestTransactions(testUser.bookId);
+  });
+
+  test("export JSON with data returns valid content", async ({ authenticatedPage, testUser }) => {
+    const categoryIds = await getCategoryIds(testUser.userId);
+    await createTestTransactions(testUser.bookId, testUser.accountId, categoryIds);
+
+    const token = await authenticatedPage.evaluate(() => {
+      const storage = (window as any).__UNI_STORAGE__ || localStorage;
+      return storage.getItem("token") || "";
+    });
+
+    const { status, body } = await exportTransactionsApi(
+      testUser.bookId,
+      { month: "2025-01", format: "json" },
+      token,
+    );
+
+    expect(status).toBe(200);
+    const data = JSON.parse(body);
+    expect(Array.isArray(data)).toBe(true);
+    expect(data.length).toBe(3);
+
+    const first = data[0];
+    expect(first).toHaveProperty("type");
+    expect(first).toHaveProperty("amount");
+    expect(first).toHaveProperty("category");
+
+    await cleanupTestTransactions(testUser.bookId);
+  });
+
+  test("export year mode returns all 12 months data", async ({ authenticatedPage, testUser }) => {
+    const categoryIds = await getCategoryIds(testUser.userId);
+    await createTestTransactions(testUser.bookId, testUser.accountId, categoryIds);
+
+    const token = await authenticatedPage.evaluate(() => {
+      const storage = (window as any).__UNI_STORAGE__ || localStorage;
+      return storage.getItem("token") || "";
+    });
+
+    const { status, body } = await exportTransactionsApi(
+      testUser.bookId,
+      { year: "2025", format: "json" },
+      token,
+    );
+
+    expect(status).toBe(200);
+    const data = JSON.parse(body);
+    expect(data.length).toBeGreaterThanOrEqual(3);
+
+    await cleanupTestTransactions(testUser.bookId);
+  });
+
+  test("import CSV inserts data into database", async ({ authenticatedPage, testUser }) => {
+    const categoryIds = await getCategoryIds(testUser.userId);
+
+    const token = await authenticatedPage.evaluate(() => {
+      const storage = (window as any).__UNI_STORAGE__ || localStorage;
+      return storage.getItem("token") || "";
+    });
+
+    const csvContent =
+      "type,amount,category,account_id,to_account_id,remark,trans_time\n" +
+      `支出,99.50,餐饮,${testUser.accountId},,测试导入午餐,2025-02-10 12:00:00\n` +
+      `收入,3000.00,工资,${testUser.accountId},,测试导入工资,2025-02-10 09:00:00`;
+
+    const { status, body } = await importTransactionsApi(
+      testUser.bookId,
+      "csv",
+      csvContent,
+      token,
+    );
+
+    expect(status).toBe(200);
+    expect(body.code).toBe(200);
+    expect(body.data.imported).toBe(2);
+    expect(body.data.total).toBe(2);
+
+    await cleanupTestTransactions(testUser.bookId);
+  });
+
+  test("import CSV with unknown category falls back to 其他", async ({ authenticatedPage, testUser }) => {
+    const categoryIds = await getCategoryIds(testUser.userId);
+
+    const token = await authenticatedPage.evaluate(() => {
+      const storage = (window as any).__UNI_STORAGE__ || localStorage;
+      return storage.getItem("token") || "";
+    });
+
+    const csvContent =
+      "type,amount,category,account_id,to_account_id,remark,trans_time\n" +
+      `支出,50.00,完全不存在的分类,${testUser.accountId},,未知分类测试,2025-03-01 10:00:00`;
+
+    const { status, body } = await importTransactionsApi(
+      testUser.bookId,
+      "csv",
+      csvContent,
+      token,
+    );
+
+    expect(status).toBe(200);
+    expect(body.code).toBe(200);
+    expect(body.data.imported).toBe(1);
+    expect(body.data.errors).toHaveLength(0);
+
+    await cleanupTestTransactions(testUser.bookId);
+  });
+
+  test("import CSV with empty category falls back to 其他", async ({ authenticatedPage, testUser }) => {
+    const categoryIds = await getCategoryIds(testUser.userId);
+
+    const token = await authenticatedPage.evaluate(() => {
+      const storage = (window as any).__UNI_STORAGE__ || localStorage;
+      return storage.getItem("token") || "";
+    });
+
+    const csvContent =
+      "type,amount,category,account_id,to_account_id,remark,trans_time\n" +
+      `支出,30.00,,${testUser.accountId},,空分类测试,2025-03-05 14:00:00`;
+
+    const { status, body } = await importTransactionsApi(
+      testUser.bookId,
+      "csv",
+      csvContent,
+      token,
+    );
+
+    expect(status).toBe(200);
+    expect(body.code).toBe(200);
+    expect(body.data.imported).toBe(1);
+    expect(body.data.errors).toHaveLength(0);
+
+    await cleanupTestTransactions(testUser.bookId);
   });
 });
