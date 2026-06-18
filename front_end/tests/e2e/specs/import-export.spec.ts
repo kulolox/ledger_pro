@@ -77,4 +77,63 @@ test.describe("Import Export", () => {
     await authenticatedPage.waitForTimeout(1000);
     await expect(authenticatedPage.locator(".home-page")).toBeVisible();
   });
+
+  test("export has year/month mode toggle", async ({ authenticatedPage }) => {
+    const iePage = new ImportExportPage(authenticatedPage);
+    await iePage.goto();
+
+    await expect(iePage.modeChips).toHaveCount(2);
+    await expect(iePage.monthPicker).toBeVisible();
+    await expect(iePage.yearPicker).not.toBeVisible();
+  });
+
+  test("switch to year mode shows year picker", async ({ authenticatedPage }) => {
+    const iePage = new ImportExportPage(authenticatedPage);
+    await iePage.goto();
+
+    await iePage.switchToMode("year");
+    await authenticatedPage.waitForTimeout(300);
+
+    await expect(iePage.monthPicker).not.toBeVisible();
+    await expect(iePage.yearPicker).toBeVisible();
+  });
+
+  test("year picker changes year on arrow click", async ({ authenticatedPage }) => {
+    const iePage = new ImportExportPage(authenticatedPage);
+    await iePage.goto();
+    await iePage.switchToMode("year");
+    await authenticatedPage.waitForTimeout(300);
+
+    const initialYear = await iePage.yearText.textContent();
+
+    await iePage.clickPrevYear();
+    await authenticatedPage.waitForTimeout(200);
+    const prevYear = await iePage.yearText.textContent();
+    expect(prevYear).not.toBe(initialYear);
+
+    await iePage.clickNextYear();
+    await authenticatedPage.waitForTimeout(200);
+    const nextYear = await iePage.yearText.textContent();
+    expect(nextYear).toBe(initialYear);
+  });
+
+  test("yearly export button triggers download", async ({ authenticatedPage }) => {
+    const iePage = new ImportExportPage(authenticatedPage);
+    await iePage.goto();
+    await iePage.switchToMode("year");
+    await authenticatedPage.waitForTimeout(300);
+
+    await iePage.selectFormat("json");
+    await iePage.clickExport();
+    await authenticatedPage.waitForTimeout(2000);
+  });
+
+  test("import format chips in import tab", async ({ authenticatedPage }) => {
+    const iePage = new ImportExportPage(authenticatedPage);
+    await iePage.goto();
+    await iePage.switchToImport();
+    await authenticatedPage.waitForTimeout(300);
+
+    await expect(iePage.formatChips.first()).toBeVisible();
+  });
 });

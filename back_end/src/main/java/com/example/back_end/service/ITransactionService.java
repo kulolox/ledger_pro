@@ -20,7 +20,7 @@ public interface ITransactionService extends IService<Transaction> {
 
     TransactionListResponse list(Long bookId, String month);
 
-    void exportTransactions(Long bookId, String month, String format, HttpServletResponse response);
+    void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response);
 
     Map<String, Object> importTransactions(Long bookId, MultipartFile file, String format);
 }

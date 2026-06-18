@@ -46,10 +46,11 @@ public class TransactionController {
     @GetMapping("/export")
     public void exportTransactions(
             @RequestParam Long book_id,
-            @RequestParam String month,
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) String year,
             @RequestParam(defaultValue = "csv") String format,
             HttpServletResponse response) {
-        transactionService.exportTransactions(book_id, month, format, response);
+        transactionService.exportTransactions(book_id, month, year, format, response);
     }
 
     @PostMapping("/import")

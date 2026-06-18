@@ -37,11 +37,40 @@
       </view>
 
       <view class="section">
+        <text class="section-label">时间范围</text>
+        <view class="mode-row">
+          <view
+            class="mode-chip"
+            :class="{ active: exportMode === 'month' }"
+            @click="exportMode = 'month'"
+          >
+            <text>按月</text>
+          </view>
+          <view
+            class="mode-chip"
+            :class="{ active: exportMode === 'year' }"
+            @click="exportMode = 'year'"
+          >
+            <text>按年</text>
+          </view>
+        </view>
+      </view>
+
+      <view v-if="exportMode === 'month'" class="section">
         <text class="section-label">导出月份</text>
         <view class="month-picker">
           <view class="month-arrow" @click="prevExportMonth"><wd-icon name="left" size="24px" color="var(--text-secondary)" /></view>
           <text class="month-text">{{ exportMonthLabel }}</text>
           <view class="month-arrow" @click="nextExportMonth"><wd-icon name="right" size="24px" color="var(--text-secondary)" /></view>
+        </view>
+      </view>
+
+      <view v-if="exportMode === 'year'" class="section">
+        <text class="section-label">导出年份</text>
+        <view class="year-picker">
+          <view class="year-arrow" @click="exportYear--"><wd-icon name="left" size="24px" color="var(--text-secondary)" /></view>
+          <text class="year-text">{{ exportYear }}</text>
+          <view class="year-arrow" @click="exportYear++"><wd-icon name="right" size="24px" color="var(--text-secondary)" /></view>
         </view>
       </view>
 
@@ -148,6 +177,7 @@ const formats = [
 const exportFormat = ref("csv");
 const importFormat = ref("csv");
 
+const exportMode = ref<"month" | "year">("month");
 const exportYear = ref(new Date().getFullYear());
 const exportMonth = ref(new Date().getMonth() + 1);
 
@@ -195,12 +225,16 @@ async function onExport() {
   if (exporting.value) return;
   exporting.value = true;
   try {
-    const month = `${exportYear.value}-${String(exportMonth.value).padStart(2, "0")}`;
-    await exportTransactions({
+    const params: Record<string, any> = {
       book_id: currentBookId.value,
-      month,
       format: exportFormat.value,
-    });
+    };
+    if (exportMode.value === "year") {
+      params.year = String(exportYear.value);
+    } else {
+      params.month = `${exportYear.value}-${String(exportMonth.value).padStart(2, "0")}`;
+    }
+    await exportTransactions(params);
     uni.showToast({ title: "导出成功", icon: "success" });
   } catch {
     uni.showToast({ title: "导出失败", icon: "error" });
@@ -430,6 +464,26 @@ onShow(async () => {
   }
 }
 
+.mode-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.mode-chip {
+  padding: 16rpx 36rpx;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+
+  &.active {
+    background: var(--color-primary);
+    color: var(--text-inverse);
+    font-weight: 600;
+  }
+}
+
 .month-picker {
   display: flex;
   align-items: center;
@@ -460,6 +514,39 @@ onShow(async () => {
   font-weight: 600;
   color: var(--text-primary);
   min-width: 200rpx;
+  text-align: center;
+}
+
+.year-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32rpx;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 24rpx;
+}
+
+.year-arrow {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.year-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 160rpx;
   text-align: center;
 }
 

@@ -169,15 +169,28 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return queryTransactions(bookId, month);
     }
 
-    public void exportTransactions(Long bookId, String month, String format, HttpServletResponse response) {
+    public void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response) {
         validateBookOwnership(bookId);
-        TransactionListResponse result = queryTransactions(bookId, month);
-        List<TransactionResponse> txs = result.list();
         Map<Long, String> categoryMap = categoryNameMap();
 
-        String safeMonth = month.replaceAll("[\\\\/:*?\"<>|]", "_");
+        List<TransactionResponse> txs;
+        String safePeriod;
+        if (year != null && !year.isBlank()) {
+            txs = new ArrayList<>();
+            for (int m = 1; m <= 12; m++) {
+                String ym = year + "-" + String.format("%02d", m);
+                txs.addAll(queryTransactions(bookId, ym).list());
+            }
+            safePeriod = year.replaceAll("[\\\\/:*?\"<>|]", "_");
+        } else if (month != null && !month.isBlank()) {
+            txs = queryTransactions(bookId, month).list();
+            safePeriod = month.replaceAll("[\\\\/:*?\"<>|]", "_");
+        } else {
+            throw new BizException("请提供 month 或 year 参数");
+        }
+
         String safeFormat = format.replaceAll("[\\\\/:*?\"<>|]", "_");
-        String filename = "transactions_" + safeMonth + "." + safeFormat;
+        String filename = "transactions_" + safePeriod + "." + safeFormat;
         response.setCharacterEncoding("UTF-8");
 
         try {
@@ -201,12 +214,15 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             Map<Long, String> categoryMap = categoryNameMap();
             Map<String, Long> nameToId = categoryMap.entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey, (a, b) -> a));
+            Map<Integer, Long> otherCategoryByType = userCategoryService.listAll().stream()
+                    .filter(c -> "其他".equals(c.name()))
+                    .collect(Collectors.toMap(c -> c.type(), c -> c.id(), (a, b) -> a));
 
             List<TransactionRequest> items =
                     switch (format) {
-                        case "csv" -> parseCsv(file, nameToId);
-                        case "excel" -> parseExcel(file, nameToId);
-                        case "json" -> parseJson(file, nameToId);
+                        case "csv" -> parseCsv(file, nameToId, otherCategoryByType);
+                        case "excel" -> parseExcel(file, nameToId, otherCategoryByType);
+                        case "json" -> parseJson(file, nameToId, otherCategoryByType);
                         default -> throw new BizException("不支持的导入格式: " + format);
                     };
 
@@ -304,15 +320,15 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         }
     }
 
-    private Long parseCategory(String s, Map<String, Long> nameToId) {
-        if (s == null || s.isBlank()) return null;
+    private Long parseCategory(String s, Integer type, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) {
+        if (s == null || s.isBlank()) return otherCategoryByType.get(type);
         String trimmed = s.trim();
         Long id = nameToId.get(trimmed);
         if (id != null) return id;
         try {
             return Long.parseLong(trimmed);
         } catch (NumberFormatException e) {
-            return null;
+            return otherCategoryByType.get(type);
         }
     }
 
@@ -396,7 +412,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(response.getOutputStream(), data);
     }
 
-    private List<TransactionRequest> parseCsv(MultipartFile file, Map<String, Long> nameToId) throws Exception {
+    private List<TransactionRequest> parseCsv(MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
         List<TransactionRequest> items = new ArrayList<>();
         try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
                 CSVReader csvReader = new CSVReader(reader)) {
@@ -417,13 +433,14 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
 
             String[] row;
             while ((row = csvReader.readNext()) != null) {
+                int type = parseType(parseString(row, idxType));
                 items.add(new TransactionRequest(
                         null,
-                        parseType(parseString(row, idxType)),
+                        type,
                         parseAmount(parseString(row, idxAmount)),
                         parseLong(row, idxAccountId),
                         parseLong(row, idxToAccountId),
-                        parseCategory(parseString(row, idxCategory), nameToId),
+                        parseCategory(parseString(row, idxCategory), type, nameToId, otherCategoryByType),
                         parseString(row, idxRemark),
                         parseString(row, idxTransTime)));
             }
@@ -431,7 +448,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return items;
     }
 
-    private List<TransactionRequest> parseExcel(MultipartFile file, Map<String, Long> nameToId) throws Exception {
+    private List<TransactionRequest> parseExcel(MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
         List<TransactionRequest> items = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -452,13 +469,14 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
+                int type = parseType(getCellString(row, idxType));
                 items.add(new TransactionRequest(
                         null,
-                        parseType(getCellString(row, idxType)),
+                        type,
                         parseAmount(getCellString(row, idxAmount)),
                         getCellLong(row, idxAccountId),
                         getCellLong(row, idxToAccountId),
-                        parseCategory(getCellString(row, idxCategory), nameToId),
+                        parseCategory(getCellString(row, idxCategory), type, nameToId, otherCategoryByType),
                         getCellString(row, idxRemark),
                         getCellString(row, idxTransTime)));
             }
@@ -466,7 +484,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return items;
     }
 
-    private List<TransactionRequest> parseJson(MultipartFile file, Map<String, Long> nameToId) throws Exception {
+    private List<TransactionRequest> parseJson(MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
         List<Map<String, Object>> rawList = objectMapper.readValue(
                 file.getInputStream(), objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
 
@@ -475,14 +493,15 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             Object typeVal = map.get("type");
             Object amountVal = map.get("amount");
             Object categoryVal = map.getOrDefault("category", map.get("category_id"));
+            int type = parseType(typeVal != null ? typeVal.toString() : "");
 
             items.add(new TransactionRequest(
                     null,
-                    parseType(typeVal != null ? typeVal.toString() : ""),
+                    type,
                     parseAmount(amountVal != null ? amountVal.toString() : ""),
                     toLong(map.get("account_id")),
                     toLong(map.get("to_account_id")),
-                    parseCategory(categoryVal != null ? categoryVal.toString() : "", nameToId),
+                    parseCategory(categoryVal != null ? categoryVal.toString() : "", type, nameToId, otherCategoryByType),
                     map.get("remark") != null ? map.get("remark").toString() : "",
                     map.get("trans_time") != null ? map.get("trans_time").toString() : ""));
         }

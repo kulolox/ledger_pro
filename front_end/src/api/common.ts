@@ -177,8 +177,8 @@ export interface Account {
 
 // ========== 导入导出相关 ==========
 
-export const exportTransactions = (params: { book_id: number; month: string; format: string }) => {
-  return request.download("/api/v1/transactions/export", params);
+export const exportTransactions = (params: { book_id: number; month?: string; year?: string; format: string }) => {
+  return request.download("/api/v1/transactions/export", params as Record<string, any>);
 };
 
 export const importTransactions = (bookId: number, filePath: string, format: string) => {
