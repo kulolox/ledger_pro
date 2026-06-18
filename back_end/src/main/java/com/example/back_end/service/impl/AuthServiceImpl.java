@@ -59,19 +59,21 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
     }
 
     @Override
-    @Transactional
+    @Transactional // 事务回滚注解（所有数据库操作要么都成功，要么都失败）
     public LoginResponse register(RegisterRequest req) {
         String rawPassword = rsaUtils.decrypt(req.password());
         if (lambdaQuery().eq(User::getEmail, req.email()).count() > 0) {
             throw new BizException("邮箱已注册");
         }
 
+        // 注册创建账号
         User user = new User();
         user.setEmail(req.email());
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setNickname(req.nickname() != null ? SanitizeUtils.escapeHtml(req.nickname()) : "");
         save(user);
 
+        // 注册是创建日常账本
         AccountBook book = new AccountBook();
         book.setId(generateBookId());
         book.setName("日常账本");
@@ -79,6 +81,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         book.setType(0);
         accountBookMapper.insert(book);
 
+        // 注册创建默认现金账户
         Account account = new Account();
         account.setBookId(book.getId());
         account.setName("现金");
@@ -86,20 +89,25 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         account.setIcon("💵");
         accountMapper.insert(account);
 
+        // 根据注册数据生成token,refreshToken
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getEmail());
+        // 返回登录数据
         return new LoginResponse(token, refreshToken, toUserInfo(user));
     }
 
     @Override
     public LoginResponse login(LoginRequest req) {
+        //
         String rawPassword = rsaUtils.decrypt(req.password());
         User user = lambdaQuery().eq(User::getEmail, req.email()).one();
         if (user == null || !passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
             throw new BizException(401, "邮箱或密码错误");
         }
+        // 根据登录数据生成token,refreshToken
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getEmail());
+        // 返回登录数据
         return new LoginResponse(token, refreshToken, toUserInfo(user));
     }
 
@@ -191,6 +199,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
     private Long generateBookId() {
         long id;
         do {
+            // 随机生产bookId,当bookId没有被占用就返回
             id = ThreadLocalRandom.current().nextLong(10000000L, 100000000000L);
         } while (accountBookMapper.selectById(id) != null);
         return id;

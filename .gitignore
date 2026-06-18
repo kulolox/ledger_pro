@@ -11,11 +11,13 @@ Thumbs.db
 # front-end
 front_end/node_modules/
 front_end/dist/
+front_end/test-result/
 
 # back-end
 back_end/target/
 back_end/sql/
 back_end/data/
+back_end/test-result/
 back_end/.mvn/wrapper/maven-wrapper.jar
 
 # claude
