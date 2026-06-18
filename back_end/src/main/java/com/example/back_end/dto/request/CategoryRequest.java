@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CategoryRequest(
-        @NotBlank @Size(max = 20) String name,
-        @NotNull Integer type,
+        @Size(max = 20) String name,
+        Integer type,
         @Size(max = 50) String icon,
         @Size(max = 20) String color,
         Long parent_id,

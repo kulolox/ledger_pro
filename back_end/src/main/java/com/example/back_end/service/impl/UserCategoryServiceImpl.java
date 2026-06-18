@@ -46,6 +46,12 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
 
     @Transactional
     public CategoryResponse create(CategoryRequest req) {
+        if (req.name() == null || req.name().isBlank()) {
+            throw new BizException("分类名称不能为空");
+        }
+        if (req.type() == null) {
+            throw new BizException("分类类型不能为空");
+        }
         Long userId = AuthUtils.getCurrentUserId();
         UserCategory uc = new UserCategory();
         uc.setUserId(userId);
