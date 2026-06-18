@@ -28,20 +28,20 @@ test.describe("Statistics", () => {
     const statsPage = new StatisticsPage(authenticatedPage);
     await statsPage.goto();
 
-    await expect(statsPage.expenseTab.locator("..")).toHaveClass(/active/);
+    await expect(statsPage.expenseTab).toHaveClass(/active/);
 
     await statsPage.switchToIncome();
     await authenticatedPage.waitForTimeout(300);
-    await expect(statsPage.incomeTab.locator("..")).toHaveClass(/active/);
+    await expect(statsPage.incomeTab).toHaveClass(/active/);
 
     await statsPage.switchToExpense();
     await authenticatedPage.waitForTimeout(300);
-    await expect(statsPage.expenseTab.locator("..")).toHaveClass(/active/);
+    await expect(statsPage.expenseTab).toHaveClass(/active/);
   });
 
   test("back button returns to home", async ({ authenticatedPage }) => {
     const statsPage = new StatisticsPage(authenticatedPage);
-    await statsPage.goto();
+    await statsPage.gotoFromHome();
 
     await authenticatedPage.waitForTimeout(500);
     await statsPage.clickBack();

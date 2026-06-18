@@ -8,8 +8,8 @@ test.describe("Logout", () => {
 
     const sidebar = authenticatedPage.locator(".sidebar");
     await sidebar.locator(".logout-item").click();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForURL("**/pages/login/index", { timeout: 10000 });
 
-    await expect(authenticatedPage.locator(".login-btn")).toBeVisible();
+    await expect(authenticatedPage.locator(".login-page")).toBeVisible();
   });
 });

@@ -32,6 +32,14 @@ export class StatisticsPage {
     await this.page.waitForSelector(".stats-page", { timeout: 10000 });
   }
 
+  async gotoFromHome() {
+    await this.page.goto("/#/pages/index/index");
+    await this.page.waitForSelector(".home-page", { timeout: 10000 });
+    await this.page.locator(".stats-btn").click();
+    await this.page.waitForURL("**/pages/statistics/index", { timeout: 10000 });
+    await this.page.waitForSelector(".stats-page", { timeout: 10000 });
+  }
+
   async clickBack() {
     await this.backBtn.click();
   }

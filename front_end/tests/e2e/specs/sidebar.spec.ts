@@ -40,13 +40,87 @@ test.describe("Sidebar", () => {
     await expect(dialog).not.toBeVisible();
   });
 
-  test("sidebar has management links", async ({ authenticatedPage }) => {
+  test("navigate to category management from sidebar", async ({ authenticatedPage }) => {
     const homePage = new HomePage(authenticatedPage);
-    await homePage.clickMenu();
 
+    await homePage.clickMenu();
     const sidebar = authenticatedPage.locator(".sidebar");
-    const sidebarText = await sidebar.textContent();
-    expect(sidebarText).toContain("分类管理");
-    expect(sidebarText).toContain("导入导出");
+    await sidebar.locator(".action-item").filter({ hasText: "分类管理" }).click();
+
+    await authenticatedPage.waitForSelector(".category-page", { timeout: 10000 });
+    await expect(authenticatedPage.locator(".category-page")).toBeVisible();
+    await expect(authenticatedPage.locator(".category-item").first()).toBeVisible();
+  });
+
+  test("navigate to import-export from sidebar", async ({ authenticatedPage }) => {
+    const homePage = new HomePage(authenticatedPage);
+
+    await homePage.clickMenu();
+    const sidebar = authenticatedPage.locator(".sidebar");
+    await sidebar.locator(".action-item").filter({ hasText: "导入导出" }).click();
+
+    await authenticatedPage.waitForSelector(".page", { timeout: 10000 });
+    await expect(authenticatedPage.locator(".export-btn")).toBeVisible();
+  });
+
+  test("navigate to statistics via stats button", async ({ authenticatedPage }) => {
+    const homePage = new HomePage(authenticatedPage);
+    await homePage.clickStats();
+
+    await expect(authenticatedPage.locator(".stats-page")).toBeVisible();
+  });
+
+  test("back from category page returns to home", async ({ authenticatedPage }) => {
+    const homePage = new HomePage(authenticatedPage);
+
+    await homePage.clickMenu();
+    const sidebar = authenticatedPage.locator(".sidebar");
+    await sidebar.locator(".action-item").filter({ hasText: "分类管理" }).click();
+    await authenticatedPage.waitForSelector(".category-page", { timeout: 10000 });
+
+    await authenticatedPage.locator(".nav-back").click();
+    await authenticatedPage.waitForTimeout(1000);
+    await expect(authenticatedPage.locator(".home-page")).toBeVisible();
+  });
+
+  test("back from import-export page returns to home", async ({ authenticatedPage }) => {
+    const homePage = new HomePage(authenticatedPage);
+
+    await homePage.clickMenu();
+    const sidebar = authenticatedPage.locator(".sidebar");
+    await sidebar.locator(".action-item").filter({ hasText: "导入导出" }).click();
+    await authenticatedPage.waitForSelector(".page", { timeout: 10000 });
+
+    await authenticatedPage.locator(".back-btn").click();
+    await authenticatedPage.waitForTimeout(1000);
+    await expect(authenticatedPage.locator(".home-page")).toBeVisible();
+  });
+
+  test("back from statistics page returns to home", async ({ authenticatedPage }) => {
+    const homePage = new HomePage(authenticatedPage);
+    await homePage.clickStats();
+    await authenticatedPage.waitForSelector(".stats-page", { timeout: 10000 });
+
+    await authenticatedPage.locator(".nav-left").click();
+    await authenticatedPage.waitForTimeout(1000);
+    await expect(authenticatedPage.locator(".home-page")).toBeVisible();
+  });
+
+  test("sync button clickable in sidebar", async ({ authenticatedPage }) => {
+    const homePage = new HomePage(authenticatedPage);
+
+    await homePage.clickMenu();
+    const sidebar = authenticatedPage.locator(".sidebar");
+    await sidebar.locator(".action-item").filter({ hasText: "同步数据" }).click();
+
+    await authenticatedPage.waitForTimeout(500);
+  });
+
+  test("logout item visible in sidebar", async ({ authenticatedPage }) => {
+    const homePage = new HomePage(authenticatedPage);
+
+    await homePage.clickMenu();
+    const sidebar = authenticatedPage.locator(".sidebar");
+    await expect(sidebar.locator(".logout-item")).toBeVisible();
   });
 });
