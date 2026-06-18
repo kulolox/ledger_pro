@@ -576,6 +576,66 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return Long.parseLong(val.toString());
     }
 
+    public void downloadTemplate(String format, HttpServletResponse response) {
+        String filename = "import_template." + format;
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            switch (format) {
+                case "csv" -> {
+                    response.setContentType("text/csv;charset=UTF-8");
+                    response.setHeader("Content-Disposition",
+                            "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+                    CSVWriter writer = new CSVWriter(new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
+                    writer.writeNext(CSV_HEADERS);
+                    writer.writeNext(new String[] {"支出", "25.50", "餐饮", "1", "", "午餐", "2025-01-15 12:30:00"});
+                    writer.flush();
+                    writer.close();
+                }
+                case "excel" -> {
+                    response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                    response.setHeader("Content-Disposition",
+                            "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+                    Workbook workbook = new XSSFWorkbook();
+                    Sheet sheet = workbook.createSheet("import_template");
+                    Row headerRow = sheet.createRow(0);
+                    for (int i = 0; i < CSV_HEADERS.length; i++) {
+                        headerRow.createCell(i).setCellValue(CSV_HEADERS[i]);
+                    }
+                    Row exampleRow = sheet.createRow(1);
+                    exampleRow.createCell(0).setCellValue("支出");
+                    exampleRow.createCell(1).setCellValue("25.50");
+                    exampleRow.createCell(2).setCellValue("餐饮");
+                    exampleRow.createCell(3).setCellValue(1);
+                    exampleRow.createCell(4).setCellValue("");
+                    exampleRow.createCell(5).setCellValue("午餐");
+                    exampleRow.createCell(6).setCellValue("2025-01-15 12:30:00");
+                    workbook.write(response.getOutputStream());
+                    workbook.close();
+                }
+                case "json" -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setHeader("Content-Disposition",
+                            "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+                    List<Map<String, Object>> example = List.of(Map.of(
+                            "type", "支出",
+                            "amount", "25.50",
+                            "category", "餐饮",
+                            "account_id", 1,
+                            "to_account_id", "",
+                            "remark", "午餐",
+                            "trans_time", "2025-01-15 12:30:00"));
+                    objectMapper.writerWithDefaultPrettyPrinter().writeValue(response.getOutputStream(), example);
+                }
+                default -> throw new BizException("不支持的模板格式: " + format);
+            }
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("模板下载失败", e);
+        }
+    }
+
     private Transaction toEntity(TransactionRequest req) {
         Transaction tx = new Transaction();
         tx.setBookId(req.book_id());

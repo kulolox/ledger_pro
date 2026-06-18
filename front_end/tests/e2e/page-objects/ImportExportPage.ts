@@ -20,6 +20,7 @@ export class ImportExportPage {
   readonly yearText: Locator;
   readonly yearPrev: Locator;
   readonly yearNext: Locator;
+  readonly templateLink: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -41,6 +42,7 @@ export class ImportExportPage {
     this.yearText = page.locator(".year-text");
     this.yearPrev = page.locator(".year-arrow").first();
     this.yearNext = page.locator(".year-arrow").nth(1);
+    this.templateLink = page.locator(".template-link");
   }
 
   async goto() {
@@ -110,5 +112,9 @@ export class ImportExportPage {
 
   async clickNextYear() {
     await this.yearNext.click();
+  }
+
+  async clickTemplate() {
+    await this.templateLink.click();
   }
 }

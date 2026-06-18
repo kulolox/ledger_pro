@@ -6,6 +6,7 @@ import {
   cleanupTestTransactions,
   exportTransactionsApi,
   importTransactionsApi,
+  downloadTemplateApi,
   getTransactionCount,
   getLatestTransactionCategory,
 } from "../utils/db";
@@ -304,5 +305,45 @@ test.describe("Import Export", () => {
     } finally {
       if (imported > 0) await cleanupTestTransactions(testUser.bookId);
     }
+  });
+
+  test("import tab shows template download link", async ({ authenticatedPage }) => {
+    const iePage = new ImportExportPage(authenticatedPage);
+    await iePage.goto();
+    await iePage.switchToImport();
+    await authenticatedPage.waitForTimeout(300);
+
+    await expect(iePage.templateLink).toBeVisible();
+    const text = await iePage.templateLink.textContent();
+    expect(text).toContain("下载");
+  });
+
+  test("download CSV template returns valid file", async ({ authenticatedPage }) => {
+    const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
+
+    const { status, body, contentType } = await downloadTemplateApi("csv", token);
+
+    expect(status).toBe(200);
+    expect(contentType).toContain("text/csv");
+
+    const lines = body.trim().split("\n");
+    expect(lines.length).toBeGreaterThanOrEqual(2);
+
+    const header = lines[0];
+    expect(header).toContain("type");
+    expect(header).toContain("amount");
+    expect(header).toContain("category");
+    expect(header).toContain("account_id");
+    expect(header).toContain("remark");
+    expect(header).toContain("trans_time");
+  });
+
+  test("download Excel template returns valid file", async ({ authenticatedPage }) => {
+    const token = await authenticatedPage.evaluate(() => localStorage.getItem("token") || "");
+
+    const { status, contentType } = await downloadTemplateApi("excel", token);
+
+    expect(status).toBe(200);
+    expect(contentType).toContain("spreadsheet");
   });
 });

@@ -117,6 +117,9 @@
 
       <view class="section">
         <text class="section-label">选择文件</text>
+        <view class="file-header">
+          <text class="template-link" @click="onDownloadTemplate">下载 {{ importFormat.toUpperCase() }} 模板</text>
+        </view>
         <view class="file-area" @click="onChooseFile">
           <view v-if="!selectedFile" class="file-empty">
             <wd-icon name="folder" size="56rpx" color="var(--text-muted)" />
@@ -164,7 +167,7 @@ import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
-import { getAccountBooks, exportTransactions, importTransactions, type AccountBook } from "@/api/common";
+import { getAccountBooks, exportTransactions, importTransactions, downloadTemplate, type AccountBook } from "@/api/common";
 
 const activeTab = ref<"export" | "import">("export");
 
@@ -345,6 +348,15 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+async function onDownloadTemplate() {
+  try {
+    await downloadTemplate(importFormat.value);
+    uni.showToast({ title: "模板下载成功", icon: "success" });
+  } catch {
+    uni.showToast({ title: "模板下载失败", icon: "error" });
+  }
 }
 
 function goBack() {
@@ -577,6 +589,23 @@ onShow(async () => {
     font-size: 32rpx;
     font-weight: 600;
     color: var(--text-inverse);
+  }
+}
+
+.file-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12rpx;
+}
+
+.template-link {
+  font-size: 24rpx;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 4rpx;
+
+  &:active {
+    opacity: 0.7;
   }
 }
 

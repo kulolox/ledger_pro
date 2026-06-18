@@ -189,6 +189,10 @@ export const importTransactions = (bookId: number, filePath: string, format: str
   );
 };
 
+export const downloadTemplate = (format: string) => {
+  return request.download("/api/v1/transactions/template", { format });
+};
+
 // ========== 统计相关 ==========
 
 export interface MonthlyStats {

@@ -23,4 +23,6 @@ public interface ITransactionService extends IService<Transaction> {
     void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response);
 
     Map<String, Object> importTransactions(Long bookId, MultipartFile file, String format);
+
+    void downloadTemplate(String format, HttpServletResponse response);
 }

@@ -60,4 +60,11 @@ public class TransactionController {
             @RequestParam(defaultValue = "csv") String format) {
         return Result.ok("导入完成", transactionService.importTransactions(book_id, file, format));
     }
+
+    @GetMapping("/template")
+    public void downloadTemplate(
+            @RequestParam(defaultValue = "csv") String format,
+            HttpServletResponse response) {
+        transactionService.downloadTemplate(format, response);
+    }
 }

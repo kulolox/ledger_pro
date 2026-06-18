@@ -134,6 +134,14 @@ export async function exportTransactionsApi(bookId: number, params: Record<strin
   return { status: res.status, body, contentType };
 }
 
+export async function downloadTemplateApi(format: string, token: string): Promise<{ status: number; body: string; contentType: string }> {
+  const url = `http://localhost:8080/api/v1/transactions/template?format=${format}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const contentType = res.headers.get("content-type") || "";
+  const body = await res.text();
+  return { status: res.status, body, contentType };
+}
+
 export async function importTransactionsApi(bookId: number, format: string, csvContent: string, token: string): Promise<{ status: number; body: any }> {
   const formData = new FormData();
   const blob = new Blob([csvContent], { type: "text/csv" });
