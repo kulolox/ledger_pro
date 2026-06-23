@@ -21,3 +21,6 @@ dist
 *.sw?
 test-results/
 playwright/.cache/
+
+# env
+.env
