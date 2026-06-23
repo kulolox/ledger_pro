@@ -71,14 +71,14 @@ cd back_end && mvn test
 
 ## 页面预览
 
-![](/document/image/Snipaste_2026-06-23_10-44-06.png)
+![](document/image/Snipaste_2026-06-23_10-44-06.png)
 
-![](/document/image/Snipaste_2026-06-23_10-44-41.png)
+![](document/image/Snipaste_2026-06-23_10-44-41.png)
 
-![](/document/image/Snipaste_2026-06-23_10-44-53.png)
+![](document/image/Snipaste_2026-06-23_10-44-53.png)
 
-![](/document/image/Snipaste_2026-06-23_10-45-02.png)
+![](document/image/Snipaste_2026-06-23_10-45-02.png)
 
-![](/document/image/Snipaste_2026-06-23_10-45-15.png)
+![](document/image/Snipaste_2026-06-23_10-45-15.png)
 
-![](/document/image/Snipaste_2026-06-23_10-45-45.png)
+![](document/image/Snipaste_2026-06-23_10-45-45.png)
