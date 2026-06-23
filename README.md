@@ -4,13 +4,13 @@
 
 ## 技术栈
 
-| 层 | 技术 |
-|---|---|
-| 前端 | uni-app (Vue 3 + TypeScript + Vite 5) + Wot UI |
-| 后端 | Spring Boot 4.0 + Java 21 + MyBatis-Plus 3.5 |
-| 数据库 | MySQL 8.0 + Redis 7 |
-| 认证 | JWT 双 token (access 24h + refresh 7d) + RSA 密码加密 |
-| 部署 | Docker Compose (nginx + backend + mysql + redis) |
+| 层     | 技术                                                  |
+| ------ | ----------------------------------------------------- |
+| 前端   | uni-app (Vue 3 + TypeScript + Vite 5) + Wot UI        |
+| 后端   | Spring Boot 4.0 + Java 21 + MyBatis-Plus 3.5          |
+| 数据库 | MySQL 8.0 + Redis 7                                   |
+| 认证   | JWT 双 token (access 24h + refresh 7d) + RSA 密码加密 |
+| 部署   | Docker Compose (nginx + backend + mysql + redis)      |
 
 ## 项目结构
 
@@ -68,3 +68,17 @@ cd back_end && mvn test
 ## 更多
 
 详细架构设计、安全策略、同步机制见 [CLAUDE.md](./CLAUDE.md)。
+
+## 页面预览
+
+![](/document/image/Snipaste_2026-06-23_10-44-06.png)
+
+![](/document/image/Snipaste_2026-06-23_10-44-41.png)
+
+![](/document/image/Snipaste_2026-06-23_10-44-53.png)
+
+![](/document/image/Snipaste_2026-06-23_10-45-02.png)
+
+![](/document/image/Snipaste_2026-06-23_10-45-15.png)
+
+![](/document/image/Snipaste_2026-06-23_10-45-45.png)

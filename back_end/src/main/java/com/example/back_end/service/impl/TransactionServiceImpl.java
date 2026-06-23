@@ -567,13 +567,17 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     private Integer toInt(Object val) {
         if (val == null) return null;
         if (val instanceof Number n) return n.intValue();
-        return Integer.parseInt(val.toString());
+        String s = val.toString();
+        if (s.isBlank()) return null;
+        return Integer.parseInt(s);
     }
 
     private Long toLong(Object val) {
         if (val == null) return null;
         if (val instanceof Number n) return n.longValue();
-        return Long.parseLong(val.toString());
+        String s = val.toString();
+        if (s.isBlank()) return null;
+        return Long.parseLong(s);
     }
 
     public void downloadTemplate(String format, HttpServletResponse response) {
