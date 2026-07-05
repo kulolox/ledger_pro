@@ -16,7 +16,7 @@
 
 ```
 ledger_pro/
-├── document/          # 产品需求、技术方案、迭代计划
+├── document/          # specs/ design/ plans/ reports/ images/
 ├── front_end/         # uni-app 前端工程
 └── back_end/          # Spring Boot 后端工程
 ```
@@ -71,14 +71,14 @@ cd back_end && mvn test
 
 ## 页面预览
 
-<img src="document/image/Snipaste_2026-06-23_10-44-06.png" width="300" height="650">
+<img src="document/images/Snipaste_2026-06-23_10-44-06.png" width="300" height="650">
 
-<img src="document/image/Snipaste_2026-06-23_10-44-41.png" width="300" height="650">
+<img src="document/images/Snipaste_2026-06-23_10-44-41.png" width="300" height="650">
 
-<img src="document/image/Snipaste_2026-06-23_10-44-53.png" width="300" height="650">
+<img src="document/images/Snipaste_2026-06-23_10-44-53.png" width="300" height="650">
 
-<img src="document/image/Snipaste_2026-06-23_10-45-02.png" width="300" height="650">
+<img src="document/images/Snipaste_2026-06-23_10-45-02.png" width="300" height="650">
 
-<img src="document/image/Snipaste_2026-06-23_10-45-15.png" width="300" height="650">
+<img src="document/images/Snipaste_2026-06-23_10-45-15.png" width="300" height="650">
 
-<img src="document/image/Snipaste_2026-06-23_10-45-45.png" width="300" height="650">
+<img src="document/images/Snipaste_2026-06-23_10-45-45.png" width="300" height="650">
