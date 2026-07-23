@@ -54,6 +54,13 @@
         "navigationBarTitleText": "导入导出",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/budget/index",
+      "style": {
+        "navigationBarTitleText": "预算中心",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

@@ -80,6 +80,10 @@
       <view class="sidebar-divider" />
 
       <view class="sidebar-actions">
+        <view class="action-item" @click="onBudget">
+          <wd-icon name="chart" size="28rpx" color="var(--text-secondary)" />
+          <text class="action-label">预算中心</text>
+        </view>
         <view class="action-item" @click="onManageCategories">
           <wd-icon name="tags" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">分类管理</text>
@@ -166,6 +170,11 @@ function onAddCancel() {
 
 const { load: loadTransactions, clear: clearTransactions } = useTransactions();
 const { clear: clearCategories } = useCategories();
+
+function onBudget() {
+  emit('update:visible', false);
+  uni.navigateTo({ url: "/pages/budget/index" });
+}
 
 function onManageCategories() {
   emit('update:visible', false);
