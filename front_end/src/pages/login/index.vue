@@ -2,9 +2,7 @@
   <view class="login-page">
     <view class="login-card">
       <view class="login-header">
-        <view class="logo-wrapper">
-          <wd-icon name="book" size="72rpx" color="var(--text-inverse)" />
-        </view>
+        <AppLogo :size="120" />
         <text class="app-name">LedgerPro</text>
         <text class="app-slogan">极简记账，一秒开始</text>
       </view>
@@ -52,6 +50,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue";
+import AppLogo from "@/components/AppLogo.vue";
 import { login } from "@/api/common";
 import { setToken, setRefreshToken, setUserInfo } from "@/utils/storage";
 
@@ -120,15 +119,7 @@ const goForgotPassword = () => {
   text-align: center;
   margin-bottom: 72rpx;
 
-  .logo-wrapper {
-    width: 120rpx;
-    height: 120rpx;
-    border-radius: 28rpx;
-    background: var(--bg-secondary);
-    box-shadow: var(--shadow-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  :deep(.app-logo) {
     margin: 0 auto 32rpx;
   }
 

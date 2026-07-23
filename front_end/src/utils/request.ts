@@ -265,7 +265,7 @@ class Request {
    */
   private async request<T = any>(config: RequestConfig): Promise<T> {
     // 显示loading
-    if (config.showLoading !== false) {
+    if (config.showLoading === true) {
       uni.showLoading({
         title: config.loadingText || "加载中...",
         mask: true,
@@ -323,7 +323,7 @@ class Request {
       return Promise.reject(result);
     } finally {
       // 隐藏loading
-      if (config.showLoading !== false) {
+      if (config.showLoading === true) {
         uni.hideLoading();
       }
     }

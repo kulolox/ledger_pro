@@ -22,7 +22,10 @@
       </template>
     </NavBar>
 
-    <view class="month-summary">
+    <PageLoader v-if="pageLoading" />
+
+    <template v-else>
+      <view class="month-summary">
       <view class="summary-item expense-card">
         <text class="summary-label">支出</text>
         <text class="summary-value expense"
@@ -46,20 +49,15 @@
       </view>
     </view>
 
+    <view class="stats-tabs">
+      <wd-tabs v-model="activeTab" custom-class="tab-custom">
+        <wd-tab title="支出" />
+        <wd-tab title="收入" />
+      </wd-tabs>
+    </view>
+
     <scroll-view scroll-y class="stats-body">
-      <view class="trend-card" v-if="trendData">
-        <text class="trend-title">近6月收支趋势</text>
-        <EChart :options="trendOption" :height="320" />
-      </view>
-
       <view class="stats-card">
-        <view class="stats-card-header">
-          <wd-tabs v-model="activeTab" custom-class="tab-custom">
-            <wd-tab title="支出" />
-            <wd-tab title="收入" />
-          </wd-tabs>
-        </view>
-
         <view v-if="currentCategories.length > 0" class="chart-section">
           <EChart :options="pieOption" :height="420" />
         </view>
@@ -95,19 +93,21 @@
 
       <view class="list-bottom" />
     </scroll-view>
+    </template>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import EChart from "@/components/EChart.vue";
+import PageLoader from "@/components/PageLoader.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { formatCents } from "@/utils/format";
-import { getMonthlyStatistics, getTrend, type MonthlyStats } from "@/api/common";
+import { getMonthlyStatistics, type MonthlyStats } from "@/api/common";
 
 const { transactions, load } = useTransactions();
 const { getCategoryName, getCategoryColor, loadCategories } = useCategories();
@@ -115,8 +115,8 @@ const { getCategoryName, getCategoryColor, loadCategories } = useCategories();
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const statsData = ref<MonthlyStats | null>(null);
-const trendData = ref<{ months: string[]; expense: number[]; income: number[] } | null>(null);
 const activeTab = ref(0);
+const pageLoading = ref(true);
 
 const monthLabel = computed(
   () => `${currentYear.value}年 ${currentMonth.value}月`,
@@ -163,40 +163,6 @@ const incomeCategories = computed(() => {
 const currentCategories = computed(() =>
   activeTab.value === 0 ? expenseCategories.value : incomeCategories.value,
 );
-
-const trendOption = computed(() => {
-  if (!trendData.value) return {};
-  const months = trendData.value.months.map((m: string) => m.substring(5));
-  const expValues = trendData.value.expense.map((v: number) => v / 100);
-  const incValues = trendData.value.income.map((v: number) => v / 100);
-  return {
-    tooltip: { trigger: "axis" },
-    grid: { left: "8%", right: "8%", bottom: "8%", top: "10%" },
-    xAxis: { type: "category", data: months },
-    yAxis: { type: "value", axisLabel: { formatter: (v: number) => `¥${v.toFixed(0)}` } },
-    series: [
-      {
-        name: "支出",
-        type: "line",
-        data: expValues,
-        smooth: true,
-        lineStyle: { color: "#f44336", width: 2 },
-        itemStyle: { color: "#f44336" },
-        areaStyle: { color: "rgba(244,67,54,0.1)" },
-      },
-      {
-        name: "收入",
-        type: "line",
-        data: incValues,
-        smooth: true,
-        lineStyle: { color: "#4caf50", width: 2 },
-        itemStyle: { color: "#4caf50" },
-        areaStyle: { color: "rgba(76,175,80,0.1)" },
-      },
-    ],
-    legend: { data: ["支出", "收入"], bottom: 0 },
-  };
-});
 
 const pieOption = computed(() => {
   const cats = currentCategories.value;
@@ -272,11 +238,6 @@ async function fetchStats() {
     });
   } catch {
     calcLocalStats(bookId);
-  }
-  try {
-    trendData.value = await getTrend({ book_id: bookId, months: 6 });
-  } catch {
-    trendData.value = null;
   }
 }
 
@@ -361,9 +322,16 @@ onShow(async () => {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
   }
+  const startTime = Date.now();
   load();
   loadCategories();
   await fetchStats();
+  await nextTick();
+  const elapsed = Date.now() - startTime;
+  if (elapsed < 500) {
+    await new Promise((r) => setTimeout(r, 500 - elapsed));
+  }
+  pageLoading.value = false;
 });
 </script>
 
@@ -464,13 +432,16 @@ onShow(async () => {
 
 .stats-card {
   background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
-.stats-card-header {
+.stats-tabs {
+  margin: 0 20rpx;
   padding: 0 24rpx;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 :deep(.tab-custom.wd-tabs) {
@@ -491,7 +462,7 @@ onShow(async () => {
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
-  padding: 16rpx 20rpx 60rpx;
+  padding: 0 20rpx 60rpx;
 }
 
 .chart-section {
@@ -555,21 +526,6 @@ onShow(async () => {
   color: var(--text-muted);
   min-width: 72rpx;
   text-align: right;
-}
-
-.trend-card {
-  background: var(--bg-secondary);
-  margin: 20rpx 32rpx;
-  padding: 24rpx;
-  border-radius: 16rpx;
-
-  .trend-title {
-    font-size: 26rpx;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 8rpx;
-    display: block;
-  }
 }
 
 .empty-state {

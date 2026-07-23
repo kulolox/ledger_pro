@@ -28,153 +28,157 @@
       </template>
     </NavBar>
 
-    <!-- 没有收支统计卡片 -->
-    <view class="month-summary">
-      <view class="summary-item expense-card">
-        <text class="summary-label">支出</text>
-        <text class="summary-value expense"
-          >-{{ formatCents(monthExpense) }}</text
-        >
-      </view>
-      <view class="summary-item income-card">
-        <text class="summary-label">收入</text>
-        <text class="summary-value income"
-          >+{{ formatCents(monthIncome) }}</text
-        >
-      </view>
-      <view class="summary-item balance-card">
-        <text class="summary-label">结余</text>
-        <text
-          class="summary-value"
-          :class="monthBalance >= 0 ? 'income' : 'expense'"
-        >
-          {{ monthBalance >= 0 ? "+" : "-"
-          }}{{ formatCents(Math.abs(monthBalance)) }}
-        </text>
-      </view>
-    </view>
+    <PageLoader v-if="pageLoading" />
 
-    <scroll-view
-      scroll-y
-      class="transaction-list"
-      refresher-enabled
-      :refresher-triggered="refreshing"
-      @refresherrefresh="onRefresh"
-      @scrolltolower="loadMore"
-    >
-      <!-- 无账单数据显示 -->
-      <view v-if="dayGroups.length === 0" class="empty-state">
-        <view class="empty-icon-wrapper">
-          <wd-icon name="book" size="72rpx" color="var(--text-label)" />
+    <template v-else>
+      <view class="month-summary">
+        <view class="summary-item expense-card">
+          <text class="summary-label">支出</text>
+          <text class="summary-value expense"
+            >-{{ formatCents(monthExpense) }}</text
+          >
         </view>
-        <text class="empty-title">暂无账单</text>
-        <text class="empty-hint">点击右下角 + 开始记账</text>
+        <view class="summary-item income-card">
+          <text class="summary-label">收入</text>
+          <text class="summary-value income"
+            >+{{ formatCents(monthIncome) }}</text
+          >
+        </view>
+        <view class="summary-item balance-card">
+          <text class="summary-label">结余</text>
+          <text
+            class="summary-value"
+            :class="monthBalance >= 0 ? 'income' : 'expense'"
+          >
+            {{ monthBalance >= 0 ? "+" : "-"
+            }}{{ formatCents(Math.abs(monthBalance)) }}
+          </text>
+        </view>
       </view>
 
-      <!-- 按日聚合的账单列表 -->
-      <view v-for="day in dayGroups" :key="day.date" class="day-group">
-        <view class="day-header">
-          <view class="day-info">
-            <text class="day-date">{{ formatDayHeader(day.date) }}</text>
-            <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
+      <scroll-view
+        scroll-y
+        class="transaction-list"
+        refresher-enabled
+        :refresher-triggered="refreshing"
+        @refresherrefresh="onRefresh"
+        @scrolltolower="loadMore"
+      >
+        <!-- 无账单数据显示 -->
+        <view v-if="dayGroups.length === 0" class="empty-state">
+          <view class="empty-icon-wrapper">
+            <wd-icon name="book" size="72rpx" color="var(--text-label)" />
           </view>
-          <view class="day-totals">
-            <text v-if="day.expense > 0" class="day-expense"
-              >-{{ formatCents(day.expense) }}</text
-            >
-            <text v-if="day.income > 0" class="day-income"
-              >+{{ formatCents(day.income) }}</text
-            >
-          </view>
+          <text class="empty-title">暂无账单</text>
+          <text class="empty-hint">点击右下角 + 开始记账</text>
         </view>
 
-        <view
-          v-for="(tx, idx) in day.items"
-          :key="tx.id"
-          class="tx-item"
-          :class="{
-            'tx-item-pending': tx.sync_status === 'pending',
-            'tx-item-failed': tx.sync_status === 'failed',
-          }"
-          @click="onEditTx(tx)"
-          @longpress="onLongPressDelete(tx)"
-        >
-          <view class="tx-left">
-            <view
-              class="tx-icon"
-              :style="{
-                background: getCategoryColor(tx.type, tx.category_id),
-              }"
-            >
-              <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
+        <!-- 按日聚合的账单列表 -->
+        <view v-for="day in dayGroups" :key="day.date" class="day-group">
+          <view class="day-header">
+            <view class="day-info">
+              <text class="day-date">{{ formatDayHeader(day.date) }}</text>
+              <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
             </view>
-            <view class="tx-info">
-              <text class="tx-category">{{
-                getCategoryName(tx.type, tx.category_id)
-              }}</text>
-              <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
+            <view class="day-totals">
+              <text v-if="day.expense > 0" class="day-expense"
+                >-{{ formatCents(day.expense) }}</text
+              >
+              <text v-if="day.income > 0" class="day-income"
+                >+{{ formatCents(day.income) }}</text
+              >
             </view>
           </view>
-          <view class="tx-right">
-            <text class="tx-amount" :class="amountClass(tx.type)">
-              {{ formatTxAmount(tx) }}
-            </text>
-            <text
-              v-if="tx.sync_status === 'pending'"
-              class="tx-sync-badge tx-sync-pending"
-            >
-              待同步
-            </text>
-            <text
-              v-if="tx.sync_status === 'failed'"
-              class="tx-sync-badge tx-sync-failed"
-            >
-              同步失败
-            </text>
+
+          <view
+            v-for="(tx, idx) in day.items"
+            :key="tx.id"
+            class="tx-item"
+            :class="{
+              'tx-item-pending': tx.sync_status === 'pending',
+              'tx-item-failed': tx.sync_status === 'failed',
+            }"
+            @click="onEditTx(tx)"
+            @longpress="onLongPressDelete(tx)"
+          >
+            <view class="tx-left">
+              <view
+                class="tx-icon"
+                :style="{
+                  background: getCategoryColor(tx.type, tx.category_id),
+                }"
+              >
+                <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
+              </view>
+              <view class="tx-info">
+                <text class="tx-category">{{
+                  getCategoryName(tx.type, tx.category_id)
+                }}</text>
+                <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
+              </view>
+            </view>
+            <view class="tx-right">
+              <text class="tx-amount" :class="amountClass(tx.type)">
+                {{ formatTxAmount(tx) }}
+              </text>
+              <text
+                v-if="tx.sync_status === 'pending'"
+                class="tx-sync-badge tx-sync-pending"
+              >
+                待同步
+              </text>
+              <text
+                v-if="tx.sync_status === 'failed'"
+                class="tx-sync-badge tx-sync-failed"
+              >
+                同步失败
+              </text>
+            </view>
           </view>
         </view>
+
+        <view class="list-bottom" v-if="dayGroups.length > 0">
+          <view class="bottom-divider" />
+          <text class="bottom-text">已加载全部账单</text>
+        </view>
+      </scroll-view>
+
+      <view class="fab" @click="onAdd">
+        <wd-icon name="plus" size="48rpx" color="var(--text-inverse)" />
       </view>
 
-      <view class="list-bottom" v-if="dayGroups.length > 0">
-        <view class="bottom-divider" />
-        <text class="bottom-text">已加载全部账单</text>
-      </view>
-    </scroll-view>
+      <wd-dialog selector="delete-confirm" />
 
-    <view class="fab" @click="onAdd">
-      <wd-icon name="plus" size="48rpx" color="var(--text-inverse)" />
-    </view>
+      <!-- 记账器组件 -->
+      <TransactionEditor
+        :visible="editorVisible"
+        :bookId="currentBookId"
+        :editData="editingTx"
+        @close="onEditorClose"
+        @saved="onEditorSaved"
+      />
 
-    <wd-dialog selector="delete-confirm" />
-
-    <!-- 记账器组件 -->
-    <TransactionEditor
-      :visible="editorVisible"
-      :bookId="currentBookId"
-      :editData="editingTx"
-      @close="onEditorClose"
-      @saved="onEditorSaved"
-    />
-
-    <!-- 侧边栏组件 -->
-    <Sidebar
-      v-model:visible="showSidebar"
-      v-model:books="books"
-      :userInfo="userInfo"
-      :currentBookId="currentBookId"
-      @close="showSidebar = false"
-      @switchBook="onSwitchBook"
-    />
+      <!-- 侧边栏组件 -->
+      <Sidebar
+        v-model:visible="showSidebar"
+        v-model:books="books"
+        :userInfo="userInfo"
+        :currentBookId="currentBookId"
+        @close="showSidebar = false"
+        @switchBook="onSwitchBook"
+      />
+    </template>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import { useDialog } from "@wot-ui/ui";
 import TransactionEditor from "@/components/TransactionEditor.vue";
 import NavBar from "@/components/NavBar.vue";
 import Sidebar from "@/components/Sidebar.vue";
+import PageLoader from "@/components/PageLoader.vue";
 import {
   useTransactions,
   type LocalTransaction,
@@ -200,6 +204,7 @@ const currentMonth = ref(new Date().getMonth() + 1);
 const editorVisible = ref(false);
 const editingTx = ref<LocalTransaction | null>(null);
 const refreshing = ref(false);
+const pageLoading = ref(true);
 
 const showSidebar = ref(false);
 const userInfo = ref<UserInfo | null>(null);
@@ -351,6 +356,7 @@ async function onRefresh() {
 function loadMore() {}
 
 let pageReady = false;
+const MIN_SKELETON_MS = 500;
 
 // 页面显示时初始化数据、加载交易列表
 onShow(async () => {
@@ -358,6 +364,8 @@ onShow(async () => {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
   }
+
+  const startTime = Date.now();
 
   if (!pageReady) {
     pageReady = true;
@@ -380,6 +388,13 @@ onShow(async () => {
 
   load();
   pullFromServer(currentBookId.value);
+
+  await nextTick();
+  const elapsed = Date.now() - startTime;
+  if (elapsed < MIN_SKELETON_MS) {
+    await new Promise((r) => setTimeout(r, MIN_SKELETON_MS - elapsed));
+  }
+  pageLoading.value = false;
 });
 </script>
 
