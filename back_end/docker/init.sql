@@ -133,3 +133,20 @@ INSERT INTO `category` (`id`, `parent_id`, `name`, `type`, `icon`, `color`, `sor
 (14, 0, '红包', 1, '🧧', '#ff6b6b', 4, 1),
 (15, 0, '退款', 1, '↩️', '#00cec9', 5, 1),
 (16, 0, '其他', 1, '💵', '#636e72', 6, 1);
+
+CREATE TABLE IF NOT EXISTS budget (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    book_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    category_id BIGINT DEFAULT NULL,
+    amount INT NOT NULL,
+    period_type INT DEFAULT 0,
+    start_date DATE NOT NULL,
+    carry_over INT DEFAULT 0,
+    status INT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_book_id (book_id),
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

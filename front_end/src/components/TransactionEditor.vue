@@ -51,7 +51,7 @@
         />
       </view>
 
-      <NumberKeyboard @keyPress="onKeyPress" />
+      <NumberKeyboard @keyPress="onKeyPress" @keyLongPress="onKeyLongPress" />
     </view>
 
     <wd-datetime-picker
@@ -184,6 +184,23 @@ const onKeyPress = (key: string) => {
     return;
   }
   inputBuffer.value += key;
+};
+
+// 长按保存键：弹出 ActionSheet
+const onKeyLongPress = async (key: string) => {
+  if (key !== "save") return;
+  const amount = evalExpression();
+  if (amount <= 0) {
+    uni.showToast({ title: "请输入金额", icon: "none" });
+    return;
+  }
+  uni.showActionSheet({
+    itemList: ["保存并关闭", "保存并再记一笔"],
+    success: (res) => {
+      if (res.tapIndex === 0) handleSave(false);
+      else if (res.tapIndex === 1) handleSave(true);
+    },
+  });
 };
 
 const onTypeChange = (type: number) => {

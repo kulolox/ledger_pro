@@ -12,6 +12,7 @@
           'kb-key-zero': key.value === '0',
         }"
         @click="onKeyClick(key)"
+        @longpress="key.type === 'save' && emit('keyLongPress', key.value)"
       >
         <text class="kb-key-text">{{ key.label }}</text>
       </view>
@@ -22,6 +23,7 @@
 <script setup lang="ts">
 const emit = defineEmits<{
   keyPress: [key: string];
+  keyLongPress: [key: string];
 }>();
 
 const keys = [
