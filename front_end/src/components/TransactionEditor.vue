@@ -81,6 +81,8 @@ const props = defineProps<{
     type: number;
     amount: number;
     category_id?: number;
+    account_id?: number;
+    to_account_id?: number;
     remark?: string;
     trans_time?: string;
   } | null;
@@ -212,11 +214,14 @@ const handleSave = (keepOpen: boolean) => {
   const ss = String(now.getSeconds()).padStart(2, "0");
   const transTime = transDate.value + `T${hh}:${mm}:${ss}`;
 
+  const accountId = 1;
+
   if (editId.value != null) {
     update(editId.value, {
       type: currentType.value,
       amount: amountCents,
       category_id: selectedCategory.value,
+      account_id: accountId,
       remark: remark.value || undefined,
       trans_time: transTime,
     });
@@ -225,7 +230,7 @@ const handleSave = (keepOpen: boolean) => {
       book_id: props.bookId,
       type: currentType.value,
       amount: amountCents,
-      account_id: 1,
+      account_id: accountId,
       category_id: selectedCategory.value,
       remark: remark.value || undefined,
       trans_time: transTime,

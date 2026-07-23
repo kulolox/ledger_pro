@@ -85,50 +85,86 @@ export async function pushPending(): Promise<{ success: number; fail: number }> 
   const pending = localList.filter((t) => t.sync_status === "pending");
   if (pending.length === 0) return { success: 0, fail: 0 };
 
-  // 组装批量数据，只传服务端需要的字段
-  const items = pending.map((tx) => ({
-    book_id: tx.book_id,
-    type: tx.type,
-    amount: tx.amount,
-    account_id: tx.account_id,
-    to_account_id: tx.to_account_id,
-    category_id: tx.category_id,
-    remark: tx.remark,
-    trans_time: tx.trans_time,
-  }));
+  const newItems = pending.filter((t) => !t.server_id);
+  const updateItems = pending.filter((t) => t.server_id);
 
-  try {
-    const result = (await silentRequest({
-      url: "/api/v1/transactions/batch",
-      method: "POST",
-      data: { items },
-    })) as any;
+  let success = 0;
+  let fail = 0;
 
-    const serverList = result?.list || [];
-    const syncedIds = new Set(pending.map((t) => t.id));
-    const localToServerId = new Map<number, number>();
-    for (let i = 0; i < pending.length; i++) {
-      if (serverList[i]) {
-        localToServerId.set(pending[i].id, serverList[i].id);
+  // 新增：批量 POST
+  if (newItems.length > 0) {
+    const items = newItems.map((tx) => ({
+      book_id: tx.book_id,
+      type: tx.type,
+      amount: tx.amount,
+      account_id: tx.account_id,
+      to_account_id: tx.to_account_id,
+      category_id: tx.category_id,
+      remark: tx.remark,
+      trans_time: tx.trans_time,
+    }));
+
+    try {
+      const result = (await silentRequest({
+        url: "/api/v1/transactions/batch",
+        method: "POST",
+        data: { items },
+      })) as any;
+
+      const serverList = result?.list || [];
+      const localToServerId = new Map<number, number>();
+      for (let i = 0; i < newItems.length; i++) {
+        if (serverList[i]) {
+          localToServerId.set(newItems[i].id, serverList[i].id);
+        }
       }
+
+      const updated = getLocalTransactions().map((t) => {
+        const serverId = localToServerId.get(t.id);
+        if (serverId !== undefined) {
+          return { ...t, sync_status: "synced" as const, server_id: serverId, deleted: 0 };
+        }
+        return t;
+      });
+      setLocalTransactions(updated);
+      success += result?.count || items.length;
+    } catch (e) {
+      console.error("[sync] pushPending batch failed:", e);
+      fail += newItems.length;
     }
-
-    const updated = localList.map((t) => {
-      const serverId = localToServerId.get(t.id);
-      if (serverId !== undefined) {
-        return { ...t, sync_status: "synced" as const, server_id: serverId, deleted: 0 };
-      }
-      return t;
-    });
-    setLocalTransactions(updated);
-    loadTransactions();
-    setLastSyncTime();
-
-    return { success: result?.count || items.length, fail: 0 };
-  } catch (e) {
-    console.error("[sync] pushPending failed:", e);
-    return { success: 0, fail: pending.length };
   }
+
+  // 更新：逐条 PUT
+  for (const item of updateItems) {
+    try {
+      await silentRequest({
+        url: `/api/v1/transactions/${item.server_id}`,
+        method: "PUT",
+        data: {
+          book_id: item.book_id,
+          type: item.type,
+          amount: item.amount,
+          account_id: item.account_id,
+          to_account_id: item.to_account_id,
+          category_id: item.category_id,
+          remark: item.remark,
+          trans_time: item.trans_time,
+        },
+      });
+      const updated = getLocalTransactions().map((t) =>
+        t.id === item.id ? { ...t, sync_status: "synced" as const } : t,
+      );
+      setLocalTransactions(updated);
+      success++;
+    } catch (e) {
+      console.error(`[sync] pushPending update ${item.id} failed:`, e);
+      fail++;
+    }
+  }
+
+  loadTransactions();
+  setLastSyncTime();
+  return { success, fail };
 }
 
 // 拉取当月全量数据，合并到本地，跳过已存在的记录
@@ -170,6 +206,8 @@ export async function pullFromServer(bookId: number): Promise<number> {
         data: {
           book_id: bookId,
           month: currentMonth(),
+          page: 1,
+          size: 999,
         },
       })) as any;
 

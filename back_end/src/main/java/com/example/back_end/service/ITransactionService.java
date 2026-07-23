@@ -14,11 +14,13 @@ import org.springframework.web.multipart.MultipartFile;
 public interface ITransactionService extends IService<Transaction> {
     TransactionResponse create(TransactionRequest req);
 
+    TransactionResponse update(Long id, TransactionRequest req);
+
     Map<String, Object> createBatch(BatchCreateRequest body);
 
     int batchDelete(BatchDeleteRequest body);
 
-    TransactionListResponse list(Long bookId, String month);
+    TransactionListResponse list(Long bookId, String month, Integer page, Integer size);
 
     void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response);
 

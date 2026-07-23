@@ -86,7 +86,10 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         if (cache != null) {
             Long userId = AuthUtils.getCurrentUserId();
             for (String month : months) {
-                cache.evict(formatCacheKey(userId, bookId, month));
+                String prefix = formatCacheKey(userId, bookId, month) + "::";
+                for (int p = 1; p <= 10; p++) {
+                    cache.evict(prefix + p);
+                }
             }
         }
     }
@@ -103,6 +106,30 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         validateBookOwnership(req.book_id());
         Transaction tx = toEntity(req);
         save(tx);
+        evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));
+        return TransactionResponse.from(tx);
+    }
+
+    @Transactional
+    public TransactionResponse update(Long id, TransactionRequest req) {
+        Transaction tx = getById(id);
+        if (tx == null) {
+            throw new BizException("交易不存在");
+        }
+        validateBookOwnership(req.book_id());
+
+        tx.setType(req.type());
+        tx.setAmount(req.amount());
+        tx.setAccountId(req.account_id());
+        tx.setToAccountId(req.to_account_id());
+        tx.setCategoryId(req.category_id());
+        tx.setRemark(req.remark() != null ? SanitizeUtils.escapeHtml(req.remark()) : "");
+        if (req.trans_time() != null && !req.trans_time().isBlank()) {
+            tx.setTransTime(LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
+        }
+        tx.setUpdatedAt(LocalDateTime.now());
+        updateById(tx);
+
         evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));
         return TransactionResponse.from(tx);
     }
@@ -163,10 +190,28 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return actualDeleted;
     }
 
-    @Cacheable(value = "transactions", key = "T(com.example.back_end.utils.AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month", unless = "#result == null")
-    public TransactionListResponse list(Long bookId, String month) {
+    @Cacheable(value = "transactions", key = "T(com.example.back_end.utils.AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month + '::' + #page", unless = "#result == null")
+    public TransactionListResponse list(Long bookId, String month, Integer page, Integer size) {
         validateBookOwnership(bookId);
-        return queryTransactions(bookId, month);
+
+        LocalDateTime monthStart = LocalDateTime.parse(month + "-01T00:00:00");
+        LocalDateTime monthEnd = monthStart.plusMonths(1);
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Transaction> pageObj =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
+
+        var result = lambdaQuery()
+                .eq(Transaction::getBookId, bookId)
+                .eq(Transaction::getDeleted, 0)
+                .ge(Transaction::getTransTime, monthStart)
+                .lt(Transaction::getTransTime, monthEnd)
+                .orderByDesc(Transaction::getTransTime)
+                .page(pageObj);
+
+        List<TransactionResponse> list = result.getRecords().stream()
+                .map(TransactionResponse::from)
+                .toList();
+        return new TransactionListResponse(list, (int) result.getTotal());
     }
 
     public void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response) {

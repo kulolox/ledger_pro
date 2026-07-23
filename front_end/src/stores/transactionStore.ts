@@ -66,7 +66,7 @@ export function addTransaction(data: {
   return tx;
 }
 
-export function updateTransaction(id: number, data: Partial<Pick<LocalTransaction, "amount" | "category_id" | "to_account_id" | "remark" | "trans_time" | "type">>) {
+export function updateTransaction(id: number, data: Partial<Pick<LocalTransaction, "amount" | "category_id" | "to_account_id" | "account_id" | "remark" | "trans_time" | "type">>) {
   const idx = transactions.value.findIndex((t) => t.id === id);
   if (idx === -1) return;
   const tx = transactions.value[idx];

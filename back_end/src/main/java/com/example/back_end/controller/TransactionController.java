@@ -27,6 +27,11 @@ public class TransactionController {
         return Result.ok("记账成功", transactionService.create(req));
     }
 
+    @PutMapping("/{id}")
+    public Result<TransactionResponse> update(@PathVariable Long id, @Valid @RequestBody TransactionRequest req) {
+        return Result.ok("修改成功", transactionService.update(id, req));
+    }
+
     @PostMapping("/batch")
     public Result<Map<String, Object>> createBatch(@Valid @RequestBody BatchCreateRequest req) {
         return Result.ok("批量记账成功", transactionService.createBatch(req));
@@ -38,9 +43,13 @@ public class TransactionController {
     }
 
     @GetMapping
-    public Result<Map<String, Object>> list(@RequestParam Long book_id, @RequestParam String month) {
-        TransactionListResponse result = transactionService.list(book_id, month);
-        return Result.ok(Map.of("list", result.list(), "total", result.total()));
+    public Result<Map<String, Object>> list(
+            @RequestParam Long book_id,
+            @RequestParam String month,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "50") Integer size) {
+        TransactionListResponse result = transactionService.list(book_id, month, page, size);
+        return Result.ok(Map.of("list", result.list(), "total", result.total(), "page", page));
     }
 
     @GetMapping("/export")

@@ -79,8 +79,8 @@ export const updateUserInfo = (data: Partial<UserInfo>) => {
 
 // ========== 记账相关 ==========
 
-export const getTransactions = (params: { book_id: number; month: string }) => {
-  return request.get<{ list: Transaction[]; total: number }>("/api/v1/transactions", params);
+export const getTransactions = (params: { book_id: number; month: string; page?: number; size?: number }) => {
+  return request.get<{ list: Transaction[]; total: number; page: number }>("/api/v1/transactions", params);
 };
 
 export const createTransaction = (data: {
@@ -94,6 +94,19 @@ export const createTransaction = (data: {
   trans_time?: string;
 }) => {
   return request.post<Transaction>("/api/v1/transactions", data);
+};
+
+export const updateTransaction = (id: number, data: {
+  book_id: number;
+  type: number;
+  amount: number;
+  account_id: number;
+  to_account_id?: number;
+  category_id?: number;
+  remark?: string;
+  trans_time: string;
+}) => {
+  return request.put<Transaction>(`/api/v1/transactions/${id}`, data);
 };
 
 // ========== 分类相关 ==========
@@ -132,6 +145,28 @@ export const reorderCategories = (data: { ids: number[] }) => {
 export const getAccounts = (params: { book_id: number }) => {
   return request.get<Account[]>("/api/v1/accounts", params);
 };
+
+export const createAccount = (data: {
+  book_id: number;
+  name: string;
+  type: number;
+  icon?: string;
+  currency?: string;
+  initial_balance?: number;
+  is_include_total?: number;
+}) => request.post<Account>("/api/v1/accounts", data);
+
+export const updateAccount = (id: number, data: {
+  name?: string;
+  type?: number;
+  icon?: string;
+  currency?: string;
+  initial_balance?: number;
+  is_include_total?: number;
+}) => request.put<Account>(`/api/v1/accounts/${id}`, data);
+
+export const deleteAccount = (id: number, book_id: number) =>
+  request.delete(`/api/v1/accounts/${id}?book_id=${book_id}`);
 
 // ========== 类型定义 ==========
 
@@ -173,6 +208,10 @@ export interface Account {
   type: number;
   icon: string;
   currency: string;
+  initial_balance?: number;
+  is_include_total?: number;
+  sort_order?: number;
+  deleted?: number;
 }
 
 // ========== 导入导出相关 ==========
