@@ -54,25 +54,25 @@
       </view>
     </scroll-view>
 
-    <wd-popup v-model:visible="showForm" position="bottom" custom-class="budget-form">
+    <wd-popup v-model:visible="showForm" position="bottom">
       <view class="form-content">
         <text class="form-title">{{ editingId ? '编辑预算' : '新增预算' }}</text>
 
-        <view class="form-item">
-          <text class="form-label">分类</text>
-          <picker :value="selectedCatIndex" :range="categoryOptions" range-key="label" @change="onCategoryChange">
-            <text>{{ categoryOptions[selectedCatIndex]?.label || '总预算' }}</text>
+        <view class="form-field">
+          <text class="field-label">分类</text>
+          <picker :value="selectedCatIndex" :range="categoryOptions" range-key="label" @change="onCategoryChange" class="field-picker">
+            <text class="field-value">{{ categoryOptions[selectedCatIndex]?.label || '总预算' }}</text>
           </picker>
         </view>
 
-        <view class="form-item">
-          <text class="form-label">月预算金额</text>
-          <wd-input v-model="form.amount" type="number" placeholder="0" />
+        <view class="form-field">
+          <text class="field-label">月预算金额</text>
+          <input v-model="form.amount" type="digit" class="field-input" placeholder="输入预算金额" />
         </view>
 
         <view class="form-actions">
-          <wd-button plain @click="showForm = false">取消</wd-button>
-          <wd-button type="primary" :loading="saving" @click="onSave">{{ editingId ? '保存' : '创建' }}</wd-button>
+          <wd-button plain block @click="showForm = false">取消</wd-button>
+          <wd-button type="primary" block :loading="saving" @click="onSave">{{ editingId ? '保存' : '创建' }}</wd-button>
         </view>
       </view>
     </wd-popup>
@@ -98,6 +98,7 @@ const currentMonth = ref(new Date().getMonth() + 1);
 const monthLabel = computed(() => `${currentYear.value}年 ${currentMonth.value}月`);
 const bookId = computed(() => getCurrentBookId());
 const categories = ref<Category[]>([]);
+
 const categoryOptions = computed(() => {
   const opts = [{ label: "总预算（不限分类）", value: null as any }];
   categories.value.forEach((c: any) => {
@@ -189,22 +190,6 @@ async function onSave() {
   }
 }
 
-async function onDelete(item: any) {
-  uni.showModal({
-    title: "确认删除",
-    content: "删除此预算？",
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          await deleteBudget(item.id, bookId.value);
-          uni.showToast({ title: "已删除", icon: "success" });
-          await loadBudgets();
-        } catch { uni.showToast({ title: "删除失败", icon: "error" }); }
-      }
-    },
-  });
-}
-
 function goBack() { uni.navigateBack(); }
 
 onMounted(async () => {
@@ -217,11 +202,13 @@ onMounted(async () => {
 .budget-page {
   min-height: 100vh;
   background: var(--bg-primary);
-  .nav-left, .nav-right { width: 64rpx; display: flex; align-items: center; }
-  .nav-center { display: flex; align-items: center; gap: 16rpx; }
-  .nav-arrow { padding: 8rpx; }
-  .month-label { font-size: 28rpx; font-weight: 600; color: var(--text-primary); min-width: 120rpx; text-align: center; }
 }
+.nav-left, .nav-right {
+  width: 64rpx; display: flex; align-items: center; justify-content: center;
+}
+.nav-center { display: flex; align-items: center; gap: 16rpx; }
+.nav-arrow { padding: 8rpx; }
+.month-label { font-size: 28rpx; font-weight: 600; color: var(--text-primary); min-width: 120rpx; text-align: center; }
 
 .total-ring {
   text-align: center;
@@ -242,7 +229,12 @@ onMounted(async () => {
 }
 
 .budget-body { padding: 0 32rpx; }
-.empty-state { text-align: center; padding: 120rpx 0; .empty-title { display: block; font-size: 28rpx; color: var(--text-muted); margin-top: 16rpx; } .empty-hint { display: block; font-size: 24rpx; color: var(--text-placeholder); margin-top: 8rpx; } }
+
+.empty-state {
+  text-align: center; padding: 120rpx 0;
+  .empty-title { display: block; font-size: 28rpx; color: var(--text-muted); margin-top: 16rpx; }
+  .empty-hint { display: block; font-size: 24rpx; color: var(--text-placeholder); margin-top: 8rpx; }
+}
 
 .budget-item {
   background: var(--bg-secondary);
@@ -263,6 +255,20 @@ onMounted(async () => {
   .budget-warn { font-size: 22rpx; color: var(--color-expense); }
 }
 
-.budget-form :deep(.wd-popup__body) { border-radius: 24rpx 24rpx 0 0; }
-.form-content { padding: 32rpx; .form-title { font-size: 32rpx; font-weight: 600; color: var(--text-primary); margin-bottom: 24rpx; display: block; } .form-item { margin-bottom: 20rpx; .form-label { display: block; font-size: 24rpx; color: var(--text-label); margin-bottom: 8rpx; } } .form-actions { display: flex; gap: 16rpx; margin-top: 32rpx; > * { flex: 1; } } }
+.form-content {
+  padding: 40rpx 32rpx;
+  .form-title { font-size: 32rpx; font-weight: 600; color: var(--text-primary); margin-bottom: 32rpx; display: block; }
+  .form-field {
+    margin-bottom: 24rpx;
+    .field-label { display: block; font-size: 24rpx; color: var(--text-label); margin-bottom: 8rpx; }
+    .field-picker { display: block; }
+    .field-value { font-size: 28rpx; color: var(--text-primary); padding: 16rpx 0; display: block; }
+    .field-input {
+      font-size: 28rpx; color: var(--text-primary);
+      background: var(--bg-secondary); padding: 16rpx 20rpx;
+      border-radius: 8rpx; width: 100%;
+    }
+  }
+  .form-actions { display: flex; gap: 16rpx; margin-top: 32rpx; > * { flex: 1; } }
+}
 </style>

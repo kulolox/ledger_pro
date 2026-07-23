@@ -81,7 +81,7 @@
 
       <view class="sidebar-actions">
         <view class="action-item" @click="onBudget">
-          <wd-icon name="chart" size="28rpx" color="var(--text-secondary)" />
+          <wd-icon name="dashboard" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">预算中心</text>
         </view>
         <view class="action-item" @click="onManageCategories">
