@@ -232,26 +232,6 @@ export const downloadTemplate = (format: string) => {
   return request.download("/api/v1/transactions/template", { format });
 };
 
-// ========== 预算相关 ==========
-
-export const listBudgets = (params: { book_id: number; month: string }) => {
-  return request.get<any[]>("/api/v1/budgets", params);
-};
-
-export const createBudget = (data: {
-  book_id: number;
-  category_id?: number | null;
-  amount: number;
-  period_type: number;
-  start_date: string;
-}) => request.post<any>("/api/v1/budgets", data);
-
-export const updateBudget = (id: number, data: any) =>
-  request.put<any>(`/api/v1/budgets/${id}`, data);
-
-export const deleteBudget = (id: number, book_id: number) =>
-  request.delete(`/api/v1/budgets/${id}?book_id=${book_id}`);
-
 // ========== 统计相关 ==========
 
 export interface MonthlyStats {
