@@ -61,6 +61,7 @@
     "@wot-ui/ui": "^2.0.5",
     "echarts": "^6.1.0",
     "sortablejs": "^1.15.7",
+    "sql.js": "^1.14.1",
     "vue": "^3.4.21",
     "vue-i18n": "^9.1.9"
   },
@@ -73,6 +74,7 @@
     "@playwright/test": "^1.48.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/sortablejs": "^1.15.9",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vitest/coverage-v8": "^2.1.9",
     "@vue/runtime-core": "^3.4.21",

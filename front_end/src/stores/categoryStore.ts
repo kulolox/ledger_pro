@@ -1,13 +1,6 @@
 import { ref } from "vue";
+import { select, insert, updateById, execute } from "@/utils/db";
 import { DEFAULT_CATEGORIES, type Category } from "@/constants/categories";
-import { createCategory, updateCategory, deleteCategory, reorderCategories } from "@/api/common";
-
-const CATEGORY_CACHE_KEY = "category_cache";
-const CATEGORY_ETAG_KEY = "category_etag";
-
-interface CategoryCache {
-  categories: Record<number, Category[]>;
-}
 
 const categories = ref<Record<number, Category[]>>({
   0: [...(DEFAULT_CATEGORIES[0] || [])],
@@ -16,76 +9,45 @@ const categories = ref<Record<number, Category[]>>({
 
 let loadPromise: Promise<void> | null = null;
 
-function getCache(): CategoryCache | null {
-  try {
-    const raw = uni.getStorageSync(CATEGORY_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as CategoryCache;
-  } catch {
-    return null;
+async function seedDefaults() {
+  for (const type of [0, 1]) {
+    const defaults = DEFAULT_CATEGORIES[type] || [];
+    for (const cat of defaults) {
+      await insert("categories", {
+        id: cat.id,
+        name: cat.name,
+        type: cat.type,
+        icon: cat.icon,
+        color: cat.color,
+        is_system: 1,
+        sort_order: cat.sort_order ?? 0,
+      });
+    }
   }
 }
 
-function setCache(data: Record<number, Category[]>) {
-  uni.setStorageSync(CATEGORY_CACHE_KEY, JSON.stringify({ categories: data }));
-}
-
-function getEtag(): string {
-  return uni.getStorageSync(CATEGORY_ETAG_KEY) || "";
-}
-
-function setEtag(etag: string) {
-  uni.setStorageSync(CATEGORY_ETAG_KEY, etag);
-}
-
-function fetchFromServer(
-  force?: boolean,
-): Promise<{ data: Record<number, Category[]>; etag: string } | null> {
-  const baseURL = import.meta.env?.["VITE_API_BASE_URL"] || "";
-  const etag = force ? "" : getEtag();
-
-  return new Promise((resolve, reject) => {
-    const header: Record<string, string> = {};
-    const token = uni.getStorageSync("token");
-    if (token) {
-      header["Authorization"] = `Bearer ${token}`;
+async function loadFromDB(): Promise<Record<number, Category[]>> {
+  const rows = await select<Category>(
+    "SELECT * FROM categories ORDER BY sort_order ASC, id ASC",
+  );
+  if (rows.length === 0) {
+    await seedDefaults();
+    const reloaded = await select<Category>(
+      "SELECT * FROM categories ORDER BY sort_order ASC, id ASC",
+    );
+    const grouped: Record<number, Category[]> = {};
+    for (const cat of reloaded) {
+      if (!grouped[cat.type]) grouped[cat.type] = [];
+      grouped[cat.type].push(cat);
     }
-    if (etag) {
-      header["If-None-Match"] = etag;
-    }
-
-    uni.request({
-      url: `${baseURL}/api/v1/categories`,
-      method: "GET",
-      header,
-      success: (res) => {
-        if (res.statusCode === 304) {
-          const cache = getCache();
-          if (cache) {
-            resolve({ data: cache.categories, etag });
-          } else {
-            resolve(null);
-          }
-          return;
-        }
-        const body = res.data as Record<string, any>;
-        if (res.statusCode >= 200 && res.statusCode < 300 && (body?.code === 0 || body?.code === 200)) {
-          const list = body.data as Category[];
-          const grouped: Record<number, Category[]> = {};
-          for (const cat of list) {
-            if (!grouped[cat.type]) grouped[cat.type] = [];
-            grouped[cat.type].push(cat);
-          }
-          const headers = res.header as Record<string, string>;
-          const newEtag = headers["ETag"] || headers["etag"] || "";
-          resolve({ data: grouped, etag: newEtag });
-        } else {
-          reject(new Error("Failed to fetch categories"));
-        }
-      },
-      fail: reject,
-    });
-  });
+    return grouped;
+  }
+  const grouped: Record<number, Category[]> = {};
+  for (const cat of rows) {
+    if (!grouped[cat.type]) grouped[cat.type] = [];
+    grouped[cat.type].push(cat);
+  }
+  return grouped;
 }
 
 export function useCategories() {
@@ -93,25 +55,10 @@ export function useCategories() {
     if (loadPromise) return loadPromise;
 
     loadPromise = (async () => {
-      const cache = getCache();
-      if (cache) {
-        categories.value = cache.categories;
-      }
-
       try {
-        const result = await fetchFromServer();
-        if (result) {
-          categories.value = result.data;
-          setCache(result.data);
-          if (result.etag) setEtag(result.etag);
-        }
+        categories.value = await loadFromDB();
       } catch {
-        if (!cache) {
-          categories.value = {
-            0: [...(DEFAULT_CATEGORIES[0] || [])],
-            1: [...(DEFAULT_CATEGORIES[1] || [])],
-          };
-        }
+        // fallback: keep defaults
       } finally {
         loadPromise = null;
       }
@@ -122,22 +69,15 @@ export function useCategories() {
 
   const refreshCategories = async () => {
     if (loadPromise) return loadPromise;
-
     loadPromise = (async () => {
       try {
-        const result = await fetchFromServer(true);
-        if (result) {
-          categories.value = result.data;
-          setCache(result.data);
-          if (result.etag) setEtag(result.etag);
-        }
+        categories.value = await loadFromDB();
       } catch {
         // ignore
       } finally {
         loadPromise = null;
       }
     })();
-
     return loadPromise;
   };
 
@@ -148,30 +88,50 @@ export function useCategories() {
     color: string;
     parent_id?: number;
   }) => {
-    await createCategory(data);
+    const rows = await select<{ maxSort: number }>(
+      `SELECT MAX(sort_order) as maxSort FROM categories WHERE type = ${data.type}`,
+    );
+    const sortOrder =
+      rows.length > 0 && rows[0].maxSort != null ? (rows[0].maxSort as number) + 1 : 0;
+    await insert("categories", {
+      name: data.name,
+      type: data.type,
+      icon: data.icon,
+      color: data.color,
+      parent_id: data.parent_id || 0,
+      sort_order: sortOrder,
+    });
     await refreshCategories();
   };
 
   const editCategory = async (
     id: number,
-    data: { name?: string; icon?: string; color?: string; sort_order?: number; visible?: number },
+    data: {
+      name?: string;
+      icon?: string;
+      color?: string;
+      sort_order?: number;
+      visible?: number;
+    },
   ) => {
-    await updateCategory(id, data);
+    await updateById("categories", id, data as Record<string, unknown>);
     await refreshCategories();
   };
 
   const removeCategory = async (id: number) => {
-    await deleteCategory(id);
+    await execute(`DELETE FROM categories WHERE id = ${id} AND is_system = 0`);
     await refreshCategories();
   };
 
   const reorder = async (ids: number[]) => {
-    await reorderCategories({ ids });
+    for (let i = 0; i < ids.length; i++) {
+      await updateById("categories", ids[i], { sort_order: i });
+    }
     await refreshCategories();
   };
 
   const toggleVisible = async (id: number, visible: number) => {
-    await updateCategory(id, { visible });
+    await updateById("categories", id, { visible });
     await refreshCategories();
   };
 
@@ -193,13 +153,12 @@ export function useCategories() {
     return cats.find((c) => c.id === categoryId)?.icon || "?";
   };
 
-  const clearCategories = () => {
+  const clearCategories = async () => {
+    await execute("DELETE FROM categories");
     categories.value = {
       0: [...(DEFAULT_CATEGORIES[0] || [])],
       1: [...(DEFAULT_CATEGORIES[1] || [])],
     };
-    uni.removeStorageSync(CATEGORY_CACHE_KEY);
-    uni.removeStorageSync(CATEGORY_ETAG_KEY);
     loadPromise = null;
   };
 

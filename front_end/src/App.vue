@@ -1,19 +1,26 @@
 <script setup lang="ts">
 import { onLaunch } from "@dcloudio/uni-app";
-import { isLoggedIn } from "@/utils/storage";
+import { initDB, select } from "@/utils/db";
 
-onLaunch(() => {
+onLaunch(async () => {
   console.log("App Launch");
-  const pages = getCurrentPages();
-  if (pages.length === 0) {
-    const hash = window.location.hash;
-    if (!hash || hash === "#/" || hash === "#") {
-      if (isLoggedIn()) {
-        uni.reLaunch({ url: "/pages/index/index" });
-      } else {
-        uni.reLaunch({ url: "/pages/login/index" });
-      }
+
+  try {
+    await initDB();
+  } catch {
+    uni.reLaunch({ url: "/pages/index/index" });
+    return;
+  }
+
+  try {
+    const rows = await select("SELECT id FROM user_profile LIMIT 1");
+    if (rows.length > 0) {
+      uni.reLaunch({ url: "/pages/index/index" });
+    } else {
+      uni.reLaunch({ url: "/pages/onboarding/index" });
     }
+  } catch {
+    uni.reLaunch({ url: "/pages/index/index" });
   }
 });
 </script>

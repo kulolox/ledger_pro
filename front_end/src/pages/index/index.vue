@@ -64,7 +64,6 @@
         @refresherrefresh="onRefresh"
         @scrolltolower="loadMore"
       >
-        <!-- 无账单数据显示 -->
         <view v-if="dayGroups.length === 0" class="empty-state">
           <view class="empty-icon-wrapper">
             <wd-icon name="book" size="72rpx" color="var(--text-label)" />
@@ -73,7 +72,6 @@
           <text class="empty-hint">点击右下角 + 开始记账</text>
         </view>
 
-        <!-- 按日聚合的账单列表 -->
         <view v-for="day in dayGroups" :key="day.date" class="day-group">
           <view class="day-header">
             <view class="day-info">
@@ -94,10 +92,6 @@
             v-for="(tx, idx) in day.items"
             :key="tx.id"
             class="tx-item"
-            :class="{
-              'tx-item-pending': tx.sync_status === 'pending',
-              'tx-item-failed': tx.sync_status === 'failed',
-            }"
             @click="onEditTx(tx)"
             @longpress="onLongPressDelete(tx)"
           >
@@ -121,18 +115,6 @@
               <text class="tx-amount" :class="amountClass(tx.type)">
                 {{ formatTxAmount(tx) }}
               </text>
-              <text
-                v-if="tx.sync_status === 'pending'"
-                class="tx-sync-badge tx-sync-pending"
-              >
-                待同步
-              </text>
-              <text
-                v-if="tx.sync_status === 'failed'"
-                class="tx-sync-badge tx-sync-failed"
-              >
-                同步失败
-              </text>
             </view>
           </view>
         </view>
@@ -149,23 +131,17 @@
 
       <wd-dialog selector="delete-confirm" />
 
-      <!-- 记账器组件 -->
       <TransactionEditor
         :visible="editorVisible"
-        :bookId="currentBookId"
+        :bookId="0"
         :editData="editingTx"
         @close="onEditorClose"
         @saved="onEditorSaved"
       />
 
-      <!-- 侧边栏组件 -->
       <Sidebar
         v-model:visible="showSidebar"
-        v-model:books="books"
-        :userInfo="userInfo"
-        :currentBookId="currentBookId"
         @close="showSidebar = false"
-        @switchBook="onSwitchBook"
       />
     </template>
   </view>
@@ -184,20 +160,13 @@ import {
   type LocalTransaction,
 } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
-import {
-  isLoggedIn,
-  getUserInfo,
-  getCurrentBookId,
-  setCurrentBookId,
-} from "@/utils/storage";
-import { pullFromServer, scheduleSync } from "@/utils/sync";
+import { useUser } from "@/stores/userStore";
 import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
-import { getAccountBooks, type UserInfo, type AccountBook } from "@/api/common";
 
 const { load, delete: removeTx, getByDate } = useTransactions();
-
 const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
   useCategories();
+const { loadUser } = useUser();
 
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
@@ -205,17 +174,17 @@ const editorVisible = ref(false);
 const editingTx = ref<LocalTransaction | null>(null);
 const refreshing = ref(false);
 const pageLoading = ref(true);
-
 const showSidebar = ref(false);
-const userInfo = ref<UserInfo | null>(null);
-const books = ref<AccountBook[]>([]);
-const currentBookId = ref(getCurrentBookId());
 
 const monthLabel = computed(
   () => `${currentYear.value}年 ${currentMonth.value}月`,
 );
 
-// 按日期分组，过滤当前账本和月份，计算每日收入/支出，按日期倒序
+const monthPrefix = computed(
+  () =>
+    `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`,
+);
+
 const dayGroups = computed(() => {
   const map = getByDate();
   const result: Array<{
@@ -225,21 +194,16 @@ const dayGroups = computed(() => {
     items: LocalTransaction[];
   }> = [];
 
-  const prefix = `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
+  const prefix = monthPrefix.value;
 
   for (const [date, group] of map) {
     if (date.startsWith(prefix)) {
-      const filtered = group.items.filter(
-        (t) => t.book_id === currentBookId.value,
-      );
-      if (filtered.length === 0) continue;
-      const income = filtered
-        .filter((t) => t.type === 1)
-        .reduce((s, t) => s + t.amount, 0);
-      const expense = filtered
-        .filter((t) => t.type === 0)
-        .reduce((s, t) => s + t.amount, 0);
-      result.push({ date, income, expense, items: filtered });
+      result.push({
+        date,
+        income: group.income,
+        expense: group.expense,
+        items: group.items,
+      });
     }
   }
 
@@ -247,18 +211,16 @@ const dayGroups = computed(() => {
   return result;
 });
 
-// 收入
 const monthIncome = computed(() =>
   dayGroups.value.reduce((sum, d) => sum + d.income, 0),
 );
-// 支出
+
 const monthExpense = computed(() =>
   dayGroups.value.reduce((sum, d) => sum + d.expense, 0),
 );
-// 结余
+
 const monthBalance = computed(() => monthIncome.value - monthExpense.value);
 
-// 切换到上月
 function prevMonth() {
   if (currentMonth.value === 1) {
     currentMonth.value = 12;
@@ -268,7 +230,6 @@ function prevMonth() {
   }
 }
 
-// 切换到下月
 function nextMonth() {
   if (currentMonth.value === 12) {
     currentMonth.value = 1;
@@ -278,116 +239,80 @@ function nextMonth() {
   }
 }
 
-// 格式化交易金额显示
 function formatTxAmount(tx: LocalTransaction): string {
   const sign = tx.type === 1 ? "+" : tx.type === 0 ? "-" : "";
   return `${sign}${(tx.amount / 100).toFixed(2)}`;
 }
 
-// 根据交易类型返回金额 CSS 类名
 function amountClass(type: number): string {
   if (type === 0) return "expense";
   if (type === 1) return "income";
   return "transfer";
 }
 
-// 打开新增交易编辑器
 function onAdd() {
   editingTx.value = null;
   editorVisible.value = true;
 }
 
-// 打开编辑交易编辑器
 function onEditTx(tx: LocalTransaction) {
-  editingTx.value = { ...tx };
+  editingTx.value = tx;
   editorVisible.value = true;
 }
 
-const dialog = useDialog("delete-confirm");
-
-// 长按弹出删除确认框
-async function onLongPressDelete(tx: LocalTransaction) {
-  const result = await dialog.confirm({
-    title: "确认删除",
-    msg: `确定要删除这笔账单吗？`,
+function onLongPressDelete(tx: LocalTransaction) {
+  uni.showModal({
+    title: "删除账单",
+    content: "确定要删除这条账单吗？",
+    success: async (res) => {
+      if (res.confirm) {
+        await removeTx(tx.id);
+        const m = monthPrefix.value;
+        await load(m);
+      }
+    },
   });
-  if (result.action === "confirm") {
-    removeTx(tx.id);
-    uni.showToast({ title: "已删除", icon: "success" });
-  }
 }
 
-// 关闭交易编辑器
 function onEditorClose() {
   editorVisible.value = false;
   editingTx.value = null;
 }
 
-// 编辑器保存成功后关闭
-function onEditorSaved() {
+async function onEditorSaved() {
   editorVisible.value = false;
   editingTx.value = null;
+  const m = monthPrefix.value;
+  await load(m);
 }
 
-// 切换当前账本
-function onSwitchBook(bookId: number) {
-  currentBookId.value = bookId;
-  setCurrentBookId(bookId);
-  showSidebar.value = false;
-  load();
-  scheduleSync(bookId);
-  pullFromServer(bookId);
+async function onRefresh() {
+  refreshing.value = true;
+  const m = monthPrefix.value;
+  await load(m);
+  refreshing.value = false;
 }
 
-// 跳转到统计页面
+function loadMore() {}
+
 function goStats() {
   uni.navigateTo({ url: "/pages/statistics/index" });
 }
 
-// 下拉刷新触发同步
-async function onRefresh() {
-  refreshing.value = true;
-  const { runSyncCycle } = await import("@/utils/sync");
-  await runSyncCycle(currentBookId.value, false);
-  refreshing.value = false;
-}
-
-// 滚动到底部加载更多（暂未实现分页）
-function loadMore() {}
-
 let pageReady = false;
 const MIN_SKELETON_MS = 500;
 
-// 页面显示时初始化数据、加载交易列表
 onShow(async () => {
-  if (!isLoggedIn()) {
-    uni.reLaunch({ url: "/pages/login/index" });
-    return;
-  }
-
   const startTime = Date.now();
 
   if (!pageReady) {
     pageReady = true;
-    userInfo.value = getUserInfo();
-    loadCategories();
-    try {
-      books.value = await getAccountBooks();
-    } catch {
-      books.value = [];
-    }
-    if (
-      !books.value.find((b) => b.id === currentBookId.value) &&
-      books.value.length > 0
-    ) {
-      currentBookId.value = books.value[0].id;
-      setCurrentBookId(currentBookId.value);
-    }
-    scheduleSync(currentBookId.value);
+    await loadUser();
+    await loadCategories();
   }
 
-  load();
-  pullFromServer(currentBookId.value);
+  const m = monthPrefix.value;
+  await load(m);
 
   await nextTick();
   const elapsed = Date.now() - startTime;
@@ -682,34 +607,6 @@ onShow(async () => {
   }
   &.transfer {
     color: var(--color-primary);
-  }
-}
-
-.tx-item-pending {
-  border-left: 6rpx solid #ff9500;
-  padding-left: 18rpx;
-}
-
-.tx-item-failed {
-  border-left: 6rpx solid var(--color-expense);
-  padding-left: 18rpx;
-}
-
-.tx-sync-badge {
-  font-size: 20rpx;
-  font-weight: 600;
-  padding: 4rpx 10rpx;
-  border-radius: var(--radius-xs);
-  line-height: 1.4;
-
-  &.tx-sync-pending {
-    color: #ff9500;
-    background: rgba(255, 149, 0, 0.1);
-  }
-
-  &.tx-sync-failed {
-    color: var(--color-expense);
-    background: rgba(255, 59, 48, 0.1);
   }
 }
 

@@ -26,73 +26,75 @@
 
     <template v-else>
       <view class="month-summary">
-      <view class="summary-item expense-card">
-        <text class="summary-label">支出</text>
-        <text class="summary-value expense"
-          >-{{ formatCents(totalExpense) }}</text
-        >
-      </view>
-      <view class="summary-item income-card">
-        <text class="summary-label">收入</text>
-        <text class="summary-value income"
-          >+{{ formatCents(totalIncome) }}</text
-        >
-      </view>
-      <view class="summary-item balance-card">
-        <text class="summary-label">结余</text>
-        <text
-          class="summary-value"
-          :class="balance >= 0 ? 'income' : 'expense'"
-        >
-          {{ balance >= 0 ? "+" : "-" }}{{ formatCents(Math.abs(balance)) }}
-        </text>
-      </view>
-    </view>
-
-    <view class="stats-tabs">
-      <wd-tabs v-model="activeTab" custom-class="tab-custom">
-        <wd-tab title="支出" />
-        <wd-tab title="收入" />
-      </wd-tabs>
-    </view>
-
-    <scroll-view scroll-y class="stats-body">
-      <view class="stats-card">
-        <view v-if="currentCategories.length > 0" class="chart-section">
-          <EChart :options="pieOption" :height="420" />
-        </view>
-
-        <view v-if="currentCategories.length > 0" class="category-list">
-          <view
-            v-for="(cat, idx) in currentCategories"
-            :key="cat.category_id"
-            class="category-item"
+        <view class="summary-item expense-card">
+          <text class="summary-label">支出</text>
+          <text class="summary-value expense"
+            >-{{ formatCents(totalExpense) }}</text
           >
-            <view class="cat-left">
-              <view class="cat-dot" :style="{ background: cat.color }" />
-              <text class="cat-name">{{ cat.name }}</text>
+        </view>
+        <view class="summary-item income-card">
+          <text class="summary-label">收入</text>
+          <text class="summary-value income"
+            >+{{ formatCents(totalIncome) }}</text
+          >
+        </view>
+        <view class="summary-item balance-card">
+          <text class="summary-label">结余</text>
+          <text
+            class="summary-value"
+            :class="balance >= 0 ? 'income' : 'expense'"
+          >
+            {{ balance >= 0 ? "+" : "-" }}{{ formatCents(Math.abs(balance)) }}
+          </text>
+        </view>
+      </view>
+
+      <view class="stats-tabs">
+        <wd-tabs v-model="activeTab" custom-class="tab-custom">
+          <wd-tab title="支出" />
+          <wd-tab title="收入" />
+        </wd-tabs>
+      </view>
+
+      <scroll-view scroll-y class="stats-body">
+        <view class="stats-card">
+          <view v-if="currentCategories.length > 0" class="chart-section">
+            <EChart :options="pieOption" :height="420" />
+          </view>
+
+          <view v-if="currentCategories.length > 0" class="category-list">
+            <view
+              v-for="(cat, idx) in currentCategories"
+              :key="cat.category_id"
+              class="category-item"
+            >
+              <view class="cat-left">
+                <view class="cat-dot" :style="{ background: cat.color }" />
+                <text class="cat-name">{{ cat.name }}</text>
+              </view>
+              <view class="cat-right">
+                <text
+                  class="cat-amount"
+                  :class="{ 'income-text': activeTab === 1 }"
+                >
+                  {{ activeTab === 0 ? "-" : "+" }}{{ formatCents(cat.amount) }}
+                </text>
+                <text class="cat-percent">{{ cat.percent }}%</text>
+              </view>
             </view>
-            <view class="cat-right">
-              <text class="cat-amount" :class="{ 'income-text': activeTab === 1 }"
-                >{{ activeTab === 0 ? "-" : "+"
-                }}{{ formatCents(cat.amount) }}</text
-              >
-              <text class="cat-percent">{{ cat.percent }}%</text>
-            </view>
+          </view>
+
+          <view
+            v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
+            class="empty-state"
+          >
+            <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
+            <text class="empty-title">本月暂无数据</text>
           </view>
         </view>
 
-        <view
-          v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
-          class="empty-state"
-        >
-          <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
-          <text class="empty-title">本月暂无数据</text>
-        </view>
-      </view>
-
-      <view class="list-bottom" />
-    </scroll-view>
+        <view class="list-bottom" />
+      </scroll-view>
     </template>
   </view>
 </template>
@@ -103,28 +105,20 @@ import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import EChart from "@/components/EChart.vue";
 import PageLoader from "@/components/PageLoader.vue";
-import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
-import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { formatCents } from "@/utils/format";
-import { getMonthlyStatistics, type MonthlyStats } from "@/api/common";
+import { select } from "@/utils/db";
 
-const { transactions, load } = useTransactions();
 const { getCategoryName, getCategoryColor, loadCategories } = useCategories();
 
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
-const statsData = ref<MonthlyStats | null>(null);
 const activeTab = ref(0);
 const pageLoading = ref(true);
-
-const monthLabel = computed(
-  () => `${currentYear.value}年 ${currentMonth.value}月`,
-);
-
-const totalExpense = computed(() => statsData.value?.total_expense ?? 0);
-const totalIncome = computed(() => statsData.value?.total_income ?? 0);
-const balance = computed(() => totalIncome.value - totalExpense.value);
+const totalExpense = ref(0);
+const totalIncome = ref(0);
+const expenseCategories = ref<CatItem[]>([]);
+const incomeCategories = ref<CatItem[]>([]);
 
 interface CatItem {
   category_id: number;
@@ -135,34 +129,34 @@ interface CatItem {
   color: string;
 }
 
-function buildCategories(
-  rawList: Array<{ category_id: number; amount: number; count: number }>,
-  type: number,
-): CatItem[] {
-  const total = rawList.reduce((s, c) => s + c.amount, 0);
-  return rawList.map((c) => ({
-    category_id: c.category_id,
-    name: getCategoryName(type, c.category_id),
-    amount: c.amount,
-    count: c.count,
-    percent: total > 0 ? ((c.amount / total) * 100).toFixed(1) : "0",
-    color: getCategoryColor(type, c.category_id),
-  }));
+function getMonthStr(): string {
+  return `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
 }
 
-const expenseCategories = computed(() => {
-  if (!statsData.value?.expense_by_category) return [];
-  return buildCategories(statsData.value.expense_by_category, 0);
-});
+const monthLabel = computed(
+  () => `${currentYear.value}年 ${currentMonth.value}月`,
+);
 
-const incomeCategories = computed(() => {
-  if (!statsData.value?.income_by_category) return [];
-  return buildCategories(statsData.value.income_by_category, 1);
-});
+const balance = computed(() => totalIncome.value - totalExpense.value);
 
 const currentCategories = computed(() =>
   activeTab.value === 0 ? expenseCategories.value : incomeCategories.value,
 );
+
+function buildCatItems(
+  rows: { category_id: number; amount: number; count: number }[],
+  type: number,
+): CatItem[] {
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  return rows.map((r) => ({
+    category_id: r.category_id,
+    name: getCategoryName(type, r.category_id),
+    amount: r.amount,
+    count: r.count,
+    percent: total > 0 ? ((r.amount / total) * 100).toFixed(1) : "0",
+    color: getCategoryColor(type, r.category_id),
+  }));
+}
 
 const pieOption = computed(() => {
   const cats = currentCategories.value;
@@ -225,92 +219,39 @@ function goBack() {
   uni.navigateBack();
 }
 
-function getMonthStr(): string {
-  return `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
-}
-
 async function fetchStats() {
-  const bookId = getCurrentBookId();
+  const m = getMonthStr();
   try {
-    statsData.value = await getMonthlyStatistics({
-      book_id: bookId,
-      month: getMonthStr(),
-    });
+    const expenseTotal = await select<{ total: number }>(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE trans_time LIKE '${m}%' AND type = 0`,
+    );
+    totalExpense.value = expenseTotal[0]?.total ?? 0;
+
+    const incomeTotal = await select<{ total: number }>(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE trans_time LIKE '${m}%' AND type = 1`,
+    );
+    totalIncome.value = incomeTotal[0]?.total ?? 0;
+
+    const expenseRows = await select<{
+      category_id: number;
+      amount: number;
+      count: number;
+    }>(
+      `SELECT category_id, SUM(amount) as amount, COUNT(*) as count FROM transactions WHERE trans_time LIKE '${m}%' AND type = 0 GROUP BY category_id ORDER BY amount DESC`,
+    );
+    expenseCategories.value = buildCatItems(expenseRows, 0);
+
+    const incomeRows = await select<{
+      category_id: number;
+      amount: number;
+      count: number;
+    }>(
+      `SELECT category_id, SUM(amount) as amount, COUNT(*) as count FROM transactions WHERE trans_time LIKE '${m}%' AND type = 1 GROUP BY category_id ORDER BY amount DESC`,
+    );
+    incomeCategories.value = buildCatItems(incomeRows, 1);
   } catch {
-    calcLocalStats(bookId);
+    // ignore
   }
-}
-
-function calcLocalStats(bookId: number) {
-  const prefix = `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
-  const map = new Map<number, { amount: number; count: number }>();
-  let expense = 0;
-  let income = 0;
-  const expenseList: Array<{
-    category_id: number;
-    amount: number;
-    count: number;
-  }> = [];
-  const incomeList: Array<{
-    category_id: number;
-    amount: number;
-    count: number;
-  }> = [];
-
-  const all = transactions.value;
-  for (const tx of all) {
-    if (!tx.trans_time.startsWith(prefix)) continue;
-    if (tx.book_id !== bookId) continue;
-    if (tx.deleted) continue;
-
-    const cid = tx.category_id ?? 0;
-    if (tx.type === 0) {
-      expense += tx.amount;
-      const existing = map.get(cid);
-      if (existing) {
-        existing.amount += tx.amount;
-        existing.count++;
-      } else {
-        map.set(cid, { amount: tx.amount, count: 1 });
-      }
-    } else if (tx.type === 1) {
-      income += tx.amount;
-      const key = cid + 10000;
-      const existing = map.get(key);
-      if (existing) {
-        existing.amount += tx.amount;
-        existing.count++;
-      } else {
-        map.set(key, { amount: tx.amount, count: 1 });
-      }
-    }
-  }
-
-  for (const [key, val] of map) {
-    if (key >= 10000) {
-      incomeList.push({
-        category_id: key - 10000,
-        amount: val.amount,
-        count: val.count,
-      });
-    } else {
-      expenseList.push({
-        category_id: key,
-        amount: val.amount,
-        count: val.count,
-      });
-    }
-  }
-
-  expenseList.sort((a, b) => b.amount - a.amount);
-  incomeList.sort((a, b) => b.amount - a.amount);
-
-  statsData.value = {
-    total_expense: expense,
-    total_income: income,
-    expense_by_category: expenseList,
-    income_by_category: incomeList,
-  };
 }
 
 watch([currentYear, currentMonth], () => {
@@ -318,13 +259,8 @@ watch([currentYear, currentMonth], () => {
 });
 
 onShow(async () => {
-  if (!isLoggedIn()) {
-    uni.reLaunch({ url: "/pages/login/index" });
-    return;
-  }
   const startTime = Date.now();
-  load();
-  loadCategories();
+  await loadCategories();
   await fetchStats();
   await nextTick();
   const elapsed = Date.now() - startTime;

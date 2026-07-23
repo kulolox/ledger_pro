@@ -53,13 +53,6 @@
             <wd-icon name="right" size="24rpx" color="var(--text-muted)" />
           </view>
         </view>
-        <view class="filter-cell" @click="showBookPicker = true">
-          <text class="cell-title">账本</text>
-          <view class="cell-value">
-            <text>{{ bookLabel }}</text>
-            <wd-icon name="right" size="24rpx" color="var(--text-muted)" />
-          </view>
-        </view>
       </view>
 
       <view class="filter-actions">
@@ -72,76 +65,62 @@
       </view>
     </view>
 
-    <scroll-view
-      scroll-y
-      class="results-body"
-      @scrolltolower="loadMore"
-    >
+    <scroll-view scroll-y class="results-body" @scrolltolower="loadMore">
       <view class="results-inner">
-      <view v-if="loading && results.length === 0" class="loading-state">
-        <wd-icon name="loading" size="72rpx" color="var(--text-muted)" />
-        <text class="loading-text">搜索中...</text>
-      </view>
+        <view v-if="loading && results.length === 0" class="loading-state">
+          <wd-icon name="loading" size="72rpx" color="var(--text-muted)" />
+          <text class="loading-text">搜索中...</text>
+        </view>
 
-      <view v-else-if="results.length === 0 && hasSearched" class="empty-state">
-        <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
-        <text class="empty-title">未找到匹配的交易</text>
-        <text class="empty-hint">试试调整筛选条件</text>
-      </view>
+        <view v-else-if="results.length === 0 && hasSearched" class="empty-state">
+          <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
+          <text class="empty-title">未找到匹配的交易</text>
+          <text class="empty-hint">试试调整筛选条件</text>
+        </view>
 
-      <view v-else-if="results.length === 0 && !hasSearched" class="empty-state">
-        <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
-        <text class="empty-title">输入关键字或选择筛选条件</text>
-        <text class="empty-hint">点击搜索开始查找</text>
-      </view>
+        <view v-else-if="results.length === 0 && !hasSearched" class="empty-state">
+          <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
+          <text class="empty-title">输入关键字或选择筛选条件</text>
+          <text class="empty-hint">点击搜索开始查找</text>
+        </view>
 
-      <view v-for="day in dayGroups" :key="day.date" class="day-group">
-        <view class="day-header">
-          <view class="day-info">
-            <text class="day-date">{{ formatDayHeader(day.date) }}</text>
-            <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
+        <view v-for="day in dayGroups" :key="day.date" class="day-group">
+          <view class="day-header">
+            <view class="day-info">
+              <text class="day-date">{{ formatDayHeader(day.date) }}</text>
+              <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
+            </view>
+            <view class="day-totals">
+              <text v-if="day.expense > 0" class="day-expense">-{{ formatCents(day.expense) }}</text>
+              <text v-if="day.income > 0" class="day-income">+{{ formatCents(day.income) }}</text>
+            </view>
           </view>
-          <view class="day-totals">
-            <text v-if="day.expense > 0" class="day-expense">-{{ formatCents(day.expense) }}</text>
-            <text v-if="day.income > 0" class="day-income">+{{ formatCents(day.income) }}</text>
+
+          <view v-for="tx in day.items" :key="tx.id" class="tx-item">
+            <view class="tx-left">
+              <view
+                class="tx-icon"
+                :style="{ background: getCategoryColor(tx.type, tx.category_id) }"
+              >
+                <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
+              </view>
+              <view class="tx-info">
+                <text class="tx-category">{{ getCategoryName(tx.type, tx.category_id) }}</text>
+                <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
+              </view>
+            </view>
+            <view class="tx-right">
+              <text class="tx-amount" :class="tx.type === 1 ? 'income' : 'expense'">
+                {{ tx.type === 1 ? '+' : '-' }}{{ formatCents(tx.amount) }}
+              </text>
+            </view>
           </view>
         </view>
 
-        <view
-          v-for="tx in day.items"
-          :key="tx.id"
-          class="tx-item"
-          :class="{
-            'tx-item-pending': tx.sync_status === 'pending',
-            'tx-item-failed': tx.sync_status === 'failed',
-          }"
-        >
-          <view class="tx-left">
-            <view
-              class="tx-icon"
-              :style="{ background: getCategoryColor(tx.type, tx.category_id) }"
-            >
-              <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
-            </view>
-            <view class="tx-info">
-              <text class="tx-category">{{ getCategoryName(tx.type, tx.category_id) }}</text>
-              <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
-            </view>
-          </view>
-          <view class="tx-right">
-            <text class="tx-amount" :class="tx.type === 1 ? 'income' : 'expense'">
-              {{ tx.type === 1 ? '+' : '-' }}{{ formatCents(tx.amount) }}
-            </text>
-            <text v-if="tx.sync_status === 'pending'" class="tx-sync-badge tx-sync-pending">待同步</text>
-            <text v-else-if="tx.sync_status === 'failed'" class="tx-sync-badge tx-sync-failed">同步失败</text>
-          </view>
+        <view v-if="hasMore" class="loading-more">
+          <text>加载更多...</text>
         </view>
-      </view>
-
-      <view v-if="hasMore" class="loading-more">
-        <text>加载更多...</text>
-      </view>
-      <view class="list-bottom" />
+        <view class="list-bottom" />
       </view>
     </scroll-view>
 
@@ -195,14 +174,6 @@
     />
 
     <wd-picker
-      v-model="bookPickerValue"
-      v-model:visible="showBookPicker"
-      :columns="bookColumns"
-      title="选择账本"
-      @confirm="onBookConfirm"
-    />
-
-    <wd-picker
       v-model="categoryPickerValue"
       v-model:visible="showCategoryPicker"
       :columns="categoryColumns"
@@ -217,16 +188,14 @@ import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import { useCategories } from "@/stores/categoryStore";
-import { useTransactions } from "@/stores/transactionStore";
-import { isLoggedIn } from "@/utils/storage";
+import type { LocalTransaction } from "@/stores/transactionStore";
 import { formatCents, formatWeekday } from "@/utils/format";
-import { searchTransactions, getAccountBooks, type SearchParams, type AccountBook } from "@/api/common";
+import { select } from "@/utils/db";
 
 const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories, categories } = useCategories();
-const { transactions } = useTransactions();
 
 const keyword = ref("");
-const results = ref<any[]>([]);
+const results = ref<LocalTransaction[]>([]);
 const total = ref(0);
 const page = ref(1);
 const loading = ref(false);
@@ -234,7 +203,6 @@ const hasMore = ref(false);
 const hasSearched = ref(false);
 const PAGE_SIZE = 50;
 
-// Date range
 const dateRangeStartTs = ref(0);
 const dateRangeEndTs = ref(0);
 const showDateStartPicker = ref(false);
@@ -244,19 +212,11 @@ const dateFrom = ref("");
 const dateTo = ref("");
 
 const showCategoryPicker = ref(false);
-const showBookPicker = ref(false);
-const books = ref<AccountBook[]>([]);
 
 const categoryLabel = computed(() => {
   if (selectedCategoryId.value === undefined) return "全部分类";
   const name = getCategoryName(0, selectedCategoryId.value) || getCategoryName(1, selectedCategoryId.value);
   return name || "全部分类";
-});
-
-const bookLabel = computed(() => {
-  if (selectedBookId.value === undefined) return "全部账本";
-  const book = books.value.find(b => b.id === selectedBookId.value);
-  return book?.name || "全部账本";
 });
 
 const dateLabel = computed(() => {
@@ -270,7 +230,6 @@ function resetFilters() {
   keyword.value = "";
   selectedType.value = undefined;
   selectedCategoryId.value = undefined;
-  selectedBookId.value = undefined;
   initDates();
 }
 
@@ -326,7 +285,6 @@ function quickDate(days: number) {
   showDateRangePopup.value = false;
 }
 
-// wd-picker for type
 const showTypePicker = ref(false);
 const typePickerValue = ref<number[]>([]);
 const typeColumns = [
@@ -345,21 +303,6 @@ function onTypeConfirm({ value }: { value: number[] }) {
   selectedType.value = v === 0 ? undefined : v - 1;
 }
 
-// wd-picker for books
-const bookPickerValue = ref<number[]>([]);
-const bookColumns = computed(() => {
-  const all = [{ label: "全部账本", value: 0 }];
-  const list = books.value.map(b => ({ label: b.name, value: b.id }));
-  return [...all, ...list];
-});
-const selectedBookId = ref<number | undefined>(undefined);
-
-function onBookConfirm({ value }: { value: number[] }) {
-  const v = value[0];
-  selectedBookId.value = v === 0 ? undefined : v;
-}
-
-// wd-picker for categories
 const categoryPickerValue = ref<number[]>([]);
 const categoryColumns = computed(() => {
   const all = [{ label: "全部分类", value: 0 }];
@@ -381,51 +324,47 @@ async function doSearch() {
   await fetchResults();
 }
 
+function escapeSearch(val: unknown): string {
+  if (val === null || val === undefined) return "NULL";
+  if (typeof val === "number") return String(val);
+  return `'${String(val).replace(/'/g, "''")}'`;
+}
+
 async function fetchResults() {
   loading.value = true;
   try {
-    const params: SearchParams = {
-      page: page.value,
-      size: PAGE_SIZE,
-    };
-    if (keyword.value.trim()) params.keyword = keyword.value.trim();
-    if (selectedType.value !== undefined) params.type = selectedType.value;
-    if (selectedCategoryId.value !== undefined) params.category_id = selectedCategoryId.value;
-    if (selectedBookId.value !== undefined) params.book_id = selectedBookId.value;
-    if (dateFrom.value) params.date_from = dateFrom.value;
-    if (dateTo.value) params.date_to = dateTo.value;
+    const conditions: string[] = [];
 
-    const res = await searchTransactions(params);
-    const list = res.list || [];
-    results.value = page.value === 1 ? list : [...results.value, ...list];
-    total.value = res.total;
-    hasMore.value = results.value.length < total.value;
-  } catch {
-    if (page.value === 1) {
-      fallbackLocalSearch();
+    if (keyword.value.trim()) {
+      conditions.push(`remark LIKE '%${keyword.value.trim().replace(/'/g, "''")}%'`);
     }
+    if (selectedType.value !== undefined) {
+      conditions.push(`type = ${selectedType.value}`);
+    }
+    if (selectedCategoryId.value !== undefined) {
+      conditions.push(`category_id = ${selectedCategoryId.value}`);
+    }
+    if (dateFrom.value) {
+      conditions.push(`trans_time >= '${dateFrom.value}'`);
+    }
+    if (dateTo.value) {
+      conditions.push(`trans_time <= '${dateTo.value}T23:59:59'`);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const offset = (page.value - 1) * PAGE_SIZE;
+
+    const rows = await select<LocalTransaction>(
+      `SELECT * FROM transactions ${where} ORDER BY trans_time DESC, id DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+    );
+
+    results.value = page.value === 1 ? rows : [...results.value, ...rows];
+    hasMore.value = rows.length === PAGE_SIZE;
+  } catch {
+    // ignore
   } finally {
     loading.value = false;
   }
-}
-
-function fallbackLocalSearch() {
-  const kw = keyword.value.trim().toLowerCase();
-  const filtered = transactions.value.filter(tx => {
-    if (tx.deleted) return false;
-    if (kw && !tx.remark?.toLowerCase().includes(kw)) return false;
-    if (selectedType.value !== undefined && tx.type !== selectedType.value) return false;
-    if (selectedCategoryId.value !== undefined && tx.category_id !== selectedCategoryId.value) return false;
-    if (selectedBookId.value !== undefined && tx.book_id !== selectedBookId.value) return false;
-    if (dateFrom.value && tx.trans_time.substring(0, 10) < dateFrom.value) return false;
-    if (dateTo.value && tx.trans_time.substring(0, 10) > dateTo.value) return false;
-    return true;
-  });
-
-  filtered.sort((a, b) => b.trans_time.localeCompare(a.trans_time));
-  results.value = filtered;
-  total.value = filtered.length;
-  hasMore.value = false;
 }
 
 function loadMore() {
@@ -435,7 +374,7 @@ function loadMore() {
 }
 
 const dayGroups = computed(() => {
-  const map = new Map<string, { date: string; income: number; expense: number; items: any[] }>();
+  const map = new Map<string, { date: string; income: number; expense: number; items: LocalTransaction[] }>();
   for (const tx of results.value) {
     const dateKey = tx.trans_time.substring(0, 10);
     if (!map.has(dateKey)) {
@@ -458,14 +397,7 @@ function goBack() {
 }
 
 onShow(async () => {
-  if (!isLoggedIn()) {
-    uni.reLaunch({ url: "/pages/login/index" });
-    return;
-  }
-  loadCategories();
-  try {
-    books.value = await getAccountBooks();
-  } catch {}
+  await loadCategories();
   initDates();
 });
 </script>
@@ -742,34 +674,6 @@ onShow(async () => {
   }
 }
 
-.tx-item-pending {
-  border-left: 6rpx solid #ff9500;
-  padding-left: 18rpx;
-}
-
-.tx-item-failed {
-  border-left: 6rpx solid var(--color-expense);
-  padding-left: 18rpx;
-}
-
-.tx-sync-badge {
-  font-size: 20rpx;
-  font-weight: 600;
-  padding: 4rpx 10rpx;
-  border-radius: var(--radius-xs);
-  line-height: 1.4;
-
-  &.tx-sync-pending {
-    color: #ff9500;
-    background: rgba(255, 149, 0, 0.1);
-  }
-
-  &.tx-sync-failed {
-    color: var(--color-expense);
-    background: rgba(255, 59, 48, 0.1);
-  }
-}
-
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -816,7 +720,34 @@ onShow(async () => {
   height: 40rpx;
 }
 
-// Picker styles
+.picker-content {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx 32rpx 16rpx;
+  border-bottom: 1rpx solid var(--border-subtle);
+
+  .picker-title {
+    font-size: 32rpx;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .picker-close {
+    font-size: 28rpx;
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+}
+
 .date-range-content {
   padding: 24rpx 32rpx;
 
@@ -866,34 +797,6 @@ onShow(async () => {
         opacity: 0.7;
       }
     }
-  }
-}
-
-.picker-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.picker-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 32rpx 32rpx 16rpx;
-  border-bottom: 1rpx solid var(--border-subtle);
-
-  .picker-title {
-    font-size: 32rpx;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .picker-close {
-    font-size: 28rpx;
-    color: var(--color-primary);
-    font-weight: 600;
   }
 }
 </style>

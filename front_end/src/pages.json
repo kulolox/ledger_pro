@@ -7,30 +7,16 @@
   },
   "pages": [
     {
+      "path": "pages/onboarding/index",
+      "style": {
+        "navigationBarTitleText": "欢迎",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/index/index",
       "style": {
         "navigationBarTitleText": "LedgerPro",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/login/index",
-      "style": {
-        "navigationBarTitleText": "登录",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/register/index",
-      "style": {
-        "navigationBarTitleText": "注册",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/forgot-password/index",
-      "style": {
-        "navigationBarTitleText": "找回密码",
         "navigationStyle": "custom"
       }
     },
@@ -49,16 +35,16 @@
       }
     },
     {
-      "path": "pages/import-export/index",
+      "path": "pages/search/index",
       "style": {
-        "navigationBarTitleText": "导入导出",
+        "navigationBarTitleText": "搜索",
         "navigationStyle": "custom"
       }
     },
     {
-      "path": "pages/search/index",
+      "path": "pages/migration/index",
       "style": {
-        "navigationBarTitleText": "搜索",
+        "navigationBarTitleText": "数据迁移",
         "navigationStyle": "custom"
       }
     }

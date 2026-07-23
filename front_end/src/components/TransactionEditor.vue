@@ -217,7 +217,7 @@ const resetInput = () => {
 
 const editId = ref<number | null>(null);
 
-const handleSave = (keepOpen: boolean) => {
+const handleSave = async (keepOpen: boolean) => {
   const amount = evalExpression();
   if (amount <= 0) {
     uni.showToast({ title: "请输入金额", icon: "none" });
@@ -234,7 +234,7 @@ const handleSave = (keepOpen: boolean) => {
   const accountId = 1;
 
   if (editId.value != null) {
-    update(editId.value, {
+    await update(editId.value, {
       type: currentType.value,
       amount: amountCents,
       category_id: selectedCategory.value,
@@ -243,8 +243,7 @@ const handleSave = (keepOpen: boolean) => {
       trans_time: transTime,
     });
   } else {
-    add({
-      book_id: props.bookId,
+    await add({
       type: currentType.value,
       amount: amountCents,
       account_id: accountId,
