@@ -47,6 +47,11 @@
     </view>
 
     <scroll-view scroll-y class="stats-body">
+      <view class="trend-card" v-if="trendData">
+        <text class="trend-title">近6月收支趋势</text>
+        <EChart :options="trendOption" :height="320" />
+      </view>
+
       <view class="stats-card">
         <view class="stats-card-header">
           <wd-tabs v-model="activeTab" custom-class="tab-custom">
@@ -102,7 +107,7 @@ import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { formatCents } from "@/utils/format";
-import { getMonthlyStatistics, type MonthlyStats } from "@/api/common";
+import { getMonthlyStatistics, getTrend, type MonthlyStats } from "@/api/common";
 
 const { transactions, load } = useTransactions();
 const { getCategoryName, getCategoryColor, loadCategories } = useCategories();
@@ -110,6 +115,7 @@ const { getCategoryName, getCategoryColor, loadCategories } = useCategories();
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const statsData = ref<MonthlyStats | null>(null);
+const trendData = ref<{ months: string[]; expense: number[]; income: number[] } | null>(null);
 const activeTab = ref(0);
 
 const monthLabel = computed(
@@ -157,6 +163,40 @@ const incomeCategories = computed(() => {
 const currentCategories = computed(() =>
   activeTab.value === 0 ? expenseCategories.value : incomeCategories.value,
 );
+
+const trendOption = computed(() => {
+  if (!trendData.value) return {};
+  const months = trendData.value.months.map((m: string) => m.substring(5));
+  const expValues = trendData.value.expense.map((v: number) => v / 100);
+  const incValues = trendData.value.income.map((v: number) => v / 100);
+  return {
+    tooltip: { trigger: "axis" },
+    grid: { left: "8%", right: "8%", bottom: "8%", top: "10%" },
+    xAxis: { type: "category", data: months },
+    yAxis: { type: "value", axisLabel: { formatter: (v: number) => `¥${v.toFixed(0)}` } },
+    series: [
+      {
+        name: "支出",
+        type: "line",
+        data: expValues,
+        smooth: true,
+        lineStyle: { color: "#f44336", width: 2 },
+        itemStyle: { color: "#f44336" },
+        areaStyle: { color: "rgba(244,67,54,0.1)" },
+      },
+      {
+        name: "收入",
+        type: "line",
+        data: incValues,
+        smooth: true,
+        lineStyle: { color: "#4caf50", width: 2 },
+        itemStyle: { color: "#4caf50" },
+        areaStyle: { color: "rgba(76,175,80,0.1)" },
+      },
+    ],
+    legend: { data: ["支出", "收入"], bottom: 0 },
+  };
+});
 
 const pieOption = computed(() => {
   const cats = currentCategories.value;
@@ -232,6 +272,11 @@ async function fetchStats() {
     });
   } catch {
     calcLocalStats(bookId);
+  }
+  try {
+    trendData.value = await getTrend({ book_id: bookId, months: 6 });
+  } catch {
+    trendData.value = null;
   }
 }
 
@@ -510,6 +555,21 @@ onShow(async () => {
   color: var(--text-muted);
   min-width: 72rpx;
   text-align: right;
+}
+
+.trend-card {
+  background: var(--bg-secondary);
+  margin: 20rpx 32rpx;
+  padding: 24rpx;
+  border-radius: 16rpx;
+
+  .trend-title {
+    font-size: 26rpx;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8rpx;
+    display: block;
+  }
 }
 
 .empty-state {

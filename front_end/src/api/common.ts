@@ -264,3 +264,7 @@ export interface MonthlyStats {
 export const getMonthlyStatistics = (params: { book_id: number; month: string }) => {
   return request.get<MonthlyStats>("/api/v1/statistics/monthly", params);
 };
+
+export const getTrend = (params: { book_id: number; months?: number }) => {
+  return request.get<{ months: string[]; expense: number[]; income: number[] }>("/api/v1/statistics/trend", params);
+};
