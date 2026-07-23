@@ -11,14 +11,10 @@
       </template>
     </NavBar>
 
-    <view class="tabs">
-      <view class="tab" :class="{ active: activeTab === 'export' }" @click="activeTab = 'export'">
-        <text>导出数据</text>
-      </view>
-      <view class="tab" :class="{ active: activeTab === 'import' }" @click="activeTab = 'import'">
-        <text>导入数据</text>
-      </view>
-    </view>
+    <wd-tabs v-model="activeTab" custom-class="tab-custom">
+      <wd-tab title="导出数据" name="export" />
+      <wd-tab title="导入数据" name="import" />
+    </wd-tabs>
 
     <view v-if="activeTab === 'export'" class="tab-content">
       <view class="section">
@@ -414,28 +410,19 @@ onShow(async () => {
   height: 64rpx;
 }
 
-.tabs {
-  display: flex;
+:deep(.tab-custom.wd-tabs) {
+  --wot-tabs-nav-bg: var(--bg-secondary);
+  --wot-tabs-nav-color: var(--text-muted);
+  --wot-tabs-nav-color-active: var(--color-primary);
+  --wot-tabs-nav-font-weight-active: 600;
+  --wot-tabs-nav-item-font-size: 28rpx;
+  --wot-tabs-nav-line-bg: var(--color-primary);
+  --wot-tabs-nav-item-padding: 18rpx 24rpx;
   margin: 0 32rpx 32rpx;
-  background: var(--bg-secondary);
   border-radius: var(--radius-lg);
-  padding: 6rpx;
-}
 
-.tab {
-  flex: 1;
-  text-align: center;
-  padding: 18rpx 0;
-  border-radius: var(--radius-md);
-  font-size: 28rpx;
-  color: var(--text-muted);
-  transition: all 0.2s;
-
-  &.active {
-    background: var(--bg-primary);
-    color: var(--color-primary);
-    font-weight: 600;
-    box-shadow: var(--shadow-sm);
+  .wd-tabs__nav-item {
+    flex: 1;
   }
 }
 

@@ -2,7 +2,6 @@
   <wd-popup
     :model-value="visible"
     position="bottom"
-    :safe-area-inset-bottom="false"
     @update:model-value="$emit('close')"
     @close="$emit('close')"
   >

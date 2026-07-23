@@ -28,6 +28,7 @@
       </template>
     </NavBar>
 
+    <!-- 没有收支统计卡片 -->
     <view class="month-summary">
       <view class="summary-item expense-card">
         <text class="summary-label">支出</text>
@@ -61,6 +62,7 @@
       @refresherrefresh="onRefresh"
       @scrolltolower="loadMore"
     >
+      <!-- 无账单数据显示 -->
       <view v-if="dayGroups.length === 0" class="empty-state">
         <view class="empty-icon-wrapper">
           <wd-icon name="book" size="72rpx" color="var(--text-label)" />
@@ -69,6 +71,7 @@
         <text class="empty-hint">点击右下角 + 开始记账</text>
       </view>
 
+      <!-- 按日聚合的账单列表 -->
       <view v-for="day in dayGroups" :key="day.date" class="day-group">
         <view class="day-header">
           <view class="day-info">
@@ -90,7 +93,6 @@
           :key="tx.id"
           class="tx-item"
           :class="{
-            'tx-item-last': idx === day.items.length - 1,
             'tx-item-pending': tx.sync_status === 'pending',
             'tx-item-failed': tx.sync_status === 'failed',
           }"
@@ -120,13 +122,15 @@
             <text
               v-if="tx.sync_status === 'pending'"
               class="tx-sync-badge tx-sync-pending"
-              >待同步</text
             >
+              待同步
+            </text>
             <text
               v-if="tx.sync_status === 'failed'"
               class="tx-sync-badge tx-sync-failed"
-              >同步失败</text
             >
+              同步失败
+            </text>
           </view>
         </view>
       </view>
@@ -143,6 +147,7 @@
 
     <wd-dialog selector="delete-confirm" />
 
+    <!-- 记账器组件 -->
     <TransactionEditor
       :visible="editorVisible"
       :bookId="currentBookId"
@@ -151,18 +156,14 @@
       @saved="onEditorSaved"
     />
 
+    <!-- 侧边栏组件 -->
     <Sidebar
       v-model:visible="showSidebar"
+      v-model:books="books"
       :userInfo="userInfo"
-      :books="books"
       :currentBookId="currentBookId"
       @close="showSidebar = false"
       @switchBook="onSwitchBook"
-      @sync="onSync"
-      @logout="onLogout"
-      @addBook="onAddBook"
-      @manageCategories="onManageCategories"
-      @importExport="onImportExport"
     />
   </view>
 </template>
@@ -170,7 +171,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
-import { useDialog } from "@wot-ui/ui/components/wd-dialog/index";
+import { useDialog } from "@wot-ui/ui";
 import TransactionEditor from "@/components/TransactionEditor.vue";
 import NavBar from "@/components/NavBar.vue";
 import Sidebar from "@/components/Sidebar.vue";
@@ -181,38 +182,18 @@ import {
 import { useCategories } from "@/stores/categoryStore";
 import {
   isLoggedIn,
-  getRefreshToken,
-  logout,
   getUserInfo,
   getCurrentBookId,
   setCurrentBookId,
 } from "@/utils/storage";
-import { pullFromServer, scheduleSync, stopSync, fullSync } from "@/utils/sync";
+import { pullFromServer, scheduleSync } from "@/utils/sync";
 import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
-import {
-  getAccountBooks,
-  createAccountBook,
-  logoutApi,
-  type UserInfo,
-  type AccountBook,
-} from "@/api/common";
+import { getAccountBooks, type UserInfo, type AccountBook } from "@/api/common";
 
-const {
-  transactions,
-  load,
-  update,
-  delete: removeTx,
-  getByDate,
-  clear: clearTransactions,
-} = useTransactions();
+const { load, delete: removeTx, getByDate } = useTransactions();
 
-const {
-  getCategoryName,
-  getCategoryColor,
-  getCategoryIcon,
-  loadCategories,
-  clear: clearCategories,
-} = useCategories();
+const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
+  useCategories();
 
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
@@ -229,6 +210,7 @@ const monthLabel = computed(
   () => `${currentYear.value}年 ${currentMonth.value}月`,
 );
 
+// 按日期分组，过滤当前账本和月份，计算每日收入/支出，按日期倒序
 const dayGroups = computed(() => {
   const map = getByDate();
   const result: Array<{
@@ -271,6 +253,7 @@ const monthExpense = computed(() =>
 // 结余
 const monthBalance = computed(() => monthIncome.value - monthExpense.value);
 
+// 切换到上月
 function prevMonth() {
   if (currentMonth.value === 1) {
     currentMonth.value = 12;
@@ -280,6 +263,7 @@ function prevMonth() {
   }
 }
 
+// 切换到下月
 function nextMonth() {
   if (currentMonth.value === 12) {
     currentMonth.value = 1;
@@ -289,22 +273,26 @@ function nextMonth() {
   }
 }
 
+// 格式化交易金额显示
 function formatTxAmount(tx: LocalTransaction): string {
   const sign = tx.type === 1 ? "+" : tx.type === 0 ? "-" : "";
   return `${sign}${(tx.amount / 100).toFixed(2)}`;
 }
 
+// 根据交易类型返回金额 CSS 类名
 function amountClass(type: number): string {
   if (type === 0) return "expense";
   if (type === 1) return "income";
   return "transfer";
 }
 
+// 打开新增交易编辑器
 function onAdd() {
   editingTx.value = null;
   editorVisible.value = true;
 }
 
+// 打开编辑交易编辑器
 function onEditTx(tx: LocalTransaction) {
   editingTx.value = { ...tx };
   editorVisible.value = true;
@@ -312,6 +300,7 @@ function onEditTx(tx: LocalTransaction) {
 
 const dialog = useDialog("delete-confirm");
 
+// 长按弹出删除确认框
 async function onLongPressDelete(tx: LocalTransaction) {
   const result = await dialog.confirm({
     title: "确认删除",
@@ -323,16 +312,19 @@ async function onLongPressDelete(tx: LocalTransaction) {
   }
 }
 
+// 关闭交易编辑器
 function onEditorClose() {
   editorVisible.value = false;
   editingTx.value = null;
 }
 
+// 编辑器保存成功后关闭
 function onEditorSaved() {
   editorVisible.value = false;
   editingTx.value = null;
 }
 
+// 切换当前账本
 function onSwitchBook(bookId: number) {
   currentBookId.value = bookId;
   setCurrentBookId(bookId);
@@ -342,63 +334,12 @@ function onSwitchBook(bookId: number) {
   pullFromServer(bookId);
 }
 
-async function onSync() {
-  showSidebar.value = false;
-  uni.showLoading({ title: "同步中..." });
-  try {
-    const result = await fullSync(currentBookId.value);
-    uni.hideLoading();
-    uni.showToast({
-      title: `已同步：推送 ${result.pushed} 条，拉取 ${result.pulled} 条`,
-      icon: "none",
-      duration: 2000,
-    });
-    if (result.pulled > 0 || result.pushed > 0) {
-      load();
-    }
-  } catch {
-    uni.hideLoading();
-    uni.showToast({ title: "同步失败", icon: "error" });
-  }
-}
-
-async function onAddBook(name: string) {
-  try {
-    const book = await createAccountBook({ name });
-    books.value.push(book);
-    uni.showToast({ title: "创建成功", icon: "success" });
-  } catch {
-    uni.showToast({ title: "创建失败", icon: "error" });
-  }
-}
-
+// 跳转到统计页面
 function goStats() {
   uni.navigateTo({ url: "/pages/statistics/index" });
 }
 
-function onManageCategories() {
-  showSidebar.value = false;
-  uni.navigateTo({ url: "/pages/category/index" });
-}
-
-function onImportExport() {
-  showSidebar.value = false;
-  uni.navigateTo({ url: "/pages/import-export/index" });
-}
-
-function onLogout() {
-  showSidebar.value = false;
-  const refreshToken = getRefreshToken();
-  if (refreshToken) {
-    logoutApi({ refresh_token: refreshToken }).catch(() => {});
-  }
-  stopSync();
-  clearTransactions();
-  clearCategories();
-  logout();
-  uni.reLaunch({ url: "/pages/login/index" });
-}
-
+// 下拉刷新触发同步
 async function onRefresh() {
   refreshing.value = true;
   const { runSyncCycle } = await import("@/utils/sync");
@@ -406,10 +347,12 @@ async function onRefresh() {
   refreshing.value = false;
 }
 
+// 滚动到底部加载更多（暂未实现分页）
 function loadMore() {}
 
 let pageReady = false;
 
+// 页面显示时初始化数据、加载交易列表
 onShow(async () => {
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });

@@ -46,57 +46,46 @@
       </view>
     </view>
 
-    <view class="tab-bar">
-      <view
-        class="tab-item"
-        :class="{ active: activeTab === 0 }"
-        @click="activeTab = 0"
-      >
-        <text>支出</text>
-      </view>
-      <view
-        class="tab-item"
-        :class="{ active: activeTab === 1 }"
-        @click="activeTab = 1"
-      >
-        <text>收入</text>
-      </view>
-    </view>
-
     <scroll-view scroll-y class="stats-body">
-      <view v-if="currentCategories.length > 0" class="chart-section">
-        <text class="section-title">{{ activeTab === 0 ? '支出分类' : '收入分类' }}</text>
-        <EChart :options="pieOption" :height="420" />
-      </view>
+      <view class="stats-card">
+        <view class="stats-card-header">
+          <wd-tabs v-model="activeTab" custom-class="tab-custom">
+            <wd-tab title="支出" />
+            <wd-tab title="收入" />
+          </wd-tabs>
+        </view>
 
-      <view v-if="currentCategories.length > 0" class="category-list">
-        <view
-          v-for="(cat, idx) in currentCategories"
-          :key="cat.category_id"
-          class="category-item"
-        >
-          <view class="cat-left">
-            <view
-              class="cat-dot"
-              :style="{ background: cat.color }"
-            />
-            <text class="cat-name">{{ cat.name }}</text>
-          </view>
-          <view class="cat-right">
-            <text class="cat-amount" :class="{ 'income-text': activeTab === 1 }"
-              >{{ activeTab === 0 ? '-' : '+' }}{{ formatCents(cat.amount) }}</text
-            >
-            <text class="cat-percent">{{ cat.percent }}%</text>
+        <view v-if="currentCategories.length > 0" class="chart-section">
+          <EChart :options="pieOption" :height="420" />
+        </view>
+
+        <view v-if="currentCategories.length > 0" class="category-list">
+          <view
+            v-for="(cat, idx) in currentCategories"
+            :key="cat.category_id"
+            class="category-item"
+          >
+            <view class="cat-left">
+              <view class="cat-dot" :style="{ background: cat.color }" />
+              <text class="cat-name">{{ cat.name }}</text>
+            </view>
+            <view class="cat-right">
+              <text class="cat-amount" :class="{ 'income-text': activeTab === 1 }"
+                >{{ activeTab === 0 ? "-" : "+"
+                }}{{ formatCents(cat.amount) }}</text
+              >
+              <text class="cat-percent">{{ cat.percent }}%</text>
+            </view>
           </view>
         </view>
-      </view>
 
-      <view
-        v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
-        class="empty-state"
-      >
-        <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
-        <text class="empty-title">本月暂无数据</text>
+        <view
+          v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
+          class="empty-state"
+        >
+          <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
+          <text class="empty-title">本月暂无数据</text>
+        </view>
       </view>
 
       <view class="list-bottom" />
@@ -428,29 +417,28 @@ onShow(async () => {
   }
 }
 
-.tab-bar {
-  display: flex;
-  margin: 0 32rpx 16rpx;
+.stats-card {
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
-  padding: 6rpx;
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
-.tab-item {
-  flex: 1;
-  text-align: center;
-  padding: 16rpx 0;
-  border-radius: calc(var(--radius-lg) - 4rpx);
-  font-size: 28rpx;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: all 0.2s;
+.stats-card-header {
+  padding: 0 24rpx;
+}
 
-  &.active {
-    background: var(--color-primary);
-    color: #fff;
-    font-weight: 600;
+:deep(.tab-custom.wd-tabs) {
+  --wot-tabs-nav-bg: transparent;
+  --wot-tabs-nav-color: var(--text-secondary);
+  --wot-tabs-nav-color-active: var(--color-primary);
+  --wot-tabs-nav-font-weight-active: 600;
+  --wot-tabs-nav-item-font-size: 28rpx;
+  --wot-tabs-nav-line-bg: var(--color-primary);
+  --wot-tabs-nav-item-padding: 20rpx 24rpx;
+
+  .wd-tabs__nav-item {
+    flex: 1;
   }
 }
 
@@ -458,27 +446,15 @@ onShow(async () => {
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
-  padding: 0 20rpx 60rpx;
+  padding: 16rpx 20rpx 60rpx;
 }
 
 .chart-section {
-  margin-top: 20rpx;
-}
-
-
-.section-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text-primary);
-  padding: 0 16rpx 16rpx;
+  padding: 8rpx 0 0;
 }
 
 .category-list {
-  margin-top: 28rpx;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  border-top: 1rpx solid var(--border-subtle);
 }
 
 .category-item {
@@ -540,7 +516,7 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 240rpx 0;
+  padding: 120rpx 0;
 
   .empty-title {
     font-size: 30rpx;

@@ -194,9 +194,7 @@ const goForgotPassword = () => {
   font-weight: 600;
   box-shadow: var(--shadow-primary-md);
 
-  :deep(.wd-button) {
-    border-radius: var(--radius-md);
-  }
+  --wot-button-radius-main: var(--radius-md);
 }
 
 .login-links {

@@ -13,7 +13,6 @@
             v-model="formData.email"
             class="form-input"
             placeholder="请输入注册邮箱"
-            type="mail"
             clearable
           />
         </view>
@@ -23,7 +22,6 @@
             <wd-input
               v-model="formData.code"
               class="form-input code-input"
-              type="inter"
               placeholder="请输入验证码"
               clearable
             />

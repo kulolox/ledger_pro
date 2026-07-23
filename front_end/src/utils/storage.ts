@@ -2,6 +2,7 @@ const TOKEN_KEY = "token";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "userInfo";
 
+// JWT access token 存取
 export const getToken = (): string => {
   return uni.getStorageSync(TOKEN_KEY) || "";
 };
@@ -14,6 +15,7 @@ export const removeToken = (): void => {
   uni.removeStorageSync(TOKEN_KEY);
 };
 
+// JWT refresh token 存取
 export const getRefreshToken = (): string => {
   return uni.getStorageSync(REFRESH_TOKEN_KEY) || "";
 };
@@ -26,6 +28,7 @@ export const removeRefreshToken = (): void => {
   uni.removeStorageSync(REFRESH_TOKEN_KEY);
 };
 
+// 用户信息存取（JSON 序列化）
 export const getUserInfo = <T = any>(): T | null => {
   const data = uni.getStorageSync(USER_KEY);
   return data ? JSON.parse(data) : null;
@@ -41,6 +44,7 @@ export const removeUserInfo = (): void => {
 
 const BOOK_KEY = "currentBookId";
 
+// 当前选中账本 ID 存取
 export const getCurrentBookId = (): number => {
   return uni.getStorageSync(BOOK_KEY);
 };
@@ -49,6 +53,7 @@ export const setCurrentBookId = (bookId: number): void => {
   uni.setStorageSync(BOOK_KEY, bookId);
 };
 
+// 是否已登录（有 access token 即认为已登录）
 export const isLoggedIn = (): boolean => {
   return !!getToken();
 };
@@ -64,10 +69,12 @@ const ALL_KEYS = [
   "sync_last_at",
 ];
 
+// 清除全部 storage 数据
 export const clearAllData = (): void => {
   ALL_KEYS.forEach((key) => uni.removeStorageSync(key));
 };
 
+// 登出
 export const logout = (): void => {
   clearAllData();
 };

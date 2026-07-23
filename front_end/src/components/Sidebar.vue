@@ -80,19 +80,19 @@
       <view class="sidebar-divider" />
 
       <view class="sidebar-actions">
-        <view class="action-item" @click="$emit('manageCategories')">
+        <view class="action-item" @click="onManageCategories">
           <wd-icon name="tags" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">分类管理</text>
         </view>
-        <view class="action-item" @click="$emit('importExport')">
+        <view class="action-item" @click="onImportExport">
           <wd-icon name="import" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">导入导出</text>
         </view>
-        <view class="action-item" @click="$emit('sync')">
+        <view class="action-item" @click="onSync">
           <wd-icon name="sync" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">同步数据</text>
         </view>
-        <view class="action-item logout-item" @click="$emit('logout')">
+        <view class="action-item logout-item" @click="onLogout">
           <wd-icon name="poweroff" size="28rpx" color="var(--color-expense)" />
           <text class="action-label">退出登录</text>
         </view>
@@ -103,7 +103,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { UserInfo } from "@/api/common";
+import { createAccountBook, logoutApi, type UserInfo } from "@/api/common";
+import { getRefreshToken, logout } from "@/utils/storage";
+import { fullSync, stopSync } from "@/utils/sync";
+import { useTransactions } from "@/stores/transactionStore";
+import { useCategories } from "@/stores/categoryStore";
 
 interface AccountBook {
   id: number;
@@ -120,14 +124,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:visible': [value: boolean];
+  'update:books': [books: AccountBook[]];
   close: [];
   userClick: [];
   switchBook: [bookId: number];
-  sync: [];
-  logout: [];
-  addBook: [name: string];
-  manageCategories: [];
-  importExport: [];
 }>();
 
 const avatarText = computed(() => {
@@ -138,7 +138,7 @@ const avatarText = computed(() => {
 const showAddInput = ref(false);
 const newBookName = ref("");
 
-function onAddBook() {
+async function onAddBook() {
   if (props.books.length >= 4) {
     uni.showToast({ title: "最多4个账本", icon: "none" });
     newBookName.value = "";
@@ -147,7 +147,13 @@ function onAddBook() {
   }
   const name = newBookName.value.trim();
   if (name) {
-    emit('addBook', name);
+    try {
+      const book = await createAccountBook({ name });
+      emit('update:books', [...props.books, book]);
+      uni.showToast({ title: "创建成功", icon: "success" });
+    } catch {
+      uni.showToast({ title: "创建失败", icon: "error" });
+    }
   }
   newBookName.value = "";
   showAddInput.value = false;
@@ -156,6 +162,52 @@ function onAddBook() {
 function onAddCancel() {
   newBookName.value = "";
   showAddInput.value = false;
+}
+
+const { load: loadTransactions, clear: clearTransactions } = useTransactions();
+const { clear: clearCategories } = useCategories();
+
+function onManageCategories() {
+  emit('update:visible', false);
+  uni.navigateTo({ url: "/pages/category/index" });
+}
+
+function onImportExport() {
+  emit('update:visible', false);
+  uni.navigateTo({ url: "/pages/import-export/index" });
+}
+
+async function onSync() {
+  emit('update:visible', false);
+  uni.showLoading({ title: "同步中..." });
+  try {
+    const result = await fullSync(props.currentBookId);
+    uni.hideLoading();
+    uni.showToast({
+      title: `已同步：推送 ${result.pushed} 条，拉取 ${result.pulled} 条`,
+      icon: "none",
+      duration: 2000,
+    });
+    if (result.pulled > 0 || result.pushed > 0) {
+      loadTransactions();
+    }
+  } catch {
+    uni.hideLoading();
+    uni.showToast({ title: "同步失败", icon: "error" });
+  }
+}
+
+function onLogout() {
+  emit('update:visible', false);
+  const refreshToken = getRefreshToken();
+  if (refreshToken) {
+    logoutApi({ refresh_token: refreshToken }).catch(() => {});
+  }
+  stopSync();
+  clearTransactions();
+  clearCategories();
+  logout();
+  uni.reLaunch({ url: "/pages/login/index" });
 }
 
 const bookColors = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#af52de'];

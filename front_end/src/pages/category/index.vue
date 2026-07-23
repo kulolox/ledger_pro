@@ -20,22 +20,10 @@
       </template>
     </NavBar>
 
-    <view class="tab-bar">
-      <view
-        class="tab-item"
-        :class="{ active: currentTab === 0 }"
-        @click="currentTab = 0"
-      >
-        <text>支出</text>
-      </view>
-      <view
-        class="tab-item"
-        :class="{ active: currentTab === 1 }"
-        @click="currentTab = 1"
-      >
-        <text>收入</text>
-      </view>
-    </view>
+    <wd-tabs v-model="currentTab" custom-class="tab-custom">
+      <wd-tab title="支出" />
+      <wd-tab title="收入" />
+    </wd-tabs>
 
     <view class="category-list" id="category-sort-list">
       <view v-if="categoryList.length === 0" class="empty-state">
@@ -170,6 +158,8 @@
         </view>
       </view>
     </wd-popup>
+
+    <wd-dialog selector="category-delete" />
   </view>
 </template>
 
@@ -177,6 +167,7 @@
 import { ref, computed, watch, nextTick, onUnmounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
+import { useDialog } from "@wot-ui/ui";
 import { useCategories } from "@/stores/categoryStore";
 import type { Category } from "@/constants/categories";
 import Sortable from "sortablejs";
@@ -231,7 +222,7 @@ const editorVisible = ref(false);
 const isEdit = ref(false);
 const editingId = ref<number>(0);
 const form = ref({ name: "", icon: "", color: "" });
-
+const dialog = useDialog("category-delete");
 watch(sortMode, async (val) => {
   if (val) {
     await nextTick();
@@ -333,23 +324,19 @@ async function onSave() {
   }
 }
 
-function onDelete(cat: Category) {
-  uni.showModal({
+async function onDelete(cat: Category) {
+  const result = await dialog.confirm({
     title: "确认删除",
-    content: `确定要删除"${cat.name}"分类吗？`,
-    confirmText: "删除",
-    confirmColor: "#ff3b30",
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          await removeCategory(cat.id);
-          uni.showToast({ title: "已删除", icon: "success" });
-        } catch {
-          uni.showToast({ title: "删除失败", icon: "error" });
-        }
-      }
-    },
+    msg: `确定要删除"${cat.name}"分类吗？`,
   });
+  if (result.action === "confirm") {
+    try {
+      await removeCategory(cat.id);
+      uni.showToast({ title: "已删除", icon: "success" });
+    } catch {
+      uni.showToast({ title: "删除失败", icon: "error" });
+    }
+  }
 }
 
 async function onToggleVisible(cat: Category) {
@@ -426,36 +413,19 @@ onShow(() => {
   }
 }
 
-.tab-bar {
-  display: flex;
-  background: var(--bg-secondary);
+:deep(.tab-custom.wd-tabs) {
+  --wot-tabs-nav-bg: var(--bg-secondary);
+  --wot-tabs-nav-color: var(--text-muted);
+  --wot-tabs-nav-color-active: var(--color-primary);
+  --wot-tabs-nav-font-weight-active: 600;
+  --wot-tabs-nav-item-font-size: 28rpx;
+  --wot-tabs-nav-line-bg: var(--color-primary);
+  --wot-tabs-nav-item-padding: 18rpx 24rpx;
   border-radius: var(--radius-md);
-  padding: 6rpx;
   box-shadow: var(--shadow-sm);
-}
 
-.tab-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18rpx 0;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s var(--spring-default);
-
-  text {
-    font-size: 28rpx;
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-
-  &.active {
-    background: var(--color-primary);
-
-    text {
-      color: var(--text-inverse);
-      font-weight: 600;
-    }
+  .wd-tabs__nav-item {
+    flex: 1;
   }
 }
 
@@ -555,6 +525,11 @@ onShow(() => {
 }
 
 .cat-lock {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cat-action {

@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
 
 const uid = ref("ec" + Math.random().toString(36).slice(2, 10));
 let chart: echarts.ECharts | null = null;
+let resizeObserver: ResizeObserver | null = null;
 
 function init() {
   const el = document.getElementById(uid.value);
@@ -24,6 +25,10 @@ function init() {
   if (props.options?.series) {
     chart.setOption(props.options);
   }
+  resizeObserver = new ResizeObserver(() => {
+    chart?.resize();
+  });
+  resizeObserver.observe(el);
 }
 
 onMounted(() => nextTick(init));
@@ -37,6 +42,7 @@ watch(() => props.options, (opts) => {
 }, { deep: true });
 
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
   if (chart) {
     chart.dispose();
     chart = null;
