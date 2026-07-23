@@ -52,6 +52,23 @@ public class TransactionController {
         return Result.ok(Map.of("list", result.list(), "total", result.total(), "page", page));
     }
 
+    @GetMapping("/search")
+    public Result<Map<String, Object>> search(
+            @RequestParam(required = false) Long book_id,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer type,
+            @RequestParam(required = false) Long category_id,
+            @RequestParam(required = false) Integer amount_min,
+            @RequestParam(required = false) Integer amount_max,
+            @RequestParam(required = false) String date_from,
+            @RequestParam(required = false) String date_to,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "50") Integer size) {
+        TransactionListResponse result = transactionService.search(
+                book_id, keyword, type, category_id, amount_min, amount_max, date_from, date_to, page, size);
+        return Result.ok(Map.of("list", result.list(), "total", result.total(), "page", page));
+    }
+
     @GetMapping("/export")
     public void exportTransactions(
             @RequestParam Long book_id,

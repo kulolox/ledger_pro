@@ -214,6 +214,25 @@ export interface Account {
   deleted?: number;
 }
 
+// ========== 搜索相关 ==========
+
+export interface SearchParams {
+  book_id?: number;
+  keyword?: string;
+  type?: number;
+  category_id?: number;
+  amount_min?: number;
+  amount_max?: number;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  size?: number;
+}
+
+export const searchTransactions = (params: SearchParams) => {
+  return request.get<{ list: Transaction[]; total: number; page: number }>("/api/v1/transactions/search", params);
+};
+
 // ========== 导入导出相关 ==========
 
 export const exportTransactions = (params: { book_id: number; month?: string; year?: string; format: string }) => {

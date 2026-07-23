@@ -22,6 +22,9 @@ public interface ITransactionService extends IService<Transaction> {
 
     TransactionListResponse list(Long bookId, String month, Integer page, Integer size);
 
+    TransactionListResponse search(Long bookId, String keyword, Integer type, Long categoryId,
+            Integer amountMin, Integer amountMax, String dateFrom, String dateTo, Integer page, Integer size);
+
     void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response);
 
     Map<String, Object> importTransactions(Long bookId, MultipartFile file, String format);

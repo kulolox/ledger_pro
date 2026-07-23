@@ -214,6 +214,59 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return new TransactionListResponse(list, (int) result.getTotal());
     }
 
+    public TransactionListResponse search(Long bookId, String keyword, Integer type, Long categoryId,
+            Integer amountMin, Integer amountMax, String dateFrom, String dateTo, Integer page, Integer size) {
+        Long userId = AuthUtils.getCurrentUserId();
+
+        List<Long> bookIds;
+        if (bookId != null) {
+            validateBookOwnership(bookId);
+            bookIds = List.of(bookId);
+        } else {
+            bookIds = getOwnedBookIds();
+            if (bookIds.isEmpty()) {
+                throw new BizException("暂无账本");
+            }
+        }
+
+        var pageObj = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<Transaction>(page, size);
+        var wrapper = new LambdaQueryWrapper<Transaction>();
+        wrapper.in(Transaction::getBookId, bookIds);
+        wrapper.eq(Transaction::getDeleted, 0);
+
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.like(Transaction::getRemark, keyword.trim());
+        }
+        if (type != null) {
+            wrapper.eq(Transaction::getType, type);
+        }
+        if (categoryId != null) {
+            wrapper.eq(Transaction::getCategoryId, categoryId);
+        }
+        if (amountMin != null) {
+            wrapper.ge(Transaction::getAmount, amountMin);
+        }
+        if (amountMax != null) {
+            wrapper.le(Transaction::getAmount, amountMax);
+        }
+        if (dateFrom != null && !dateFrom.isBlank()) {
+            wrapper.ge(Transaction::getTransTime, LocalDateTime.parse(dateFrom.trim() + "T00:00:00"));
+        } else {
+            wrapper.ge(Transaction::getTransTime, LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0));
+        }
+        if (dateTo != null && !dateTo.isBlank()) {
+            wrapper.lt(Transaction::getTransTime, LocalDateTime.parse(dateTo.trim() + "T23:59:59"));
+        }
+
+        wrapper.orderByDesc(Transaction::getTransTime);
+
+        var result = page(pageObj, wrapper);
+        List<TransactionResponse> list = result.getRecords().stream()
+                .map(TransactionResponse::from)
+                .toList();
+        return new TransactionListResponse(list, (int) result.getTotal());
+    }
+
     public void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response) {
         validateBookOwnership(bookId);
         Map<Long, String> categoryMap = categoryNameMap();

@@ -11,8 +11,8 @@
           <text class="avatar-text">{{ avatarText }}</text>
         </view>
         <view class="user-info">
-          <text class="user-name">{{ userInfo?.nickname || '未登录' }}</text>
-          <text class="user-email">{{ userInfo?.email || '' }}</text>
+          <text class="user-name">{{ userInfo?.nickname || "未登录" }}</text>
+          <text class="user-email">{{ userInfo?.email || "" }}</text>
         </view>
       </view>
 
@@ -65,11 +65,23 @@
             :class="{ active: book.id === currentBookId }"
             @click="$emit('switchBook', book.id)"
           >
-            <view class="book-icon" :style="{ background: book.coverIcon ? 'transparent' : getBookColor(book.id) }">
+            <view
+              class="book-icon"
+              :style="{
+                background: book.coverIcon
+                  ? 'transparent'
+                  : getBookColor(book.id),
+              }"
+            >
               <text>{{ book.coverIcon || getBookLetter(book.name) }}</text>
             </view>
             <text class="book-name">{{ book.name }}</text>
-            <wd-icon v-if="book.id === currentBookId" name="check" size="28rpx" color="var(--color-primary)" />
+            <wd-icon
+              v-if="book.id === currentBookId"
+              name="check"
+              size="28rpx"
+              color="var(--color-primary)"
+            />
           </view>
         </view>
         <view v-else class="book-empty">
@@ -83,6 +95,14 @@
         <view class="action-item" @click="onManageCategories">
           <wd-icon name="tags" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">分类管理</text>
+        </view>
+        <view class="action-item" @click="onSearch">
+          <wd-icon
+            name="search-line"
+            size="28rpx"
+            color="var(--text-secondary)"
+          />
+          <text class="action-label">账单查询</text>
         </view>
         <view class="action-item" @click="onImportExport">
           <wd-icon name="import" size="28rpx" color="var(--text-secondary)" />
@@ -123,15 +143,15 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'update:visible': [value: boolean];
-  'update:books': [books: AccountBook[]];
+  "update:visible": [value: boolean];
+  "update:books": [books: AccountBook[]];
   close: [];
   userClick: [];
   switchBook: [bookId: number];
 }>();
 
 const avatarText = computed(() => {
-  if (!props.userInfo?.nickname) return '?';
+  if (!props.userInfo?.nickname) return "?";
   return props.userInfo.nickname.charAt(0).toUpperCase();
 });
 
@@ -149,7 +169,7 @@ async function onAddBook() {
   if (name) {
     try {
       const book = await createAccountBook({ name });
-      emit('update:books', [...props.books, book]);
+      emit("update:books", [...props.books, book]);
       uni.showToast({ title: "创建成功", icon: "success" });
     } catch {
       uni.showToast({ title: "创建失败", icon: "error" });
@@ -168,17 +188,22 @@ const { load: loadTransactions, clear: clearTransactions } = useTransactions();
 const { clear: clearCategories } = useCategories();
 
 function onManageCategories() {
-  emit('update:visible', false);
+  emit("update:visible", false);
   uni.navigateTo({ url: "/pages/category/index" });
 }
 
+function onSearch() {
+  emit("update:visible", false);
+  uni.navigateTo({ url: "/pages/search/index" });
+}
+
 function onImportExport() {
-  emit('update:visible', false);
+  emit("update:visible", false);
   uni.navigateTo({ url: "/pages/import-export/index" });
 }
 
 async function onSync() {
-  emit('update:visible', false);
+  emit("update:visible", false);
   uni.showLoading({ title: "同步中..." });
   try {
     const result = await fullSync(props.currentBookId);
@@ -198,7 +223,7 @@ async function onSync() {
 }
 
 function onLogout() {
-  emit('update:visible', false);
+  emit("update:visible", false);
   const refreshToken = getRefreshToken();
   if (refreshToken) {
     logoutApi({ refresh_token: refreshToken }).catch(() => {});
@@ -210,7 +235,7 @@ function onLogout() {
   uni.reLaunch({ url: "/pages/login/index" });
 }
 
-const bookColors = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#af52de'];
+const bookColors = ["#007aff", "#34c759", "#ff9500", "#ff3b30", "#af52de"];
 
 function getBookColor(id: number): string {
   return bookColors[id % bookColors.length];
