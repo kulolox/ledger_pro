@@ -1,20 +1,26 @@
 <template>
   <view ref="containerRef" class="echart" :style="{ height: height + 'px' }">
+    <!-- #ifdef H5 -->
+    <canvas
+      type="2d"
+      :id="canvasId"
+      class="charts"
+      @touchend="onTap"
+    />
+    <!-- #endif -->
     <!-- #ifndef H5 -->
-    <canvas type="2d" :id="canvasId" class="charts" @touchend="onTap" />
+    <canvas
+      :id="canvasId"
+      :canvas-id="canvasId"
+      class="charts"
+      @touchend="onTap"
+    />
     <!-- #endif -->
   </view>
 </template>
 
 <script setup lang="ts">
-import {
-  ref,
-  watch,
-  onMounted,
-  onBeforeUnmount,
-  getCurrentInstance,
-  nextTick,
-} from "vue";
+import { ref, watch, onMounted, onBeforeUnmount, getCurrentInstance, nextTick } from "vue";
 import uCharts from "@qiun/ucharts";
 
 const props = withDefaults(
@@ -30,9 +36,8 @@ const props = withDefaults(
   },
 );
 
-let _id = 0;
 function uid() {
-  return `ec${_id++}`;
+  return `ec${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
 const canvasId = ref(uid());
@@ -46,9 +51,14 @@ let h5Canvas: HTMLCanvasElement | null = null;
 function waitLayout(): Promise<void> {
   return new Promise((resolve) => {
     nextTick(() => {
+      // #ifdef H5
       requestAnimationFrame(() => {
-        setTimeout(resolve, 30);
+        setTimeout(resolve, 50);
       });
+      // #endif
+      // #ifndef H5
+      setTimeout(resolve, 80);
+      // #endif
     });
   });
 }
@@ -80,24 +90,19 @@ async function getCtx(): Promise<any> {
   return { ctx: h5Canvas.getContext("2d"), dpr, w: pw, h: ph };
   // #endif
   // #ifndef H5
+  await waitLayout();
   return new Promise((resolve) => {
     const query = uni.createSelectorQuery().in(instance?.proxy);
-    query
-      .select(`#${canvasId.value}`)
-      .fields({ node: true, size: true })
-      .exec((res: any) => {
-        if (!res[0]?.node) {
-          resolve(null);
-          return;
-        }
-        const canvas = res[0].node;
-        const dpr = uni.getSystemInfoSync().pixelRatio || 1;
-        const pw = res[0].width * dpr;
-        const ph = res[0].height * dpr;
-        canvas.width = pw;
-        canvas.height = ph;
-        resolve({ ctx: canvas.getContext("2d"), dpr, w: pw, h: ph });
-      });
+    query.select(`#${canvasId.value}`).boundingClientRect().exec((res: any) => {
+      const rect = res?.[0];
+      if (!rect) { resolve(null); return; }
+      const w = Math.round(rect.width);
+      const h = Math.round(rect.height);
+      if (w === 0 || h === 0) { resolve(null); return; }
+      const ctx = uni.createCanvasContext(canvasId.value, instance?.proxy);
+      if (!ctx) { resolve(null); return; }
+      resolve({ ctx, dpr: 1, w, h });
+    });
   });
   // #endif
 }
