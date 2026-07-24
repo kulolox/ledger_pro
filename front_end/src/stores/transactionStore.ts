@@ -14,7 +14,12 @@ export interface LocalTransaction {
   updated_at: string;
 }
 
+const PAGE_SIZE = 30;
+
 const transactions = ref<LocalTransaction[]>([]);
+const hasMore = ref(false);
+
+let currentPage = 1;
 
 function currentMonth(): string {
   const now = new Date();
@@ -23,13 +28,31 @@ function currentMonth(): string {
 
 export async function loadTransactions(month?: string): Promise<void> {
   const m = month || currentMonth();
+  currentPage = 1;
   try {
     const rows = await select<LocalTransaction>(
-      `SELECT * FROM transactions WHERE trans_time LIKE '${m}%' ORDER BY trans_time DESC, id DESC`,
+      `SELECT * FROM transactions WHERE trans_time LIKE '${m}%' ORDER BY trans_time DESC, id DESC LIMIT ${PAGE_SIZE} OFFSET 0`,
     );
     transactions.value = rows;
+    hasMore.value = rows.length === PAGE_SIZE;
   } catch {
     transactions.value = [];
+    hasMore.value = false;
+  }
+}
+
+export async function loadMoreTransactions(month?: string): Promise<void> {
+  const m = month || currentMonth();
+  currentPage++;
+  const offset = (currentPage - 1) * PAGE_SIZE;
+  try {
+    const rows = await select<LocalTransaction>(
+      `SELECT * FROM transactions WHERE trans_time LIKE '${m}%' ORDER BY trans_time DESC, id DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+    );
+    transactions.value = [...transactions.value, ...rows];
+    hasMore.value = rows.length === PAGE_SIZE;
+  } catch {
+    hasMore.value = false;
   }
 }
 
@@ -108,7 +131,9 @@ export async function clearTransactions(): Promise<void> {
 export function useTransactions() {
   return {
     transactions,
+    hasMore,
     load: loadTransactions,
+    loadMore: loadMoreTransactions,
     add: addTransaction,
     update: updateTransaction,
     delete: deleteTransaction,

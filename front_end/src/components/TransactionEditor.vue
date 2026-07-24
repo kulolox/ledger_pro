@@ -34,24 +34,28 @@
         />
       </view>
 
-      <view class="amount-area">
-        <text class="amount-number">{{ rawInput || "0" }}</text>
-      </view>
+      <view class="calc-card">
+        <view class="calc-display">
+          <view class="amount-area">
+            <text class="amount-number">{{ rawInput || "0" }}</text>
+          </view>
 
-      <view class="meta-row">
-        <view class="meta-btn" @click="showDatePicker = true">
-          <text class="meta-icon">📅</text>
-          <text class="meta-text">{{ transDate }}</text>
+          <view class="meta-row">
+            <view class="meta-btn" @click="showDatePicker = true">
+              <text class="meta-icon">📅</text>
+              <text class="meta-text">{{ transDate }}</text>
+            </view>
+            <wd-input
+              v-model="remark"
+              custom-class="remark-input"
+              placeholder="添加备注..."
+              clearable
+            />
+          </view>
         </view>
-        <wd-input
-          v-model="remark"
-          custom-class="remark-input"
-          placeholder="添加备注..."
-          clearable
-        />
-      </view>
 
-      <NumberKeyboard @keyPress="onKeyPress" @keyLongPress="onKeyLongPress" />
+        <NumberKeyboard @keyPress="onKeyPress" @keyLongPress="onKeyLongPress" />
+      </view>
     </view>
 
     <wd-datetime-picker
@@ -109,8 +113,8 @@ const transTimestamp = ref(Date.now());
 const transDate = computed(() => timestampToDateStr(transTimestamp.value));
 const showDatePicker = ref(false);
 
-const currentCategories = computed(
-  () => (categories.value[currentType.value] || []).filter((c) => c.visible !== 0),
+const currentCategories = computed(() =>
+  (categories.value[currentType.value] || []).filter((c) => c.visible !== 0),
 );
 
 const rawInput = computed(() => {
@@ -372,20 +376,26 @@ watch(
   padding: 4rpx 0 8rpx;
 }
 
+.calc-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  overflow: hidden;
+  padding-bottom: 20rpx;
+}
+
+.calc-display {
+  background: var(--bg-primary);
+  margin: 12rpx 12rpx 0;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
 .amount-area {
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
-  padding: 24rpx 40rpx 8rpx;
-  min-height: 140rpx;
-  gap: 4rpx;
-
-  .amount-sign {
-    font-size: 56rpx;
-    font-weight: 300;
-    color: var(--text-muted);
-    margin-right: -4rpx;
-  }
+  padding: 24rpx 24rpx 4rpx;
+  min-height: 110rpx;
 
   .amount-number {
     font-size: 64rpx;
@@ -402,13 +412,16 @@ watch(
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding-bottom: 12rpx;
+  padding: 0 12rpx 20rpx;
 
   .meta-btn {
     display: flex;
     align-items: center;
     gap: 6rpx;
+    height: 44px;
+    box-sizing: border-box;
     padding: 24rpx;
+    border-radius: var(--radius-sm);
     background: var(--bg-secondary);
     box-shadow: var(--shadow-sm);
     font-size: 24rpx;

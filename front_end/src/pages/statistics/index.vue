@@ -3,7 +3,11 @@
     <NavBar>
       <template #left>
         <view class="nav-left" @click="goBack">
-          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+          <wd-icon
+            name="arrow-left"
+            size="24px"
+            color="var(--text-secondary)"
+          />
         </view>
       </template>
       <template #center>
@@ -58,9 +62,9 @@
 
       <scroll-view scroll-y class="stats-body">
         <view class="stats-card">
-          <view v-if="currentCategories.length > 0" class="chart-section">
-            <EChart :options="pieOption" :height="420" />
-          </view>
+          <!-- <view v-if="currentCategories.length > 0" class="chart-section">
+            <EChart type="ring" :chartData="chartData" :opts="chartOpts" :height="420" />
+          </view> -->
 
           <view v-if="currentCategories.length > 0" class="category-list">
             <view
@@ -84,12 +88,9 @@
             </view>
           </view>
 
-          <view
-            v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
-            class="empty-state"
-          >
+          <view v-if="currentCategories.length === 0" class="empty-state">
             <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
-            <text class="empty-title">本月暂无数据</text>
+            <text class="empty-title">暂无数据</text>
           </view>
         </view>
 
@@ -103,7 +104,7 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
-import EChart from "@/components/EChart.vue";
+// import EChart from "@/components/EChart.vue";
 import PageLoader from "@/components/PageLoader.vue";
 import { useCategories } from "@/stores/categoryStore";
 import { formatCents } from "@/utils/format";
@@ -158,44 +159,28 @@ function buildCatItems(
   }));
 }
 
-const pieOption = computed(() => {
-  const cats = currentCategories.value;
-  const prefix = activeTab.value === 0 ? "-" : "+";
-  const data = cats.map((c) => ({
+const chartData = computed(() => {
+  const data = currentCategories.value.map((c) => ({
     name: c.name,
     value: c.amount,
-    itemStyle: { color: c.color },
+    color: c.color,
   }));
-
-  return {
-    tooltip: {
-      trigger: "item",
-      formatter: (params: any) => {
-        const val = (params.value / 100).toFixed(2);
-        return `${params.name}: ${prefix}${val} (${params.percent}%)`;
-      },
-    },
-    series: [
-      {
-        type: "pie",
-        radius: ["30%", "55%"],
-        center: ["50%", "50%"],
-        data,
-        label: {
-          formatter: (params: any) => `${params.name}\n${params.percent}%`,
-          fontSize: 11,
-        },
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: "rgba(0,0,0,0.3)",
-          },
-        },
-      },
-    ],
-  };
+  return { series: [{ data, name: "" }] };
 });
+
+const chartOpts = computed(() => ({
+  background: "#FFFFFF",
+  dataLabel: true,
+  tooltip: {
+    showBox: true,
+  },
+  extra: {
+    ring: {
+      ringWidth: 40,
+      labelWidth: 15,
+    },
+  },
+}));
 
 function prevMonth() {
   if (currentMonth.value === 1) {
@@ -374,7 +359,7 @@ onShow(async () => {
 }
 
 .stats-tabs {
-  margin: 0 20rpx;
+  margin: 0 32rpx;
   padding: 0 24rpx;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -398,7 +383,7 @@ onShow(async () => {
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
-  padding: 0 20rpx 60rpx;
+  padding: 0 32rpx 60rpx;
 }
 
 .chart-section {
@@ -468,7 +453,7 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 120rpx 0;
+  padding: 80rpx 0;
 
   .empty-title {
     font-size: 30rpx;

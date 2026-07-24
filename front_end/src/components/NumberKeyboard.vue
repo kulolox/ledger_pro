@@ -52,16 +52,14 @@ const onKeyClick = (key: (typeof keys)[number]) => {
 
 <style lang="scss" scoped>
 .keyboard {
-  background: var(--bg-tertiary);
-  padding: 12rpx 12rpx 20rpx;
-  border-top: 1rpx solid var(--border-subtle);
+  padding: 16rpx 16rpx 0;
 }
 
 .kb-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10rpx;
-  grid-template-rows: repeat(5, 96rpx);
+  gap: 12rpx;
+  grid-template-rows: repeat(4, 96rpx);
 }
 
 .kb-key {
@@ -69,29 +67,38 @@ const onKeyClick = (key: (typeof keys)[number]) => {
   align-items: center;
   justify-content: center;
   background: var(--bg-key);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   user-select: none;
-  box-shadow: var(--shadow-key);
+  box-shadow:
+    0 2rpx 0 rgba(0, 0, 0, 0.06),
+    0 4rpx 12rpx rgba(0, 0, 0, 0.06);
   transition:
     transform 0.12s var(--spring-default),
-    background 0.12s var(--spring-default);
+    box-shadow 0.12s var(--spring-default);
   .kb-key-text {
     font-size: 38rpx;
     color: var(--text-primary);
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1;
   }
   &:active {
-    background: var(--bg-key-hover);
-    transform: scale(0.94);
+    box-shadow:
+      0 1rpx 0 rgba(0, 0, 0, 0.04),
+      0 2rpx 6rpx rgba(0, 0, 0, 0.04);
+    transform: scale(0.95);
   }
 }
 
 .kb-key-fn {
   background: var(--bg-operator);
+  box-shadow:
+    0 2rpx 0 rgba(0, 0, 0, 0.04),
+    0 4rpx 12rpx rgba(0, 0, 0, 0.04);
 
   &:active {
-    background: var(--bg-operator-hover);
+    box-shadow:
+      0 1rpx 0 rgba(0, 0, 0, 0.02),
+      0 2rpx 6rpx rgba(0, 0, 0, 0.02);
   }
 
   .kb-key-text {
@@ -102,25 +109,38 @@ const onKeyClick = (key: (typeof keys)[number]) => {
 
 .kb-key-op {
   background: var(--bg-operator);
+  box-shadow:
+    0 2rpx 0 rgba(0, 0, 0, 0.04),
+    0 4rpx 12rpx rgba(0, 0, 0, 0.04);
 
   &:active {
-    background: var(--bg-operator-hover);
+    box-shadow:
+      0 1rpx 0 rgba(0, 0, 0, 0.02),
+      0 2rpx 6rpx rgba(0, 0, 0, 0.02);
   }
 
   .kb-key-text {
     color: var(--color-primary);
     font-size: 40rpx;
-    font-weight: 400;
+    font-weight: 500;
   }
 }
 
 .kb-key-save {
-  background: linear-gradient(135deg, var(--color-save), var(--color-save-hover));
-  box-shadow: var(--shadow-save);
+  background: linear-gradient(
+    135deg,
+    var(--color-save),
+    var(--color-save-hover)
+  );
+  box-shadow:
+    0 4rpx 0 var(--color-save-hover),
+    0 6rpx 16rpx rgba(0, 0, 0, 0.15);
 
   &:active {
-    background: linear-gradient(135deg, var(--color-save-hover), var(--color-save));
-    transform: scale(0.94);
+    box-shadow:
+      0 2rpx 0 var(--color-save-hover),
+      0 3rpx 8rpx rgba(0, 0, 0, 0.12);
+    transform: scale(0.95);
   }
 
   .kb-key-text {

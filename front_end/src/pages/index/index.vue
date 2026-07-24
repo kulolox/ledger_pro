@@ -7,14 +7,9 @@
         </view>
       </template>
       <template #center>
-        <view class="month-nav">
-          <view class="nav-arrow" @click="prevMonth">
-            <wd-icon name="left" size="24px" color="var(--text-secondary)" />
-          </view>
+        <view class="month-nav" @click="openPicker">
           <text class="month-label">{{ monthLabel }}</text>
-          <view class="nav-arrow" @click="nextMonth">
-            <wd-icon name="right" size="24px" color="var(--text-secondary)" />
-          </view>
+          <wd-icon name="down" size="28rpx" color="var(--text-secondary)" />
         </view>
       </template>
       <template #right>
@@ -60,6 +55,7 @@
         scroll-y
         class="transaction-list"
         refresher-enabled
+        refresher-background="#F2F2F7"
         :refresher-triggered="refreshing"
         @refresherrefresh="onRefresh"
         @scrolltolower="loadMore"
@@ -120,8 +116,13 @@
         </view>
 
         <view class="list-bottom" v-if="dayGroups.length > 0">
-          <view class="bottom-divider" />
-          <text class="bottom-text">已加载全部账单</text>
+          <template v-if="loadingMore">
+            <text class="bottom-text">加载中...</text>
+          </template>
+          <template v-else-if="!hasMore">
+            <view class="bottom-divider" />
+            <text class="bottom-text">已加载全部账单</text>
+          </template>
         </view>
       </scroll-view>
 
@@ -139,10 +140,32 @@
         @saved="onEditorSaved"
       />
 
-      <Sidebar
-        v-model:visible="showSidebar"
-        @close="showSidebar = false"
-      />
+      <Sidebar v-model:visible="showSidebar" @close="showSidebar = false" />
+
+      <wd-popup
+        v-model="pickerVisible"
+        position="bottom"
+        :round="true"
+        :safe-area-inset-bottom="true"
+        custom-class="picker-popup"
+      >
+        <view class="picker-container">
+          <view class="picker-tabs">
+            <wd-tabs v-model="pickerMode" @change="onModeChange">
+              <wd-tab title="按月" name="month" />
+              <wd-tab title="按年" name="year" />
+            </wd-tabs>
+          </view>
+          <view class="picker-view-wrap">
+            <wd-picker-view v-model="pickerValue" :columns="pickerColumns" />
+          </view>
+          <view class="picker-footer">
+            <wd-button block size="large" @click="onPickerConfirm"
+              >确认</wd-button
+            >
+          </view>
+        </view>
+      </wd-popup>
     </template>
   </view>
 </template>
@@ -163,7 +186,13 @@ import { useCategories } from "@/stores/categoryStore";
 import { useUser } from "@/stores/userStore";
 import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
 
-const { load, delete: removeTx, getByDate } = useTransactions();
+const {
+  load,
+  loadMore: fetchMore,
+  hasMore,
+  delete: removeTx,
+  getByDate,
+} = useTransactions();
 const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
   useCategories();
 const { loadUser } = useUser();
@@ -175,15 +204,51 @@ const editingTx = ref<LocalTransaction | null>(null);
 const refreshing = ref(false);
 const pageLoading = ref(true);
 const showSidebar = ref(false);
+const pickerVisible = ref(false);
+const pickerMode = ref<string>("month");
+const pickerValue = ref<(string | number)[]>([
+  currentYear.value,
+  currentMonth.value,
+]);
+const loadingMore = ref(false);
 
-const monthLabel = computed(
-  () => `${currentYear.value}年 ${currentMonth.value}月`,
-);
+function makeYearOptions() {
+  const cy = new Date().getFullYear();
+  const years: { label: string; value: number }[] = [];
+  for (let y = cy - 10; y <= cy + 10; y++) {
+    years.push({ label: `${y}年`, value: y });
+  }
+  return years;
+}
 
-const monthPrefix = computed(
-  () =>
-    `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`,
-);
+function makeMonthOptions() {
+  const months: { label: string; value: number }[] = [];
+  for (let m = 1; m <= 12; m++) {
+    months.push({ label: `${m}月`, value: m });
+  }
+  return months;
+}
+
+const pickerColumns = computed(() => {
+  if (pickerMode.value === "year") {
+    return [makeYearOptions()];
+  }
+  return [makeYearOptions(), makeMonthOptions()];
+});
+
+const monthLabel = computed(() => {
+  if (currentMonth.value === 0) {
+    return `${currentYear.value}年`;
+  }
+  return `${currentYear.value}年 ${currentMonth.value}月`;
+});
+
+const monthPrefix = computed(() => {
+  if (currentMonth.value === 0) {
+    return `${currentYear.value}`;
+  }
+  return `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
+});
 
 const dayGroups = computed(() => {
   const map = getByDate();
@@ -221,22 +286,33 @@ const monthExpense = computed(() =>
 
 const monthBalance = computed(() => monthIncome.value - monthExpense.value);
 
-function prevMonth() {
-  if (currentMonth.value === 1) {
-    currentMonth.value = 12;
-    currentYear.value--;
+function openPicker() {
+  pickerMode.value = currentMonth.value === 0 ? "year" : "month";
+  if (pickerMode.value === "year") {
+    pickerValue.value = [currentYear.value];
   } else {
-    currentMonth.value--;
+    pickerValue.value = [currentYear.value, currentMonth.value];
+  }
+  pickerVisible.value = true;
+}
+
+function onModeChange(e: { name: string }) {
+  const mode = e.name;
+  if (pickerMode.value === mode) return;
+  pickerMode.value = mode;
+  if (mode === "year") {
+    pickerValue.value = [pickerValue.value[0]];
+  } else {
+    pickerValue.value = [pickerValue.value[0], 1];
   }
 }
 
-function nextMonth() {
-  if (currentMonth.value === 12) {
-    currentMonth.value = 1;
-    currentYear.value++;
-  } else {
-    currentMonth.value++;
-  }
+async function onPickerConfirm() {
+  const [year, month] = pickerValue.value;
+  currentYear.value = Number(year);
+  currentMonth.value = pickerMode.value === "year" ? 0 : Number(month ?? 1);
+  pickerVisible.value = false;
+  await load(monthPrefix.value);
 }
 
 function formatTxAmount(tx: LocalTransaction): string {
@@ -293,7 +369,12 @@ async function onRefresh() {
   refreshing.value = false;
 }
 
-function loadMore() {}
+async function loadMore() {
+  if (!hasMore.value || loadingMore.value) return;
+  loadingMore.value = true;
+  await fetchMore(monthPrefix.value);
+  loadingMore.value = false;
+}
 
 function goStats() {
   uni.navigateTo({ url: "/pages/statistics/index" });
@@ -311,8 +392,7 @@ onShow(async () => {
     await loadCategories();
   }
 
-  const m = monthPrefix.value;
-  await load(m);
+  await load(monthPrefix.value);
 
   await nextTick();
   const elapsed = Date.now() - startTime;
@@ -337,6 +417,11 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8rpx;
+
+  &:active {
+    opacity: 0.6;
+  }
 }
 
 .menu-btn {
@@ -353,21 +438,6 @@ onShow(async () => {
 
   &:active {
     transform: scale(0.92);
-  }
-}
-
-.nav-arrow {
-  width: 44rpx;
-  height: 44rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12rpx;
-  background: var(--bg-primary);
-  flex-shrink: 0;
-
-  &:active {
-    opacity: 0.6;
   }
 }
 
@@ -440,7 +510,7 @@ onShow(async () => {
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
-  padding: 0 20rpx 60rpx;
+  padding: 0 32rpx 60rpx;
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -650,5 +720,36 @@ onShow(async () => {
     transform: scale(0.88);
     box-shadow: var(--shadow-fab-active);
   }
+}
+
+.picker-container {
+  background: var(--bg-primary);
+}
+
+.picker-tabs {
+  padding: 20rpx 24rpx 0;
+
+  :deep(.wd-tabs) {
+    --wot-tabs-nav-bg: transparent;
+    --wot-tabs-nav-color: var(--text-secondary);
+    --wot-tabs-nav-color-active: var(--color-primary);
+    --wot-tabs-nav-font-weight-active: 600;
+    --wot-tabs-nav-item-font-size: 28rpx;
+    --wot-tabs-nav-line-bg: var(--color-primary);
+    --wot-tabs-nav-item-padding: 20rpx 24rpx;
+
+    .wd-tabs__nav-item {
+      flex: 1;
+    }
+  }
+}
+
+.picker-view-wrap {
+  padding: 8rpx 0;
+}
+
+.picker-footer {
+  padding: 8rpx 32rpx 32rpx;
+  padding-bottom: calc(32rpx + var(--safe-area-bottom, 0px));
 }
 </style>
