@@ -30,6 +30,8 @@ import { onLoad } from "@dcloudio/uni-app";
 import AppLogo from "@/components/AppLogo.vue";
 import { useUser } from "@/stores/userStore";
 
+const { statusBarHeight } = uni.getSystemInfoSync();
+
 const nickname = ref("");
 const { nickname: currentNickname, createUser, updateNickname, loadUser } = useUser();
 const isEdit = ref(false);
@@ -69,6 +71,7 @@ async function onStart() {
 <style lang="scss" scoped>
 .onboarding-page {
   min-height: 100vh;
+  padding-top: v-bind(statusBarHeight + "px");
   background: var(--bg-primary);
   display: flex;
   align-items: center;

@@ -1,5 +1,8 @@
 <template>
-  <view class="nav-header">
+  <view
+    class="nav-header"
+    :style="{ paddingTop: statusBarHeight + 'px' }"
+  >
     <view
       class="nav-bar"
       :style="{ gridTemplateColumns: `64rpx 1fr ${rightWidth}` }"
@@ -18,6 +21,8 @@
 </template>
 
 <script setup lang="ts">
+const { statusBarHeight } = uni.getSystemInfoSync();
+
 withDefaults(
   defineProps<{
     rightWidth?: string;
@@ -36,7 +41,7 @@ withDefaults(
   .nav-bar {
     display: grid;
     align-items: center;
-    padding: calc(var(--status-bar-height, 44px) + 16rpx) 32rpx 20rpx;
+    padding: 16rpx 32rpx 20rpx;
 
     .nav-slot {
       display: flex;

@@ -3,6 +3,15 @@ import { onLaunch } from "@dcloudio/uni-app";
 import { initDB, select } from "@/utils/db";
 
 onLaunch(async () => {
+  const { safeAreaInsets } = uni.getSystemInfoSync();
+  try {
+    const style = document.documentElement.style;
+    style.setProperty("--status-bar-height", `${uni.getSystemInfoSync().statusBarHeight}px`);
+    if (safeAreaInsets?.bottom) {
+      style.setProperty("--safe-area-bottom", `${safeAreaInsets.bottom}px`);
+    }
+  } catch {}
+
   console.log("App Launch");
 
   try {
@@ -33,7 +42,6 @@ page {
   font-family: var(--font-family-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding-top: var(--status-bar-height);
   background: var(--bg-primary);
 }
 
