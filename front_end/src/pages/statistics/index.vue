@@ -26,73 +26,77 @@
 
     <template v-else>
       <view class="month-summary">
-      <view class="summary-item expense-card">
-        <text class="summary-label">支出</text>
-        <text class="summary-value expense"
-          >-{{ formatCents(totalExpense) }}</text
-        >
-      </view>
-      <view class="summary-item income-card">
-        <text class="summary-label">收入</text>
-        <text class="summary-value income"
-          >+{{ formatCents(totalIncome) }}</text
-        >
-      </view>
-      <view class="summary-item balance-card">
-        <text class="summary-label">结余</text>
-        <text
-          class="summary-value"
-          :class="balance >= 0 ? 'income' : 'expense'"
-        >
-          {{ balance >= 0 ? "+" : "-" }}{{ formatCents(Math.abs(balance)) }}
-        </text>
-      </view>
-    </view>
-
-    <view class="stats-tabs">
-      <wd-tabs v-model="activeTab" custom-class="tab-custom">
-        <wd-tab title="支出" />
-        <wd-tab title="收入" />
-      </wd-tabs>
-    </view>
-
-    <scroll-view scroll-y class="stats-body">
-      <view class="stats-card">
-        <view v-if="currentCategories.length > 0" class="chart-section">
-          <EChart :options="pieOption" :height="420" />
-        </view>
-
-        <view v-if="currentCategories.length > 0" class="category-list">
-          <view
-            v-for="(cat, idx) in currentCategories"
-            :key="cat.category_id"
-            class="category-item"
+        <view class="summary-item expense-card">
+          <text class="summary-label">支出</text>
+          <text class="summary-value expense"
+            >-{{ formatCents(totalExpense) }}</text
           >
-            <view class="cat-left">
-              <view class="cat-dot" :style="{ background: cat.color }" />
-              <text class="cat-name">{{ cat.name }}</text>
+        </view>
+        <view class="summary-item income-card">
+          <text class="summary-label">收入</text>
+          <text class="summary-value income"
+            >+{{ formatCents(totalIncome) }}</text
+          >
+        </view>
+        <view class="summary-item balance-card">
+          <text class="summary-label">结余</text>
+          <text
+            class="summary-value"
+            :class="balance >= 0 ? 'income' : 'expense'"
+          >
+            {{ balance >= 0 ? "+" : "-" }}{{ formatCents(Math.abs(balance)) }}
+          </text>
+        </view>
+      </view>
+
+      <view class="stats-tabs">
+        <wd-tabs v-model="activeTab" custom-class="tab-custom">
+          <wd-tab title="支出" />
+          <wd-tab title="收入" />
+        </wd-tabs>
+      </view>
+
+      <scroll-view scroll-y class="stats-body">
+        <view class="stats-card">
+          <!-- <view v-if="currentCategories.length > 0" class="chart-section">
+          <EChart :options="pieOption" :height="420" />
+        </view> -->
+
+          <view v-if="currentCategories.length > 0" class="category-list">
+            <view
+              v-for="(cat, idx) in currentCategories"
+              :key="cat.category_id"
+              class="category-item"
+            >
+              <view class="cat-left">
+                <view class="cat-dot" :style="{ background: cat.color }" />
+                <text class="cat-name">{{ cat.name }}</text>
+              </view>
+              <view class="cat-right">
+                <text
+                  class="cat-amount"
+                  :class="{ 'income-text': activeTab === 1 }"
+                  >{{ activeTab === 0 ? "-" : "+"
+                  }}{{ formatCents(cat.amount) }}</text
+                >
+                <text class="cat-percent">{{ cat.percent }}%</text>
+              </view>
             </view>
-            <view class="cat-right">
-              <text class="cat-amount" :class="{ 'income-text': activeTab === 1 }"
-                >{{ activeTab === 0 ? "-" : "+"
-                }}{{ formatCents(cat.amount) }}</text
-              >
-              <text class="cat-percent">{{ cat.percent }}%</text>
-            </view>
+          </view>
+
+          <view
+            v-if="
+              expenseCategories.length === 0 && incomeCategories.length === 0
+            "
+            class="empty-state"
+          >
+            <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
+            <text class="empty-title">本月暂无数据</text>
           </view>
         </view>
 
-        <view
-          v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
-          class="empty-state"
-        >
-          <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
-          <text class="empty-title">本月暂无数据</text>
-        </view>
-      </view>
-
-      <view class="list-bottom" />
-    </scroll-view>
+        <view class="list-bottom" />
+      </scroll-view>
     </template>
   </view>
 </template>
@@ -101,7 +105,7 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
-import EChart from "@/components/EChart.vue";
+// import EChart from "@/components/EChart.vue";
 import PageLoader from "@/components/PageLoader.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";

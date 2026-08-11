@@ -5,6 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 public class AuthUtils {
     public static Long getCurrentUserId() {
+        // 1. 从线程绑定的上下文中获取认证对象
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Long) {
             return (Long) auth.getPrincipal();

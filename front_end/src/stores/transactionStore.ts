@@ -66,7 +66,21 @@ export function addTransaction(data: {
   return tx;
 }
 
-export function updateTransaction(id: number, data: Partial<Pick<LocalTransaction, "amount" | "category_id" | "to_account_id" | "account_id" | "remark" | "trans_time" | "type">>) {
+export function updateTransaction(
+  id: number,
+  data: Partial<
+    Pick<
+      LocalTransaction,
+      | "amount"
+      | "category_id"
+      | "to_account_id"
+      | "account_id"
+      | "remark"
+      | "trans_time"
+      | "type"
+    >
+  >,
+) {
   const idx = transactions.value.findIndex((t) => t.id === id);
   if (idx === -1) return;
   const tx = transactions.value[idx];
@@ -95,12 +109,23 @@ export function deleteTransaction(id: number) {
 export function markSynced(localId: number, serverId: number) {
   const idx = transactions.value.findIndex((t) => t.id === localId);
   if (idx === -1) return;
-  transactions.value[idx] = { ...transactions.value[idx], sync_status: "synced", server_id: serverId, deleted: 0 };
+  transactions.value[idx] = {
+    ...transactions.value[idx],
+    sync_status: "synced",
+    server_id: serverId,
+    deleted: 0,
+  };
   persist();
 }
 
-export function getTransactionsByDate(): Map<string, { income: number; expense: number; items: LocalTransaction[] }> {
-  const map = new Map<string, { income: number; expense: number; items: LocalTransaction[] }>();
+export function getTransactionsByDate(): Map<
+  string,
+  { income: number; expense: number; items: LocalTransaction[] }
+> {
+  const map = new Map<
+    string,
+    { income: number; expense: number; items: LocalTransaction[] }
+  >();
   for (const tx of transactions.value) {
     if (tx.deleted === 1) continue;
     const dateKey = tx.trans_time.substring(0, 10);
@@ -122,11 +147,16 @@ export function getTransactionsByDate(): Map<string, { income: number; expense: 
 }
 
 export function getPendingTransactions(): LocalTransaction[] {
-  return transactions.value.filter((t) => t.sync_status === "pending" && t.deleted === 0);
+  return transactions.value.filter(
+    (t) => t.sync_status === "pending" && t.deleted === 0,
+  );
 }
 
 export function getPendingDeletes(): LocalTransaction[] {
-  return transactions.value.filter((t) => t.sync_status === "pending" && t.deleted === 1 && t.server_id != null);
+  return transactions.value.filter(
+    (t) =>
+      t.sync_status === "pending" && t.deleted === 1 && t.server_id != null,
+  );
 }
 
 export function clearTransactions() {

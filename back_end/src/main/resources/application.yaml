@@ -28,20 +28,24 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl # SQL 走 slf4j，级别由下方 logging 控制，生产默认不打印 SQL
   global-config:
     db-config:
-      id-type: auto
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
+      logic-delete-field: deleted # 逻辑删除字段名
+      logic-delete-value: 1  # 已删除的值
+      logic-not-delete-value: 0 # 未删除的值
 
 app:
   jwt:
     secret: ${JWT_SECRET:}
 
+logging:
+  level:
+    com.example.back_end: info
+    com.example.back_end.mapper: warn # 需要调试 SQL 时改为 debug
+
 server:
-  port: 8080
+  port: ${SERVER_PORT:8114}
   servlet:
     context-path: /api/v1
     encoding:

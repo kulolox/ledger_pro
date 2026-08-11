@@ -1,85 +1,37 @@
 package com.example.back_end.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * 账本实体
+ */
+@Data
 @TableName("account_book")
 public class AccountBook {
-    @TableId(type = IdType.INPUT)
+
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    private String name = "";
-    private String coverIcon = "";
-    private Integer type = 0;
+    /** 账本名称 */
+    private String name;
+
+    /** 封面图标 URL */
+    private String coverIcon;
+
+    /** 账本类型：0-个人账本，1-家庭账本，2-企业账本等 */
+    private Integer type;
+
+    /** 账本所有者（创建者）的用户 ID */
     private Long ownerId;
 
-    @TableField(updateStrategy = FieldStrategy.NEVER)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt = LocalDateTime.now();
-    private Integer deleted = 0;
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getCoverIcon() {
-        return coverIcon;
-    }
-
-    public void setCoverIcon(String coverIcon) {
-        this.coverIcon = coverIcon;
-    }
-
-    public Integer getType() {
-        return type;
-    }
-
-    public void setType(Integer type) {
-        this.type = type;
-    }
-
-    public Long getOwnerId() {
-        return ownerId;
-    }
-
-    public void setOwnerId(Long ownerId) {
-        this.ownerId = ownerId;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Integer getDeleted() {
-        return deleted;
-    }
-
-    public void setDeleted(Integer deleted) {
-        this.deleted = deleted;
-    }
+    @TableLogic
+    private Integer deleted;
 }

@@ -9,6 +9,7 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+// 设置 REDIS_HOST 环境变量才装配 Redis Bean；未设置则整个 Redis 栈缺失，依赖 @ConditionalOnExpression 的降级实现生效
 @Configuration
 @ConditionalOnExpression("!'${REDIS_HOST:}'.isEmpty()")
 public class RedisAutoDetectConfig {

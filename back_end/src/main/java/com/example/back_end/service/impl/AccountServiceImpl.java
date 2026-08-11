@@ -11,12 +11,15 @@ import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.AccountMapper;
 import com.example.back_end.service.IAccountService;
 import com.example.back_end.utils.AuthUtils;
+import com.example.back_end.utils.SanitizeUtils;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> implements IAccountService {
 
     private final AccountBookMapper accountBookMapper;
@@ -25,6 +28,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         this.accountBookMapper = accountBookMapper;
     }
 
+    // 账本归属校验：账户操作必须发生在当前用户拥有的账本下
     private AccountBook validateBookOwnership(Long bookId) {
         var book = accountBookMapper.selectById(bookId);
         if (book == null || !book.getOwnerId().equals(AuthUtils.getCurrentUserId())) {
@@ -46,14 +50,15 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
         Account a = new Account();
         a.setBookId(req.book_id());
-        a.setName(req.name());
+        a.setName(SanitizeUtils.escapeHtml(req.name()));
         a.setType(req.type());
-        a.setIcon(req.icon() != null ? req.icon() : "");
+        a.setIcon(SanitizeUtils.escapeHtml(req.icon() != null ? req.icon() : ""));
         a.setCurrency(req.currency() != null ? req.currency() : "CNY");
         a.setInitialBalance(req.initial_balance() != null ? req.initial_balance() : 0);
         a.setIsIncludeTotal(req.is_include_total() != null ? req.is_include_total() : 1);
         a.setSortOrder(req.sort_order() != null ? req.sort_order() : 0);
         save(a);
+        log.info("新增账户 userId={} bookId={} accountId={} name={}", AuthUtils.getCurrentUserId(), req.book_id(), a.getId(), a.getName());
         return AccountResponse.from(a);
     }
 
@@ -66,15 +71,16 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         // owner check via book
         validateBookOwnership(a.getBookId());
 
-        if (req.name() != null) a.setName(req.name());
+        if (req.name() != null) a.setName(SanitizeUtils.escapeHtml(req.name()));
         if (req.type() != null) a.setType(req.type());
-        if (req.icon() != null) a.setIcon(req.icon());
+        if (req.icon() != null) a.setIcon(SanitizeUtils.escapeHtml(req.icon()));
         if (req.currency() != null) a.setCurrency(req.currency());
         if (req.initial_balance() != null) a.setInitialBalance(req.initial_balance());
         if (req.is_include_total() != null) a.setIsIncludeTotal(req.is_include_total());
         if (req.sort_order() != null) a.setSortOrder(req.sort_order());
         a.setUpdatedAt(LocalDateTime.now());
         updateById(a);
+        log.info("更新账户 userId={} accountId={}", AuthUtils.getCurrentUserId(), id);
         return AccountResponse.from(a);
     }
 
@@ -89,5 +95,6 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         a.setDeleted(1);
         a.setUpdatedAt(LocalDateTime.now());
         updateById(a);
+        log.info("删除账户 userId={} accountId={} bookId={}", AuthUtils.getCurrentUserId(), id, bookId);
     }
 }

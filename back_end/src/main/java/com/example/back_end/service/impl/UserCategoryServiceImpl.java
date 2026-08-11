@@ -14,10 +14,12 @@ import com.example.back_end.utils.SanitizeUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, UserCategory> implements IUserCategoryService {
 
     private final CategoryMapper categoryMapper;
@@ -33,6 +35,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
                 .orderByAsc(UserCategory::getSortOrder)
                 .list();
 
+        // 用户首次访问分类时懒初始化：从模板表复制到 user_category（synchronized 防并发重复复制）
         if (list.isEmpty()) {
             initForUser(userId);
             list = lambdaQuery()
@@ -61,9 +64,9 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         uc.setColor(req.color() != null ? SanitizeUtils.escapeHtml(req.color()) : "");
         uc.setParentId(req.parent_id() != null ? req.parent_id() : 0L);
         uc.setIsSystem(0);
-        uc.setSourceId(null);
         uc.setSortOrder(nextSortOrder(userId, req.type()));
         save(uc);
+        log.info("新增分类 userId={} categoryId={} name={} type={}", userId, uc.getId(), uc.getName(), uc.getType());
         return CategoryResponse.from(uc);
     }
 
@@ -75,6 +78,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
             throw new BizException("无权操作该分类");
         }
 
+        // 系统分类（模板复制来的）只允许调整可见性/排序，身份信息（名称/图标/颜色）不可改
         boolean isSystem = uc.getIsSystem() == 1;
         boolean hasIdentityChange = req.name() != null || req.icon() != null || req.color() != null;
         if (isSystem && hasIdentityChange) {
@@ -89,6 +93,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         if (req.sort_order() != null) uc.setSortOrder(req.sort_order());
         uc.setUpdatedAt(LocalDateTime.now());
         updateById(uc);
+        log.info("更新分类 userId={} categoryId={}", userId, id);
         return CategoryResponse.from(uc);
     }
 
@@ -103,6 +108,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
             throw new BizException("系统分类不可删除");
         }
         removeById(id);
+        log.info("删除分类 userId={} categoryId={}", userId, id);
     }
 
     @Transactional
@@ -117,6 +123,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         }
     }
 
+    // 从 category 模板表复制系统分类到该用户的 user_category，source 数据由 DataInitializer 启动时种入
     private void initForUser(Long userId) {
         List<Category> templates = categoryMapper.selectList(null);
         List<UserCategory> list = new ArrayList<>();
@@ -129,7 +136,6 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
             uc.setColor(t.getColor());
             uc.setParentId(t.getParentId());
             uc.setIsSystem(1);
-            uc.setSourceId(t.getId());
             uc.setSortOrder(t.getSortOrder());
             list.add(uc);
         }

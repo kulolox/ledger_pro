@@ -8,4 +8,4 @@ export const TEST_USER = {
 
 export const TEST_BOOK_NAME = "日常账本";
 
-export const API_BASE = "http://localhost:8080/api/v1";
+export const API_BASE = "http://localhost:8114/api/v1";

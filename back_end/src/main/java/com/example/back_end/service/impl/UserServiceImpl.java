@@ -10,9 +10,11 @@ import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.AuthUtils;
 import com.example.back_end.utils.SanitizeUtils;
 import java.time.LocalDateTime;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
 
     public UserInfoResponse getInfo() {
@@ -37,6 +39,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         user.setUpdatedAt(LocalDateTime.now());
 
         updateById(user);
+        log.info("更新用户信息 userId={}", userId);
         return toUserInfo(user);
     }
 

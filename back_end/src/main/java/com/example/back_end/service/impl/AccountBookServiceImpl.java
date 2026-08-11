@@ -8,11 +8,14 @@ import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.service.IAccountBookService;
 import com.example.back_end.utils.AuthUtils;
+import com.example.back_end.utils.SanitizeUtils;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, AccountBook> implements IAccountBookService {
 
     public List<AccountBookResponse> listByOwner() {
@@ -28,14 +31,16 @@ public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, Accou
         }
         AccountBook book = new AccountBook();
         book.setId(generateBookId());
-        book.setName(req.name().trim());
+        book.setName(SanitizeUtils.escapeHtml(req.name().trim()));
         book.setOwnerId(AuthUtils.getCurrentUserId());
-        if (req.coverIcon() != null) book.setCoverIcon(req.coverIcon());
+        if (req.coverIcon() != null) book.setCoverIcon(SanitizeUtils.escapeHtml(req.coverIcon()));
         if (req.type() != null) book.setType(req.type());
         save(book);
+        log.info("新增账本 userId={} bookId={} name={}", AuthUtils.getCurrentUserId(), book.getId(), book.getName());
         return AccountBookResponse.from(book);
     }
 
+    // 账本 id 用随机 8-12 位数字而非自增，避免通过连续 id 遍历他人账本
     private Long generateBookId() {
         long id;
         do {

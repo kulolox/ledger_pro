@@ -1,48 +1,47 @@
 package com.example.back_end.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * 系统分类实体（内置分类，非用户自定义）
+ * 区别于 user_category（用户自定义分类）
+ */
+@Data
 @TableName("category")
 public class Category {
-    @TableId(type = IdType.AUTO)
+
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    private Long parentId = 0L;
-    private String name = "";
-    private Integer type = 0;
-    private String icon = "";
-    private String color = "";
-    private Integer sortOrder = 0;
-    private Integer isSystem = 0;
+    /** 父分类 ID，0 表示顶级分类 */
+    private Long parentId;
 
-    @TableField(updateStrategy = FieldStrategy.NEVER)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    /** 分类名称 */
+    private String name;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    /** 分类类型：0-支出，1-收入等 */
+    private Integer type;
 
-    public Long getParentId() { return parentId; }
-    public void setParentId(Long parentId) { this.parentId = parentId; }
+    /** 分类图标 URL */
+    private String icon;
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    /** 分类颜色标识 */
+    private String color;
 
-    public Integer getType() { return type; }
-    public void setType(Integer type) { this.type = type; }
+    /** 排序顺序，数值越小越靠前 */
+    private Integer sortOrder;
 
-    public String getIcon() { return icon; }
-    public void setIcon(String icon) { this.icon = icon; }
+    /** 是否系统内置：0-否，1-是（通常系统分类为只读） */
+    private Integer isSystem;
 
-    public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
 
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 
-    public Integer getIsSystem() { return isSystem; }
-    public void setIsSystem(Integer isSystem) { this.isSystem = isSystem; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    @TableLogic
+    private Integer deleted;
 }

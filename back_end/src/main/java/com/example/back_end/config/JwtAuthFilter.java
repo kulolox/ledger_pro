@@ -8,10 +8,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+@Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
@@ -25,15 +27,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        // 每个请求先经此过滤器：校验 Bearer token + 黑名单 → 写入 SecurityContext，后续接口从上下文取 userId
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (jwtUtils.validateToken(token) && !tokenBlacklistService.isBlacklisted(token)) {
-                String email = jwtUtils.getEmailFromToken(token);
-                Long userId = jwtUtils.getUserIdFromToken(token);
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
-                SecurityContextHolder.getContext().setAuthentication(auth);
+            if (jwtUtils.validateToken(token)) {
+                boolean blacklisted = false;
+                try {
+                    blacklisted = tokenBlacklistService.isBlacklisted(token);
+                } catch (Exception e) {
+                    // Redis 故障时 fail-open：不阻塞请求，靠 token 自然过期兜底
+                    log.error("黑名单查询失败，按未拉黑处理 path={}", request.getRequestURI(), e);
+                }
+                if (!blacklisted) {
+                    String email = jwtUtils.getEmailFromToken(token);
+                    Long userId = jwtUtils.getUserIdFromToken(token);
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
+            } else {
+                log.debug("token 校验失败，跳过认证 path={}", request.getRequestURI());
             }
         }
         chain.doFilter(request, response);

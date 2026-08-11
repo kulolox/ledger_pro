@@ -42,8 +42,8 @@ export async function createTestUser(): Promise<TestUserRow> {
     const [categories] = await conn.execute("SELECT id FROM `category`");
     for (const row of categories as any[]) {
       await conn.execute(
-        `INSERT INTO user_category (user_id, name, type, icon, color, parent_id, is_system, source_id, visible, sort_order, created_at, updated_at)
-         SELECT ?, name, type, icon, color, parent_id, 1, id, 1, sort_order, NOW(), NOW()
+        `INSERT INTO user_category (user_id, name, type, icon, color, parent_id, is_system, visible, sort_order, created_at, updated_at)
+         SELECT ?, name, type, icon, color, parent_id, 1, 1, sort_order, NOW(), NOW()
          FROM category WHERE id = ?`,
         [userId, row.id],
       );
@@ -127,7 +127,7 @@ export async function cleanupTestTransactions(bookId: number): Promise<void> {
 
 export async function exportTransactionsApi(bookId: number, params: Record<string, string>, token: string): Promise<{ status: number; body: string; contentType: string }> {
   const query = new URLSearchParams({ book_id: String(bookId), ...params }).toString();
-  const url = `http://localhost:8080/api/v1/transactions/export?${query}`;
+  const url = `http://localhost:8114/api/v1/transactions/export?${query}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const contentType = res.headers.get("content-type") || "";
   const body = await res.text();
@@ -135,7 +135,7 @@ export async function exportTransactionsApi(bookId: number, params: Record<strin
 }
 
 export async function downloadTemplateApi(format: string, token: string): Promise<{ status: number; body: string; contentType: string }> {
-  const url = `http://localhost:8080/api/v1/transactions/template?format=${format}`;
+  const url = `http://localhost:8114/api/v1/transactions/template?format=${format}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const contentType = res.headers.get("content-type") || "";
   const body = await res.text();
@@ -149,7 +149,7 @@ export async function importTransactionsApi(bookId: number, format: string, csvC
   formData.append("book_id", String(bookId));
   formData.append("format", format);
 
-  const url = `http://localhost:8080/api/v1/transactions/import`;
+  const url = `http://localhost:8114/api/v1/transactions/import`;
   const res = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },

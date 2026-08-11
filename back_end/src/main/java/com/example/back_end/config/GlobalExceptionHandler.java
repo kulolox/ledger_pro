@@ -2,19 +2,19 @@ package com.example.back_end.config;
 
 import com.example.back_end.exception.BizException;
 import com.example.back_end.utils.Result;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
+    // 业务预期异常（参数错误/无权限等）：warn + 原样返回，不当作系统错误
     @ExceptionHandler(BizException.class)
     public Result<Void> handleBiz(BizException e) {
+        log.warn("BizException: {}", e.getMessage());
         return Result.fail(e.getCode(), e.getMessage());
     }
 

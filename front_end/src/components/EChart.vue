@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <view :id="uid" class="echart" :style="{ height: height + 'px' }" />
 </template>
 
@@ -54,4 +54,4 @@ onBeforeUnmount(() => {
 .echart {
   width: 100%;
 }
-</style>
+</style> -->

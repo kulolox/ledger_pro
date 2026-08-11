@@ -5,13 +5,13 @@ import uni from "@dcloudio/vite-plugin-uni";
 export default defineConfig({
   plugins: [uni()],
   optimizeDeps: {
-    include: ["echarts"],
+    // include: ["echarts"],
   },
   server: {
     proxy: {
       "/api": {
         // target: "http://127.0.0.1", // prod
-        target: "http://localhost:8080", // dev
+        target: "http://localhost:8114", // dev
         changeOrigin: true,
       },
     },

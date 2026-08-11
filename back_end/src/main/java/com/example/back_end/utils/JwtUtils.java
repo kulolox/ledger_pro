@@ -15,15 +15,15 @@ public class JwtUtils {
     private final long accessExpireMs = 24 * 60 * 60 * 1000;
     private final long refreshExpireMs = 7 * 24 * 60 * 60 * 1000;
 
+    // 从配置文件（application.yml）读取 app.jwt.secret 的值
     public JwtUtils(@Value("${app.jwt.secret:}") String secret) {
         if (secret == null || secret.isBlank()) {
             throw new IllegalStateException("JWT_SECRET 环境变量未配置，请在启动前设置 JWT_SECRET");
         }
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        // keyBytes小于32位（HS256 密钥下限，防止弱密钥被暴力破解）
         if (keyBytes.length < 32) {
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, Math.min(keyBytes.length, 32));
-            keyBytes = padded;
+            throw new IllegalStateException("JWT_SECRET 长度小于32位");
         }
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
@@ -36,14 +36,15 @@ public class JwtUtils {
         return buildToken(userId, email, "refresh", refreshExpireMs);
     }
 
+    // type claim 区分 access/refresh：validateToken/validateRefreshToken 据此防止类型混淆（refresh 不能当 access 用）
     private String buildToken(Long userId, String email, String type, long expireMs) {
         return Jwts.builder()
-                .subject(email)
-                .claim("userId", userId)
-                .claim("type", type)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expireMs))
-                .signWith(secretKey)
+                .subject(email) // 设置 JWT 的 主体（Subject），通常存放用户标识（这里存邮箱）
+                .claim("userId", userId) // 自定义声明，存放用户 ID
+                .claim("type", type) // 自定义声明，区分 token 类型
+                .issuedAt(new Date()) // 签发时间（当前时间）
+                .expiration(new Date(System.currentTimeMillis() + expireMs)) // 过期时间（当前时间 + 有效期）
+                .signWith(secretKey) // 使用密钥对 JWT 进行签名（HMAC-SHA）
                 .compact();
     }
 
@@ -77,6 +78,7 @@ public class JwtUtils {
         return parseClaims(token).getExpiration();
     }
 
+    // 解析token 获取相关信息（jjwt 内置验签 + 过期校验，失败抛异常由调用方 catch）
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)

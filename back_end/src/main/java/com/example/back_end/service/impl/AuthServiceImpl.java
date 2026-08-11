@@ -1,6 +1,7 @@
 package com.example.back_end.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.dto.request.RegisterRequest;
 import com.example.back_end.dto.response.LoginResponse;
@@ -24,12 +25,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.concurrent.ThreadLocalRandom;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor  // 自动生成所有 final 字段的构造方法
+@Slf4j
 public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IAuthService {
     private final AccountBookMapper accountBookMapper;
     private final AccountMapper accountMapper;
@@ -41,26 +46,11 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    public AuthServiceImpl(
-            AccountBookMapper accountBookMapper,
-            AccountMapper accountMapper,
-            BCryptPasswordEncoder passwordEncoder,
-            JwtUtils jwtUtils,
-            RsaUtils rsaUtils,
-            MailService mailService,
-            ITokenBlacklistService tokenBlacklistService) {
-        this.accountBookMapper = accountBookMapper;
-        this.accountMapper = accountMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtils = jwtUtils;
-        this.rsaUtils = rsaUtils;
-        this.mailService = mailService;
-        this.tokenBlacklistService = tokenBlacklistService;
-    }
 
     @Override
     @Transactional // 事务回滚注解（所有数据库操作要么都成功，要么都失败）
     public LoginResponse register(RegisterRequest req) {
+        // 前端 RSA 公钥加密传输，后端私钥解密；仅解密后的明文参与 BCrypt 哈希
         String rawPassword = rsaUtils.decrypt(req.password());
         if (lambdaQuery().eq(User::getEmail, req.email()).count() > 0) {
             throw new BizException("邮箱已注册");
@@ -73,9 +63,9 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         user.setNickname(req.nickname() != null ? SanitizeUtils.escapeHtml(req.nickname()) : "");
         save(user);
 
-        // 注册是创建日常账本
+        // 注册时初始化默认数据：日常账本 + 现金账户（与用户数据同事务）
         AccountBook book = new AccountBook();
-        book.setId(generateBookId());
+//        book.setId(generateBookId());
         book.setName("日常账本");
         book.setOwnerId(user.getId());
         book.setType(0);
@@ -92,13 +82,14 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         // 根据注册数据生成token,refreshToken
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getEmail());
+        log.info("用户注册成功 userId={} email={}", user.getId(), user.getEmail());
         // 返回登录数据
         return new LoginResponse(token, refreshToken, toUserInfo(user));
     }
 
     @Override
     public LoginResponse login(LoginRequest req) {
-        //
+        // 解密 → 按邮箱查用户 → BCrypt 比对；用户不存在与密码错误返回同一提示，防账号枚举
         String rawPassword = rsaUtils.decrypt(req.password());
         User user = lambdaQuery().eq(User::getEmail, req.email()).one();
         if (user == null || !passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
@@ -107,22 +98,37 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         // 根据登录数据生成token,refreshToken
         String token = jwtUtils.generateToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getEmail());
+        log.info("用户登录成功 userId={} email={}", user.getId(), user.getEmail());
         // 返回登录数据
         return new LoginResponse(token, refreshToken, toUserInfo(user));
     }
 
     @Override
     public void logout(String accessToken, String refreshToken) {
+        // 登出 = 把 token 加入黑名单，TTL 取 token 剩余有效期；拉黑失败不阻塞登出
+        boolean accessOk = false;
+        boolean refreshOk = false;
         if (accessToken != null && jwtUtils.validateToken(accessToken)) {
             Date exp = jwtUtils.getExpiration(accessToken);
             long ttl = Duration.between(Instant.now(), exp.toInstant()).toSeconds();
-            tokenBlacklistService.blacklist(accessToken, ttl);
+            try {
+                tokenBlacklistService.blacklist(accessToken, ttl);
+                accessOk = true;
+            } catch (Exception e) {
+                log.error("access token 拉黑失败，token 将保留至自然过期", e);
+            }
         }
         if (refreshToken != null && jwtUtils.validateRefreshToken(refreshToken)) {
             Date exp = jwtUtils.getExpiration(refreshToken);
             long ttl = Duration.between(Instant.now(), exp.toInstant()).toSeconds();
-            tokenBlacklistService.blacklist(refreshToken, ttl);
+            try {
+                tokenBlacklistService.blacklist(refreshToken, ttl);
+                refreshOk = true;
+            } catch (Exception e) {
+                log.error("refresh token 拉黑失败，token 将保留至自然过期", e);
+            }
         }
+        log.info("用户登出 accessTokenBlacklisted={} refreshTokenBlacklisted={}", accessOk, refreshOk);
     }
 
     @Override
@@ -136,17 +142,20 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
             throw new BizException("该邮箱未注册");
         }
 
+        // 防频繁请求：验证码 5 分钟内不重发
         if (user.getResetCodeExpiresAt() != null
                 && user.getResetCodeExpiresAt().isAfter(LocalDateTime.now())) {
             throw new BizException("验证码已发送，请稍后再试");
         }
 
         String code = String.format("%06d", RANDOM.nextInt(1000000));
+        // 邮件发送成功后落库验证码，发送失败不会产生不可用的验证码
         mailService.sendResetCode(email, code);
 
         user.setResetCode(code);
         user.setResetCodeExpiresAt(LocalDateTime.now().plusMinutes(5));
         updateById(user);
+        log.info("重置验证码已发送 email={}", email);
     }
 
     @Override
@@ -173,10 +182,12 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         user.setResetCode(null);
         user.setResetCodeExpiresAt(null);
         updateById(user);
+        log.info("密码重置成功 email={}", email);
     }
 
     @Override
     public LoginResponse refresh(String refreshToken) {
+        // access token 过期后用 refresh token 换发新 token 对；黑名单与用户有效性都需通过
         if (refreshToken == null || !jwtUtils.validateRefreshToken(refreshToken)) {
             throw new BizException(401, "refresh_token无效或已过期，请重新登录");
         }
@@ -193,17 +204,18 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         String newRefreshToken = jwtUtils.generateRefreshToken(userId, email);
         var userInfo = new UserInfoResponse(
                 user.getId(), user.getNickname(), user.getAvatarUrl(), user.getEmail(), user.getPhone());
+        log.info("token 刷新成功 userId={}", userId);
         return new LoginResponse(newToken, newRefreshToken, userInfo);
     }
 
-    private Long generateBookId() {
-        long id;
-        do {
-            // 随机生产bookId,当bookId没有被占用就返回
-            id = ThreadLocalRandom.current().nextLong(10000000L, 100000000000L);
-        } while (accountBookMapper.selectById(id) != null);
-        return id;
-    }
+//    private Long generateBookId() {
+//        long id;
+//        do {
+//            // 随机生产bookId,当bookId没有被占用就返回
+//            id = ThreadLocalRandom.current().nextLong(10000000L, 100000000000L);
+//        } while (accountBookMapper.selectById(id) != null);
+//        return id;
+//    }
 
     private UserInfoResponse toUserInfo(User user) {
         return new UserInfoResponse(

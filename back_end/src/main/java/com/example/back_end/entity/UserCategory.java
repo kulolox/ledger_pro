@@ -1,69 +1,52 @@
 package com.example.back_end.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * 用户分类实体
+ */
+@Data
 @TableName("user_category")
 public class UserCategory {
-    @TableId(type = IdType.AUTO)
+
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    /** 用户 ID（如果为 null，则可能是系统分类） */
     private Long userId;
-    private String name = "";
-    private Integer type = 0;
-    private String icon = "";
-    private String color = "";
-    private Long parentId = 0L;
-    private Integer isSystem = 0;
-    private Long sourceId;
-    private Integer visible = 1;
-    private Integer sortOrder = 0;
 
-    @TableField(updateStrategy = FieldStrategy.NEVER)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    /** 分类名称 */
+    private String name;
 
-    private LocalDateTime updatedAt = LocalDateTime.now();
-    private Integer deleted = 0;
+    /** 分类类型：0-普通，1-特殊类型等 */
+    private Integer type;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    /** 分类图标 URL */
+    private String icon;
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    /** 分类颜色标识 */
+    private String color;
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    /** 父分类 ID（用于构建树形结构），0 表示顶级分类 */
+    private Long parentId;
 
-    public Integer getType() { return type; }
-    public void setType(Integer type) { this.type = type; }
+    /** 是否系统内置分类：0-否，1-是 */
+    private Integer isSystem;
 
-    public String getIcon() { return icon; }
-    public void setIcon(String icon) { this.icon = icon; }
+    /** 是否可见：0-隐藏，1-可见 */
+    private Integer visible;
 
-    public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
+    /** 排序顺序，数值越小越靠前 */
+    private Integer sortOrder;
 
-    public Long getParentId() { return parentId; }
-    public void setParentId(Long parentId) { this.parentId = parentId; }
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
 
-    public Integer getIsSystem() { return isSystem; }
-    public void setIsSystem(Integer isSystem) { this.isSystem = isSystem; }
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 
-    public Long getSourceId() { return sourceId; }
-    public void setSourceId(Long sourceId) { this.sourceId = sourceId; }
-
-    public Integer getVisible() { return visible; }
-    public void setVisible(Integer visible) { this.visible = visible; }
-
-    public Integer getSortOrder() { return sortOrder; }
-    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    public Integer getDeleted() { return deleted; }
-    public void setDeleted(Integer deleted) { this.deleted = deleted; }
+    @TableLogic
+    private Integer deleted;
 }

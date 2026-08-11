@@ -19,6 +19,7 @@ public class SanitizeUtils {
         return sb.toString();
     }
 
+    // 防 CSV 公式注入：单元格以 = + - @ 开头时加 ' 前缀，防止 Excel 打开时执行恶意公式
     public static String sanitizeCsvCell(String value) {
         if (value == null || value.isEmpty()) return value;
         char first = value.charAt(0);

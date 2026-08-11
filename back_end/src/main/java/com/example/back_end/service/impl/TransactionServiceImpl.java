@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -43,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
+@Slf4j
 public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Transaction> implements ITransactionService {
 
     private static final String[] CSV_HEADERS = {
@@ -61,6 +63,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         this.cacheManager = cacheManager;
     }
 
+    // 多账本隔离核心校验：交易只能属于当前用户拥有的账本
     private void validateBookOwnership(Long bookId) {
         var book = accountBookMapper.selectById(bookId);
         if (book == null || !book.getOwnerId().equals(AuthUtils.getCurrentUserId())) {
@@ -77,10 +80,12 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 .toList();
     }
 
+    // 缓存 key：userId::bookId::month，隔离不同用户/账本/月份的列表缓存
     private String formatCacheKey(Long userId, Long bookId, String month) {
         return userId + "::" + bookId + "::" + month;
     }
 
+    // 写操作（增删改/导入）后驱逐相关月份缓存，保证列表读到的不是脏数据
     private void evictTransactionCache(Long bookId, String... months) {
         Cache cache = cacheManager.getCache("transactions");
         if (cache != null) {
@@ -107,6 +112,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         Transaction tx = toEntity(req);
         save(tx);
         evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));
+        log.info("新增交易 userId={} bookId={} txId={} amount={} type={}",
+                AuthUtils.getCurrentUserId(), req.book_id(), tx.getId(), tx.getAmount(), tx.getType());
         return TransactionResponse.from(tx);
     }
 
@@ -131,6 +138,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         updateById(tx);
 
         evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));
+        log.info("更新交易 userId={} bookId={} txId={}", AuthUtils.getCurrentUserId(), req.book_id(), id);
         return TransactionResponse.from(tx);
     }
 
@@ -187,9 +195,12 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 .distinct()
                 .toList();
         affectedBookIds.forEach(bid -> evictTransactionCache(bid, evictMonths.toArray(new String[0])));
+        log.info("批量删除交易 userId={} requested={} deleted={}",
+                AuthUtils.getCurrentUserId(), body.ids().size(), actualDeleted);
         return actualDeleted;
     }
 
+    // 列表缓存按 userId::bookId::month::page 分片，写操作后驱逐对应月份；unless 空结果不缓存
     @Cacheable(value = "transactions", key = "T(com.example.back_end.utils.AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month + '::' + #page", unless = "#result == null")
     public TransactionListResponse list(Long bookId, String month, Integer page, Integer size) {
         validateBookOwnership(bookId);
@@ -302,6 +313,9 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("导出失败", e);
+        } finally {
+            log.info("导出交易 userId={} bookId={} format={} period={} count={}",
+                    AuthUtils.getCurrentUserId(), bookId, format, safePeriod, txs.size());
         }
     }
 
@@ -330,6 +344,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
 
             List<Transaction> txs = new ArrayList<>();
             List<String> errors = new ArrayList<>();
+            // 逐行转换：坏行收集错误信息，好行入库，不整体失败
             for (int i = 0; i < items.size(); i++) {
                 TransactionRequest req = items.get(i);
                 try {
@@ -351,6 +366,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                     .distinct()
                     .toList();
             evictTransactionCache(bookId, importMonths.toArray(new String[0]));
+            log.info("导入交易 userId={} bookId={} format={} total={} imported={} errors={}",
+                    AuthUtils.getCurrentUserId(), bookId, format, items.size(), txs.size(), errors.size());
             return Map.of("imported", txs.size(), "errors", errors, "total", items.size());
         } catch (BizException e) {
             throw e;
@@ -739,6 +756,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         }
     }
 
+    // 请求 DTO → 实体：amount 全链路以"分"为单位存储，避免浮点精度问题
     private Transaction toEntity(TransactionRequest req) {
         Transaction tx = new Transaction();
         tx.setBookId(req.book_id());

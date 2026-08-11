@@ -1,121 +1,49 @@
 package com.example.back_end.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * 账户实体（账本下的具体账户，如：现金、银行卡、信用卡等）
+ */
+@Data
 @TableName("account")
 public class Account {
-    @TableId(type = IdType.AUTO)
+
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    /** 所属账本 ID（关联 account_book 表） */
     private Long bookId;
-    private String name = "";
-    private Integer type = 0;
-    private String currency = "CNY";
-    private String icon = "";
-    private Integer initialBalance = 0;
-    private Integer isIncludeTotal = 1;
-    private Integer sortOrder = 0;
 
-    @TableField(updateStrategy = FieldStrategy.NEVER)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    /** 账户名称 */
+    private String name;
 
-    private LocalDateTime updatedAt = LocalDateTime.now();
-    private Integer deleted = 0;
+    /** 账户类型：1-现金，2-储蓄卡，3-信用卡，4-支付宝，5-微信支付等 */
+    private Integer type;
 
-    public Long getId() {
-        return id;
-    }
+    /** 货币类型，默认 CNY（人民币） */
+    private String currency;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    /** 账户图标 URL */
+    private String icon;
 
-    public Long getBookId() {
-        return bookId;
-    }
+    /** 初始余额（单位：分，避免浮点精度问题） */
+    private Integer initialBalance;
 
-    public void setBookId(Long bookId) {
-        this.bookId = bookId;
-    }
+    /** 是否计入总资产：0-不计入，1-计入（默认） */
+    private Integer isIncludeTotal;
 
-    public String getName() {
-        return name;
-    }
+    /** 排序顺序，数值越小越靠前 */
+    private Integer sortOrder;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
 
-    public Integer getType() {
-        return type;
-    }
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 
-    public void setType(Integer type) {
-        this.type = type;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-
-    public String getIcon() {
-        return icon;
-    }
-
-    public void setIcon(String icon) {
-        this.icon = icon;
-    }
-
-    public Integer getInitialBalance() {
-        return initialBalance;
-    }
-
-    public void setInitialBalance(Integer initialBalance) {
-        this.initialBalance = initialBalance;
-    }
-
-    public Integer getIsIncludeTotal() {
-        return isIncludeTotal;
-    }
-
-    public void setIsIncludeTotal(Integer isIncludeTotal) {
-        this.isIncludeTotal = isIncludeTotal;
-    }
-
-    public Integer getSortOrder() {
-        return sortOrder;
-    }
-
-    public void setSortOrder(Integer sortOrder) {
-        this.sortOrder = sortOrder;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Integer getDeleted() {
-        return deleted;
-    }
-
-    public void setDeleted(Integer deleted) {
-        this.deleted = deleted;
-    }
+    @TableLogic
+    private Integer deleted;
 }
