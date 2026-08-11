@@ -23,6 +23,10 @@ back_end/.mvn/wrapper/maven-wrapper.jar
 # claude
 .claude/
 
+# keystore
+*.keystore
+*.jks
+
 # env
 .env
 .env.local

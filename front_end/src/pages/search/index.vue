@@ -3,7 +3,11 @@
     <NavBar>
       <template #left>
         <view class="nav-left" @click="goBack">
-          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+          <wd-icon
+            name="arrow-left"
+            size="24px"
+            color="var(--text-secondary)"
+          />
         </view>
       </template>
       <template #center>
@@ -18,7 +22,11 @@
       <view class="filter-search">
         <view class="search-row">
           <view class="search-input-wrap">
-            <wd-icon name="search-line" size="28rpx" color="var(--text-muted)" />
+            <wd-icon
+              name="search-line"
+              size="28rpx"
+              color="var(--text-muted)"
+            />
             <input
               class="search-input"
               v-model="keyword"
@@ -26,7 +34,9 @@
               confirm-type="search"
               @confirm="doSearch"
             />
-            <text v-if="keyword" class="search-clear" @click="keyword = ''">✕</text>
+            <text v-if="keyword" class="search-clear" @click="keyword = ''"
+              >✕</text
+            >
           </view>
         </view>
       </view>
@@ -72,13 +82,19 @@
           <text class="loading-text">搜索中...</text>
         </view>
 
-        <view v-else-if="results.length === 0 && hasSearched" class="empty-state">
+        <view
+          v-else-if="results.length === 0 && hasSearched"
+          class="empty-state"
+        >
           <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
           <text class="empty-title">未找到匹配的交易</text>
           <text class="empty-hint">试试调整筛选条件</text>
         </view>
 
-        <view v-else-if="results.length === 0 && !hasSearched" class="empty-state">
+        <view
+          v-else-if="results.length === 0 && !hasSearched"
+          class="empty-state"
+        >
           <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
           <text class="empty-title">输入关键字或选择筛选条件</text>
           <text class="empty-hint">点击搜索开始查找</text>
@@ -91,8 +107,12 @@
               <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
             </view>
             <view class="day-totals">
-              <text v-if="day.expense > 0" class="day-expense">-{{ formatCents(day.expense) }}</text>
-              <text v-if="day.income > 0" class="day-income">+{{ formatCents(day.income) }}</text>
+              <text v-if="day.expense > 0" class="day-expense"
+                >-{{ formatCents(day.expense) }}</text
+              >
+              <text v-if="day.income > 0" class="day-income"
+                >+{{ formatCents(day.income) }}</text
+              >
             </view>
           </view>
 
@@ -100,18 +120,25 @@
             <view class="tx-left">
               <view
                 class="tx-icon"
-                :style="{ background: getCategoryColor(tx.type, tx.category_id) }"
+                :style="{
+                  background: getCategoryColor(tx.type, tx.category_id),
+                }"
               >
                 <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
               </view>
               <view class="tx-info">
-                <text class="tx-category">{{ getCategoryName(tx.type, tx.category_id) }}</text>
+                <text class="tx-category">{{
+                  getCategoryName(tx.type, tx.category_id)
+                }}</text>
                 <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
               </view>
             </view>
             <view class="tx-right">
-              <text class="tx-amount" :class="tx.type === 1 ? 'income' : 'expense'">
-                {{ tx.type === 1 ? '+' : '-' }}{{ formatCents(tx.amount) }}
+              <text
+                class="tx-amount"
+                :class="tx.type === 1 ? 'income' : 'expense'"
+              >
+                {{ tx.type === 1 ? "+" : "-" }}{{ formatCents(tx.amount) }}
               </text>
             </view>
           </view>
@@ -124,20 +151,32 @@
       </view>
     </scroll-view>
 
-    <wd-popup :model-value="showDateRangePopup" @update:model-value="showDateRangePopup = $event" position="bottom">
+    <wd-popup
+      :model-value="showDateRangePopup"
+      @update:model-value="showDateRangePopup = $event"
+      position="bottom"
+    >
       <view class="picker-content">
         <view class="picker-header">
           <text class="picker-title">选择时间范围</text>
-          <text class="picker-close" @click="showDateRangePopup = false">完成</text>
+          <text class="picker-close" @click="showDateRangePopup = false"
+            >完成</text
+          >
         </view>
         <view class="date-range-content">
           <view class="date-range-row-inline">
-            <view class="date-range-btn date-btn-start" @click="showDateStartPicker = true">
-              <text>{{ dateFrom || '开始' }}</text>
+            <view
+              class="date-range-btn date-btn-start"
+              @click="showDateStartPicker = true"
+            >
+              <text>{{ dateFrom || "开始" }}</text>
             </view>
             <text class="date-sep">至</text>
-            <view class="date-range-btn date-btn-end" @click="showDateEndPicker = true">
-              <text>{{ dateTo || '结束' }}</text>
+            <view
+              class="date-range-btn date-btn-end"
+              @click="showDateEndPicker = true"
+            >
+              <text>{{ dateTo || "结束" }}</text>
             </view>
           </view>
           <view class="date-quick-actions">
@@ -192,7 +231,13 @@ import type { LocalTransaction } from "@/stores/transactionStore";
 import { formatCents, formatWeekday } from "@/utils/format";
 import { select } from "@/utils/db";
 
-const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories, categories } = useCategories();
+const {
+  getCategoryName,
+  getCategoryColor,
+  getCategoryIcon,
+  loadCategories,
+  categories,
+} = useCategories();
 
 const keyword = ref("");
 const results = ref<LocalTransaction[]>([]);
@@ -215,13 +260,16 @@ const showCategoryPicker = ref(false);
 
 const categoryLabel = computed(() => {
   if (selectedCategoryId.value === undefined) return "全部分类";
-  const name = getCategoryName(0, selectedCategoryId.value) || getCategoryName(1, selectedCategoryId.value);
+  const name =
+    getCategoryName(0, selectedCategoryId.value) ||
+    getCategoryName(1, selectedCategoryId.value);
   return name || "全部分类";
 });
 
 const dateLabel = computed(() => {
   if (!dateFrom.value && !dateTo.value) return "全部时间";
-  if (dateFrom.value && dateTo.value) return `${dateFrom.value} 至 ${dateTo.value}`;
+  if (dateFrom.value && dateTo.value)
+    return `${dateFrom.value} 至 ${dateTo.value}`;
   if (dateFrom.value) return `${dateFrom.value} 起`;
   return `至 ${dateTo.value}`;
 });
@@ -306,7 +354,9 @@ function onTypeConfirm({ value }: { value: number[] }) {
 const categoryPickerValue = ref<number[]>([]);
 const categoryColumns = computed(() => {
   const all = [{ label: "全部分类", value: 0 }];
-  const cats = (categories.value[0] || []).concat(categories.value[1] || []).filter((c: any) => c.visible !== 0);
+  const cats = (categories.value[0] || [])
+    .concat(categories.value[1] || [])
+    .filter((c: any) => c.visible !== 0);
   const list = cats.map((c: any) => ({ label: c.name, value: c.id }));
   return [...all, ...list];
 });
@@ -336,7 +386,9 @@ async function fetchResults() {
     const conditions: string[] = [];
 
     if (keyword.value.trim()) {
-      conditions.push(`remark LIKE '%${keyword.value.trim().replace(/'/g, "''")}%'`);
+      conditions.push(
+        `remark LIKE '%${keyword.value.trim().replace(/'/g, "''")}%'`,
+      );
     }
     if (selectedType.value !== undefined) {
       conditions.push(`type = ${selectedType.value}`);
@@ -351,7 +403,8 @@ async function fetchResults() {
       conditions.push(`trans_time <= '${dateTo.value}T23:59:59'`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const offset = (page.value - 1) * PAGE_SIZE;
 
     const rows = await select<LocalTransaction>(
@@ -374,7 +427,10 @@ function loadMore() {
 }
 
 const dayGroups = computed(() => {
-  const map = new Map<string, { date: string; income: number; expense: number; items: LocalTransaction[] }>();
+  const map = new Map<
+    string,
+    { date: string; income: number; expense: number; items: LocalTransaction[] }
+  >();
   for (const tx of results.value) {
     const dateKey = tx.trans_time.substring(0, 10);
     if (!map.has(dateKey)) {

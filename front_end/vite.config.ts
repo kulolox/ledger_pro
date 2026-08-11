@@ -5,7 +5,7 @@ import uni from "@dcloudio/vite-plugin-uni";
 export default defineConfig({
   plugins: [uni()],
   optimizeDeps: {
-    include: ["echarts"],
+    // include: ["echarts"],
   },
   server: {
     proxy: {

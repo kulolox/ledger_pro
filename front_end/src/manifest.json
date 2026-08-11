@@ -1,6 +1,6 @@
 {
-    "name" : "",
-    "appid" : "",
+    "name" : "ledgerpro",
+    "appid" : "__UNI__E03086B",
     "description" : "",
     "versionName" : "1.0.0",
     "versionCode" : "100",
@@ -18,12 +18,13 @@
         },
         /* 模块配置 */
         "modules" : {
-            "SQLite": {}
+            "SQLite" : {}
         },
         /* 应用发布信息 */
         "distribute" : {
             /* android打包配置 */
             "android" : {
+                "packagename" : "com.kulolox.ledgerpro",
                 "permissions" : [
                     "<uses-permission android:name=\"android.permission.CHANGE_NETWORK_STATE\"/>",
                     "<uses-permission android:name=\"android.permission.MOUNT_UNMOUNT_FILESYSTEMS\"/>",
@@ -43,7 +44,10 @@
                 ]
             },
             /* ios打包配置 */
-            "ios" : {},
+            "ios" : {
+                "packagename" : "com.kulolox.ledgerpro",
+                "dSYMs" : false
+            },
             /* SDK配置 */
             "sdkConfigs" : {}
         }
@@ -67,8 +71,8 @@
     "mp-toutiao" : {
         "usingComponents" : true
     },
-    "uniStatistics": {  
-        "enable": false
+    "uniStatistics" : {
+        "enable" : false
     },
     "vueVersion" : "3"
 }

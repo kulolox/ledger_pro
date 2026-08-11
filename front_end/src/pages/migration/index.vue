@@ -3,7 +3,11 @@
     <NavBar>
       <template #left>
         <view class="back-btn" @click="goBack">
-          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+          <wd-icon
+            name="arrow-left"
+            size="24px"
+            color="var(--text-secondary)"
+          />
         </view>
       </template>
       <template #center>
@@ -20,7 +24,9 @@
           <wd-icon name="download" size="48rpx" color="var(--color-primary)" />
         </view>
         <text class="card-title">导出数据</text>
-        <text class="card-desc">将所有数据导出为备份文件，可用于迁移到新手机</text>
+        <text class="card-desc"
+          >将所有数据导出为备份文件，可用于迁移到新手机</text
+        >
         <view class="card-btn" @click="onExport">
           <text>{{ exporting ? "导出中..." : "导出数据" }}</text>
         </view>
@@ -36,7 +42,11 @@
         </view>
         <text class="card-title">导入数据</text>
         <text class="card-desc">从备份文件恢复数据，将覆盖当前所有数据</text>
-        <view class="card-btn" :class="{ disabled: importing }" @click="onImport">
+        <view
+          class="card-btn"
+          :class="{ disabled: importing }"
+          @click="onImport"
+        >
           <text>{{ importing ? "导入中..." : "选择文件并导入" }}</text>
         </view>
       </view>
@@ -47,7 +57,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import NavBar from "@/components/NavBar.vue";
+// #ifdef H5
 import { exportData, importData } from "@/utils/migration";
+// #endif
+// #ifdef APP-PLUS
+import { exportData, importDataFile, listBackupFiles } from "@/utils/migration";
+// #endif
 import { useUser } from "@/stores/userStore";
 import { useCategories } from "@/stores/categoryStore";
 import { useTransactions } from "@/stores/transactionStore";
@@ -88,6 +103,7 @@ function onImport() {
   });
 }
 
+// #ifdef H5
 function triggerFileInput() {
   const input = document.createElement("input");
   input.type = "file";
@@ -98,14 +114,7 @@ function triggerFileInput() {
     importing.value = true;
     try {
       await importData(file);
-      const { loadUser } = useUser();
-      const { loadCategories } = useCategories();
-      const { load } = useTransactions();
-      const now = new Date();
-      const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-      await loadUser();
-      await loadCategories();
-      await load(m);
+      await refreshStores();
       uni.showToast({ title: "导入成功", icon: "success" });
     } catch (e: any) {
       uni.showToast({ title: e.message || "导入失败", icon: "error" });
@@ -114,6 +123,51 @@ function triggerFileInput() {
     }
   };
   input.click();
+}
+// #endif
+
+// #ifdef APP-PLUS
+async function triggerFileInput() {
+  importing.value = true;
+  try {
+    const files = await listBackupFiles();
+    if (files.length === 0) {
+      uni.showToast({
+        title: "下载目录中没有备份文件，请先将 .json 文件放到下载目录",
+        icon: "none",
+        duration: 3000,
+      });
+      return;
+    }
+    const { tapIndex } = await new Promise<{ tapIndex: number }>((resolve) => {
+      uni.showActionSheet({
+        title: "选择备份文件",
+        itemList: files.map((f) => f.name),
+        success: (res) => resolve({ tapIndex: res.tapIndex }),
+        fail: () => resolve({ tapIndex: -1 }),
+      });
+    });
+    if (tapIndex < 0) return;
+    await importDataFile(files[tapIndex].fullPath);
+    await refreshStores();
+    uni.showToast({ title: "导入成功", icon: "success" });
+  } catch (e: any) {
+    uni.showToast({ title: e.message || "导入失败", icon: "error" });
+  } finally {
+    importing.value = false;
+  }
+}
+// #endif
+
+async function refreshStores() {
+  const { loadUser } = useUser();
+  const { loadCategories } = useCategories();
+  const { load } = useTransactions();
+  const now = new Date();
+  const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  await loadUser();
+  await loadCategories();
+  await load(m);
 }
 </script>
 

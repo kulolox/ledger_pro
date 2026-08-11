@@ -164,50 +164,49 @@ export async function closeDB(): Promise<void> {
   // #endif
 }
 
-const TABLES_SQL = `
-CREATE TABLE IF NOT EXISTS user_profile (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nickname TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS categories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  type INTEGER NOT NULL,
-  icon TEXT NOT NULL DEFAULT '',
-  color TEXT NOT NULL DEFAULT '',
-  is_system INTEGER NOT NULL DEFAULT 0,
-  parent_id INTEGER DEFAULT 0,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  visible INTEGER NOT NULL DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS transactions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  type INTEGER NOT NULL,
-  amount INTEGER NOT NULL,
-  category_id INTEGER NOT NULL DEFAULT 0,
-  account_id INTEGER NOT NULL DEFAULT 1,
-  to_account_id INTEGER DEFAULT 0,
-  remark TEXT DEFAULT '',
-  trans_time TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_tx_trans_time ON transactions(trans_time);
-CREATE INDEX IF NOT EXISTS idx_tx_category ON transactions(category_id);
-CREATE INDEX IF NOT EXISTS idx_tx_type ON transactions(type);
-`;
+const TABLES_SQL = [
+  `CREATE TABLE IF NOT EXISTS user_profile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nickname TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  )`,
+  `CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type INTEGER NOT NULL,
+    icon TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT '',
+    is_system INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    visible INTEGER NOT NULL DEFAULT 1
+  )`,
+  `CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type INTEGER NOT NULL,
+    amount INTEGER NOT NULL,
+    category_id INTEGER NOT NULL DEFAULT 0,
+    account_id INTEGER NOT NULL DEFAULT 1,
+    to_account_id INTEGER DEFAULT 0,
+    remark TEXT DEFAULT '',
+    trans_time TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_tx_trans_time ON transactions(trans_time)`,
+  `CREATE INDEX IF NOT EXISTS idx_tx_category ON transactions(category_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_tx_type ON transactions(type)`,
+];
 
 export async function initDB(): Promise<void> {
   await openDB();
   // #ifdef APP-PLUS
-  await execute(TABLES_SQL);
+  for (const sql of TABLES_SQL) {
+    await execute(sql);
+  }
   // #endif
   // #ifdef H5
-  h5db!.exec(TABLES_SQL);
+  h5db!.exec(TABLES_SQL.join(";\n"));
   saveToStorage();
   // #endif
 }

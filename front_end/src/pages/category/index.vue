@@ -3,7 +3,11 @@
     <NavBar rightWidth="auto">
       <template #left>
         <view class="nav-back" @click="goBack">
-          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+          <wd-icon
+            name="arrow-left"
+            size="24px"
+            color="var(--text-secondary)"
+          />
         </view>
       </template>
       <template #center>

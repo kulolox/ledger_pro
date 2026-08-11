@@ -58,6 +58,7 @@
     "@dcloudio/uni-mp-weixin": "3.0.0-5000720260410001",
     "@dcloudio/uni-mp-xhs": "3.0.0-5000720260410001",
     "@dcloudio/uni-quickapp-webview": "3.0.0-5000720260410001",
+    "@qiun/ucharts": "2.5.0-20230101",
     "@wot-ui/ui": "^2.0.5",
     "echarts": "^6.1.0",
     "sortablejs": "^1.15.7",
