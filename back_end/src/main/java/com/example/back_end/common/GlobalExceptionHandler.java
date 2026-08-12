@@ -1,7 +1,5 @@
-package com.example.back_end.config;
+package com.example.back_end.common;
 
-import com.example.back_end.exception.BizException;
-import com.example.back_end.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;

@@ -1,10 +1,10 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.common.Result;
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.dto.request.RegisterRequest;
 import com.example.back_end.dto.response.LoginResponse;
 import com.example.back_end.service.IAuthService;
-import com.example.back_end.utils.Result;
 import com.example.back_end.utils.RsaUtils;
 import jakarta.validation.Valid;
 import java.util.Map;

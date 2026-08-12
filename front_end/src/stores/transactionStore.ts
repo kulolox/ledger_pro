@@ -1,14 +1,14 @@
 import { ref, computed } from "vue";
 
 export interface LocalTransaction {
-  id: number;
-  server_id?: number;
-  book_id: number;
+  id: string;
+  server_id?: string;
+  book_id: string;
   type: number;
   amount: number;
-  account_id: number;
-  to_account_id?: number;
-  category_id?: number;
+  account_id: string;
+  to_account_id?: string;
+  category_id?: string;
   remark?: string;
   trans_time: string;
   sync_status: "pending" | "synced" | "failed";
@@ -29,7 +29,7 @@ export function loadTransactions() {
       const parsed = JSON.parse(raw) as LocalTransaction[];
       transactions.value = parsed;
       if (parsed.length > 0) {
-        const minId = Math.min(...parsed.map((t) => t.id));
+        const minId = Math.min(...parsed.map((t) => Number(t.id)));
         nextLocalId = minId < 0 ? minId - 1 : -1;
       }
     }
@@ -43,18 +43,18 @@ function persist() {
 }
 
 export function addTransaction(data: {
-  book_id: number;
+  book_id: string;
   type: number;
   amount: number;
-  account_id: number;
-  to_account_id?: number;
-  category_id?: number;
+  account_id: string;
+  to_account_id?: string;
+  category_id?: string;
   remark?: string;
   trans_time: string;
 }): LocalTransaction {
   const now = new Date().toISOString();
   const tx: LocalTransaction = {
-    id: nextLocalId--,
+    id: String(nextLocalId--),
     ...data,
     sync_status: "pending",
     deleted: 0,
@@ -67,7 +67,7 @@ export function addTransaction(data: {
 }
 
 export function updateTransaction(
-  id: number,
+  id: string,
   data: Partial<
     Pick<
       LocalTransaction,
@@ -92,7 +92,7 @@ export function updateTransaction(
   persist();
 }
 
-export function deleteTransaction(id: number) {
+export function deleteTransaction(id: string) {
   const idx = transactions.value.findIndex((t) => t.id === id);
   if (idx === -1) return;
   const tx = transactions.value[idx];
@@ -106,7 +106,7 @@ export function deleteTransaction(id: number) {
   persist();
 }
 
-export function markSynced(localId: number, serverId: number) {
+export function markSynced(localId: string, serverId: string) {
   const idx = transactions.value.findIndex((t) => t.id === localId);
   if (idx === -1) return;
   transactions.value[idx] = {

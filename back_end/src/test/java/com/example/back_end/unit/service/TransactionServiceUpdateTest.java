@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.TransactionRequest;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.Transaction;
-import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.TransactionMapper;
 import com.example.back_end.service.impl.TransactionServiceImpl;

@@ -45,11 +45,12 @@ export const removeUserInfo = (): void => {
 const BOOK_KEY = "currentBookId";
 
 // 当前选中账本 ID 存取
-export const getCurrentBookId = (): number => {
-  return uni.getStorageSync(BOOK_KEY);
+export const getCurrentBookId = (): string => {
+  const v = uni.getStorageSync(BOOK_KEY);
+  return v == null ? "" : String(v);
 };
 
-export const setCurrentBookId = (bookId: number): void => {
+export const setCurrentBookId = (bookId: string): void => {
   uni.setStorageSync(BOOK_KEY, bookId);
 };
 

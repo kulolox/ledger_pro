@@ -2,6 +2,7 @@ package com.example.back_end.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.dto.request.RegisterRequest;
 import com.example.back_end.dto.response.LoginResponse;
@@ -9,7 +10,6 @@ import com.example.back_end.dto.response.UserInfoResponse;
 import com.example.back_end.entity.Account;
 import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.User;
-import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.AccountMapper;
 import com.example.back_end.mapper.UserMapper;
@@ -65,7 +65,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
 
         // 注册时初始化默认数据：日常账本 + 现金账户（与用户数据同事务）
         AccountBook book = new AccountBook();
-//        book.setId(generateBookId());
         book.setName("日常账本");
         book.setOwnerId(user.getId());
         book.setType(0);
@@ -207,15 +206,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         log.info("token 刷新成功 userId={}", userId);
         return new LoginResponse(newToken, newRefreshToken, userInfo);
     }
-
-//    private Long generateBookId() {
-//        long id;
-//        do {
-//            // 随机生产bookId,当bookId没有被占用就返回
-//            id = ThreadLocalRandom.current().nextLong(10000000L, 100000000000L);
-//        } while (accountBookMapper.selectById(id) != null);
-//        return id;
-//    }
 
     private UserInfoResponse toUserInfo(User user) {
         return new UserInfoResponse(

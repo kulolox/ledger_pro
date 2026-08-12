@@ -1,10 +1,10 @@
 package com.example.back_end.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.UpdateUserRequest;
 import com.example.back_end.dto.response.UserInfoResponse;
 import com.example.back_end.entity.User;
-import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.UserMapper;
 import com.example.back_end.service.IUserService;
 import com.example.back_end.utils.AuthUtils;
@@ -36,7 +36,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (req.nickname() != null) user.setNickname(SanitizeUtils.escapeHtml(req.nickname()));
         if (req.avatar() != null) user.setAvatarUrl(SanitizeUtils.escapeHtml(req.avatar()));
         if (req.phone() != null) user.setPhone(req.phone());
-        user.setUpdatedAt(LocalDateTime.now());
 
         updateById(user);
         log.info("更新用户信息 userId={}", userId);

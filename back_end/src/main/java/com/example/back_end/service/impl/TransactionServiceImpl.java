@@ -3,6 +3,7 @@ package com.example.back_end.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.BatchCreateRequest;
 import com.example.back_end.dto.request.BatchDeleteRequest;
 import com.example.back_end.dto.request.TransactionRequest;
@@ -10,7 +11,6 @@ import com.example.back_end.dto.response.TransactionListResponse;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.Transaction;
-import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.TransactionMapper;
 import com.example.back_end.service.ITransactionService;
@@ -134,7 +134,6 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         if (req.trans_time() != null && !req.trans_time().isBlank()) {
             tx.setTransTime(LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
         }
-        tx.setUpdatedAt(LocalDateTime.now());
         updateById(tx);
 
         evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));

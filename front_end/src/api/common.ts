@@ -61,7 +61,7 @@ export const createAccountBook = (data: { name: string; coverIcon?: string; type
 };
 
 export interface AccountBook {
-  id: number;
+  id: string;
   name: string;
   coverIcon: string;
   type: number;
@@ -79,30 +79,30 @@ export const updateUserInfo = (data: Partial<UserInfo>) => {
 
 // ========== 记账相关 ==========
 
-export const getTransactions = (params: { book_id: number; month: string; page?: number; size?: number }) => {
+export const getTransactions = (params: { book_id: string; month: string; page?: number; size?: number }) => {
   return request.get<{ list: Transaction[]; total: number; page: number }>("/api/v1/transactions", params);
 };
 
 export const createTransaction = (data: {
-  book_id: number;
+  book_id: string;
   type: number;
   amount: number;
-  account_id: number;
-  to_account_id?: number;
-  category_id?: number;
+  account_id: string;
+  to_account_id?: string;
+  category_id?: string;
   remark?: string;
   trans_time?: string;
 }) => {
   return request.post<Transaction>("/api/v1/transactions", data);
 };
 
-export const updateTransaction = (id: number, data: {
-  book_id: number;
+export const updateTransaction = (id: string, data: {
+  book_id: string;
   type: number;
   amount: number;
-  account_id: number;
-  to_account_id?: number;
-  category_id?: number;
+  account_id: string;
+  to_account_id?: string;
+  category_id?: string;
   remark?: string;
   trans_time: string;
 }) => {
@@ -120,58 +120,36 @@ export const createCategory = (data: {
   type: number;
   icon: string;
   color: string;
-  parent_id?: number;
+  parent_id?: string;
 }) => {
   return request.post<Category>("/api/v1/categories", data);
 };
 
 export const updateCategory = (
-  id: number,
+  id: string,
   data: { name?: string; icon?: string; color?: string; sort_order?: number; visible?: number },
 ) => {
   return request.put<Category>(`/api/v1/categories/${id}`, data);
 };
 
-export const deleteCategory = (id: number) => {
+export const deleteCategory = (id: string) => {
   return request.delete(`/api/v1/categories/${id}`);
 };
 
-export const reorderCategories = (data: { ids: number[] }) => {
+export const reorderCategories = (data: { ids: string[] }) => {
   return request.put("/api/v1/categories/reorder", data);
 };
 
 // ========== 账户相关 ==========
 
-export const getAccounts = (params: { book_id: number }) => {
+export const getAccounts = (params: { book_id: string }) => {
   return request.get<Account[]>("/api/v1/accounts", params);
 };
-
-export const createAccount = (data: {
-  book_id: number;
-  name: string;
-  type: number;
-  icon?: string;
-  currency?: string;
-  initial_balance?: number;
-  is_include_total?: number;
-}) => request.post<Account>("/api/v1/accounts", data);
-
-export const updateAccount = (id: number, data: {
-  name?: string;
-  type?: number;
-  icon?: string;
-  currency?: string;
-  initial_balance?: number;
-  is_include_total?: number;
-}) => request.put<Account>(`/api/v1/accounts/${id}`, data);
-
-export const deleteAccount = (id: number, book_id: number) =>
-  request.delete(`/api/v1/accounts/${id}?book_id=${book_id}`);
 
 // ========== 类型定义 ==========
 
 export interface UserInfo {
-  id: number;
+  id: string;
   nickname: string;
   avatar: string;
   email: string;
@@ -179,31 +157,31 @@ export interface UserInfo {
 }
 
 export interface Transaction {
-  id: number;
-  book_id: number;
+  id: string;
+  book_id: string;
   type: number;
   amount: number;
-  account_id: number;
-  to_account_id: number;
-  category_id: number;
+  account_id: string;
+  to_account_id: string;
+  category_id: string;
   remark: string;
   trans_time: string;
 }
 
 export interface Category {
-  id: number;
+  id: string;
   name: string;
   type: number;
   icon: string;
   color: string;
-  parent_id: number;
+  parent_id: string;
   is_system: number;
   sort_order: number;
   visible: number;
 }
 
 export interface Account {
-  id: number;
+  id: string;
   name: string;
   type: number;
   icon: string;
@@ -217,10 +195,10 @@ export interface Account {
 // ========== 搜索相关 ==========
 
 export interface SearchParams {
-  book_id?: number;
+  book_id?: string;
   keyword?: string;
   type?: number;
-  category_id?: number;
+  category_id?: string;
   amount_min?: number;
   amount_max?: number;
   date_from?: string;
@@ -235,11 +213,11 @@ export const searchTransactions = (params: SearchParams) => {
 
 // ========== 导入导出相关 ==========
 
-export const exportTransactions = (params: { book_id: number; month?: string; year?: string; format: string }) => {
+export const exportTransactions = (params: { book_id: string; month?: string; year?: string; format: string }) => {
   return request.download("/api/v1/transactions/export", params as Record<string, any>);
 };
 
-export const importTransactions = (bookId: number, filePath: string, format: string) => {
+export const importTransactions = (bookId: string, filePath: string, format: string) => {
   return request.upload<{ imported: number; errors: string[]; total: number }>(
     "/api/v1/transactions/import",
     filePath,
@@ -256,14 +234,14 @@ export const downloadTemplate = (format: string) => {
 export interface MonthlyStats {
   total_expense: number;
   total_income: number;
-  expense_by_category: Array<{ category_id: number; amount: number; count: number }>;
-  income_by_category: Array<{ category_id: number; amount: number; count: number }>;
+  expense_by_category: Array<{ category_id: string; amount: number; count: number }>;
+  income_by_category: Array<{ category_id: string; amount: number; count: number }>;
 }
 
-export const getMonthlyStatistics = (params: { book_id: number; month: string }) => {
+export const getMonthlyStatistics = (params: { book_id: string; month: string }) => {
   return request.get<MonthlyStats>("/api/v1/statistics/monthly", params);
 };
 
-export const getTrend = (params: { book_id: number; months?: number }) => {
+export const getTrend = (params: { book_id: string; months?: number }) => {
   return request.get<{ months: string[]; expense: number[]; income: number[] }>("/api/v1/statistics/trend", params);
 };

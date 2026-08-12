@@ -49,7 +49,7 @@ describe("categoryStore", () => {
     });
 
     it('returns "其他" for invalid id', () => {
-      expect(store.getCategoryName(0, 99999)).toBe("其他");
+      expect(store.getCategoryName(0, "99999")).toBe("其他");
     });
   });
 
@@ -64,7 +64,7 @@ describe("categoryStore", () => {
     });
 
     it("returns default color for invalid id", () => {
-      expect(store.getCategoryColor(0, 99999)).toBe("#607d8b");
+      expect(store.getCategoryColor(0, "99999")).toBe("#607d8b");
     });
   });
 
@@ -79,7 +79,7 @@ describe("categoryStore", () => {
     });
 
     it('returns "?" for invalid id', () => {
-      expect(store.getCategoryIcon(0, 99999)).toBe("?");
+      expect(store.getCategoryIcon(0, "99999")).toBe("?");
     });
   });
 

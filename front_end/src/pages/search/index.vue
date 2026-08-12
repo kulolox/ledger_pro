@@ -352,11 +352,11 @@ const bookColumns = computed(() => {
   const list = books.value.map(b => ({ label: b.name, value: b.id }));
   return [...all, ...list];
 });
-const selectedBookId = ref<number | undefined>(undefined);
+const selectedBookId = ref<string | undefined>(undefined);
 
 function onBookConfirm({ value }: { value: number[] }) {
   const v = value[0];
-  selectedBookId.value = v === 0 ? undefined : v;
+  selectedBookId.value = v === 0 ? undefined : String(v);
 }
 
 // wd-picker for categories
@@ -367,11 +367,11 @@ const categoryColumns = computed(() => {
   const list = cats.map((c: any) => ({ label: c.name, value: c.id }));
   return [...all, ...list];
 });
-const selectedCategoryId = ref<number | undefined>(undefined);
+const selectedCategoryId = ref<string | undefined>(undefined);
 
 function onCategoryConfirm({ value }: { value: number[] }) {
   const v = value[0];
-  selectedCategoryId.value = v === 0 ? undefined : v;
+  selectedCategoryId.value = v === 0 ? undefined : String(v);
 }
 
 async function doSearch() {

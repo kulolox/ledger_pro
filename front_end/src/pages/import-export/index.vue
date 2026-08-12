@@ -233,7 +233,7 @@ async function onExport() {
     } else {
       params.month = `${exportYear.value}-${String(exportMonth.value).padStart(2, "0")}`;
     }
-    await exportTransactions(params);
+    await exportTransactions(params as Parameters<typeof exportTransactions>[0]);
     uni.showToast({ title: "导出成功", icon: "success" });
   } catch {
     uni.showToast({ title: "导出失败", icon: "error" });

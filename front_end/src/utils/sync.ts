@@ -45,7 +45,7 @@ function setLastSyncTime() {
 // 静默请求：不显示 loading，不弹 toast，用于后台同步
 function silentRequest<T = any>(options: {
   url: string;
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT";
   data?: Record<string, any>;
 }): Promise<T> {
   const token = getToken();
@@ -112,10 +112,10 @@ export async function pushPending(): Promise<{ success: number; fail: number }> 
       })) as any;
 
       const serverList = result?.list || [];
-      const localToServerId = new Map<number, number>();
+      const localToServerId = new Map<string, string>();
       for (let i = 0; i < newItems.length; i++) {
         if (serverList[i]) {
-          localToServerId.set(newItems[i].id, serverList[i].id);
+          localToServerId.set(newItems[i].id, String(serverList[i].id));
         }
       }
 
@@ -195,7 +195,7 @@ export async function pushDeletes(): Promise<number> {
   }
 }
 
-export async function pullFromServer(bookId: number): Promise<number> {
+export async function pullFromServer(bookId: string): Promise<number> {
   if (pullPromise) return pullPromise;
 
   pullPromise = (async () => {
@@ -215,18 +215,18 @@ export async function pullFromServer(bookId: number): Promise<number> {
     if (!Array.isArray(serverList) || serverList.length === 0) return 0;
 
     const localList = getLocalTransactions();
-    const existingIds = new Set<number>();
-    const existingServerIds = new Set<number>();
+    const existingIds = new Set<string>();
+    const existingServerIds = new Set<string>();
     for (const t of localList) {
-      existingIds.add(t.id);
-      if (t.server_id) existingServerIds.add(t.server_id);
+      existingIds.add(String(t.id));
+      if (t.server_id) existingServerIds.add(String(t.server_id));
     }
 
     for (const item of serverList) {
-      if (existingIds.has(item.id) || existingServerIds.has(item.id)) continue;
+      if (existingIds.has(String(item.id)) || existingServerIds.has(String(item.id))) continue;
       localList.unshift({
-        id: item.id,
-        server_id: item.id,
+        id: String(item.id),
+        server_id: String(item.id),
         book_id: item.book_id,
         type: item.type,
         amount: item.amount,
@@ -259,7 +259,7 @@ export async function pullFromServer(bookId: number): Promise<number> {
 }
 
 // 单次同步周期：先推后拉，syncing 锁防止并发
-export async function runSyncCycle(bookId: number, silent = true): Promise<{
+export async function runSyncCycle(bookId: string, silent = true): Promise<{
   pushed: number;
   pulled: number;
 }> {
@@ -276,12 +276,12 @@ export async function runSyncCycle(bookId: number, silent = true): Promise<{
   }
 }
 
-export async function fullSync(bookId: number): Promise<{ pushed: number; pulled: number }> {
+export async function fullSync(bookId: string): Promise<{ pushed: number; pulled: number }> {
   return runSyncCycle(bookId, false);
 }
 
 // 启动后台同步：定时轮询 + 网络恢复时触发
-export function scheduleSync(bookId: number) {
+export function scheduleSync(bookId: string) {
   stopSync();
 
   syncTimer = setInterval(() => {

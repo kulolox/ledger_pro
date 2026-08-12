@@ -130,7 +130,7 @@ import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
 
 interface AccountBook {
-  id: number;
+  id: string;
   name: string;
   coverIcon?: string;
 }
@@ -139,7 +139,7 @@ const props = defineProps<{
   visible: boolean;
   userInfo: UserInfo | null;
   books: AccountBook[];
-  currentBookId: number;
+  currentBookId: string;
 }>();
 
 const emit = defineEmits<{
@@ -147,7 +147,7 @@ const emit = defineEmits<{
   "update:books": [books: AccountBook[]];
   close: [];
   userClick: [];
-  switchBook: [bookId: number];
+  switchBook: [bookId: string];
 }>();
 
 const avatarText = computed(() => {
@@ -237,8 +237,10 @@ function onLogout() {
 
 const bookColors = ["#007aff", "#34c759", "#ff9500", "#ff3b30", "#af52de"];
 
-function getBookColor(id: number): string {
-  return bookColors[id % bookColors.length];
+function getBookColor(id: string): string {
+  let hash = 0;
+  for (const ch of id) hash += ch.charCodeAt(0);
+  return bookColors[hash % bookColors.length];
 }
 
 function getBookLetter(name: string): string {

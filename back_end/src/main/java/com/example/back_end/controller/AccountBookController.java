@@ -1,9 +1,9 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.common.Result;
 import com.example.back_end.dto.request.CreateAccountBookRequest;
 import com.example.back_end.dto.response.AccountBookResponse;
 import com.example.back_end.service.IAccountBookService;
-import com.example.back_end.utils.Result;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.*;

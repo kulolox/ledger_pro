@@ -1,9 +1,9 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.common.Result;
 import com.example.back_end.dto.request.UpdateUserRequest;
 import com.example.back_end.dto.response.UserInfoResponse;
 import com.example.back_end.service.IUserService;
-import com.example.back_end.utils.Result;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,9 +1,9 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.common.Result;
 import com.example.back_end.dto.response.StatisticsResponse;
 import com.example.back_end.dto.response.TrendResponse;
 import com.example.back_end.service.IStatisticsService;
-import com.example.back_end.utils.Result;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

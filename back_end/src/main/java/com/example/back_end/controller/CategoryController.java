@@ -1,9 +1,9 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.common.Result;
 import com.example.back_end.dto.request.CategoryRequest;
 import com.example.back_end.dto.response.CategoryResponse;
 import com.example.back_end.service.IUserCategoryService;
-import com.example.back_end.utils.Result;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;

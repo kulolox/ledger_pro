@@ -75,14 +75,14 @@ const { categories } = useCategories();
 
 const props = defineProps<{
   visible: boolean;
-  bookId: number;
+  bookId: string;
   editData?: {
-    id: number;
+    id: string;
     type: number;
     amount: number;
-    category_id?: number;
-    account_id?: number;
-    to_account_id?: number;
+    category_id?: string;
+    account_id?: string;
+    to_account_id?: string;
     remark?: string;
     trans_time?: string;
   } | null;
@@ -103,7 +103,7 @@ const currentType = ref(0);
 const inputBuffer = ref("");
 // 历史运算数数组
 const expressionParts = ref<string[]>([]);
-const selectedCategory = ref(1);
+const selectedCategory = ref("");
 const remark = ref("");
 const transTimestamp = ref(Date.now());
 const transDate = computed(() => timestampToDateStr(transTimestamp.value));
@@ -206,7 +206,7 @@ const onKeyLongPress = async (key: string) => {
 const onTypeChange = (type: number) => {
   currentType.value = type;
   const cats = categories.value[type];
-  selectedCategory.value = cats.length > 0 ? cats[0].id : 0;
+  selectedCategory.value = cats.length > 0 ? cats[0].id : "";
 };
 
 const resetInput = () => {
@@ -215,7 +215,7 @@ const resetInput = () => {
   remark.value = "";
 };
 
-const editId = ref<number | null>(null);
+const editId = ref<string | null>(null);
 
 const handleSave = (keepOpen: boolean) => {
   const amount = evalExpression();
@@ -231,7 +231,7 @@ const handleSave = (keepOpen: boolean) => {
   const ss = String(now.getSeconds()).padStart(2, "0");
   const transTime = transDate.value + `T${hh}:${mm}:${ss}`;
 
-  const accountId = 1;
+  const accountId = "1";
 
   if (editId.value != null) {
     update(editId.value, {
@@ -280,7 +280,7 @@ watch(
         selectedCategory.value =
           props.editData.category_id ||
           categories.value[props.editData.type]?.[0]?.id ||
-          0;
+          "";
         if (props.editData.amount > 0) {
           inputBuffer.value = String(props.editData.amount / 100);
         }
@@ -291,7 +291,7 @@ watch(
       } else {
         editId.value = null;
         currentType.value = 0;
-        selectedCategory.value = categories.value[0]?.[0]?.id || 1;
+        selectedCategory.value = categories.value[0]?.[0]?.id || "";
         transTimestamp.value = Date.now();
       }
     }

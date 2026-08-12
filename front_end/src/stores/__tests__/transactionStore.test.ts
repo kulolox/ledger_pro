@@ -15,11 +15,11 @@ beforeEach(() => {
 
 function makeTx(overrides: Record<string, any> = {}) {
   return {
-    book_id: 12345,
+    book_id: "12345",
     type: 0,
     amount: 2500,
-    account_id: 1,
-    category_id: 1,
+    account_id: "1",
+    category_id: "1",
     trans_time: "2026-06-17T12:00:00",
     ...overrides,
   };
@@ -42,7 +42,7 @@ describe("transactionStore", () => {
 
     it("assigns negative local id", () => {
       const tx = store.addTransaction(makeTx());
-      expect(tx.id).toBeLessThan(0);
+      expect(Number(tx.id)).toBeLessThan(0);
     });
 
     it("unshifts to transactions array", () => {
@@ -70,14 +70,14 @@ describe("transactionStore", () => {
 
     it("resets sync_status to pending if was synced", () => {
       const tx = store.addTransaction(makeTx());
-      store.markSynced(tx.id, 999);
+      store.markSynced(tx.id, "999");
       store.updateTransaction(tx.id, { amount: 3000 });
       const updated = store.useTransactions().transactions.value.find((t) => t.id === tx.id);
       expect(updated?.sync_status).toBe("pending");
     });
 
     it("no-ops for non-existent id", () => {
-      expect(() => store.updateTransaction(99999, { amount: 1 })).not.toThrow();
+      expect(() => store.updateTransaction("99999", { amount: 1 })).not.toThrow();
     });
   });
 
@@ -91,7 +91,7 @@ describe("transactionStore", () => {
 
     it("soft deletes synced transaction (sets deleted=1)", () => {
       const tx = store.addTransaction(makeTx());
-      store.markSynced(tx.id, 999);
+      store.markSynced(tx.id, "999");
       store.deleteTransaction(tx.id);
       const found = store.useTransactions().transactions.value.find((t) => t.id === tx.id);
       expect(found?.deleted).toBe(1);
@@ -102,10 +102,10 @@ describe("transactionStore", () => {
   describe("markSynced", () => {
     it("sets sync_status to synced and assigns server_id", () => {
       const tx = store.addTransaction(makeTx());
-      store.markSynced(tx.id, 888);
+      store.markSynced(tx.id, "888");
       const found = store.useTransactions().transactions.value.find((t) => t.id === tx.id);
       expect(found?.sync_status).toBe("synced");
-      expect(found?.server_id).toBe(888);
+      expect(found?.server_id).toBe("888");
     });
   });
 
@@ -137,7 +137,7 @@ describe("transactionStore", () => {
     it("returns only pending non-deleted transactions", () => {
       const tx1 = store.addTransaction(makeTx({ amount: 100 }));
       const tx2 = store.addTransaction(makeTx({ amount: 200 }));
-      store.markSynced(tx2.id, 10);
+      store.markSynced(tx2.id, "10");
       const pending = store.getPendingTransactions();
       expect(pending.length).toBe(1);
       expect(pending[0].id).toBe(tx1.id);
@@ -147,7 +147,7 @@ describe("transactionStore", () => {
   describe("getPendingDeletes", () => {
     it("returns soft-deleted synced transactions", () => {
       const tx = store.addTransaction(makeTx());
-      store.markSynced(tx.id, 999);
+      store.markSynced(tx.id, "999");
       store.deleteTransaction(tx.id);
       const deletes = store.getPendingDeletes();
       expect(deletes.length).toBe(1);

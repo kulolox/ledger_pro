@@ -220,7 +220,7 @@ let sortableInstance: Sortable | null = null;
 
 const editorVisible = ref(false);
 const isEdit = ref(false);
-const editingId = ref<number>(0);
+const editingId = ref<string>("");
 const form = ref({ name: "", icon: "", color: "" });
 const dialog = useDialog("category-delete");
 watch(sortMode, async (val) => {
@@ -267,7 +267,7 @@ function goBack() {
 
 function onAdd() {
   isEdit.value = false;
-  editingId.value = 0;
+  editingId.value = "";
   form.value = { name: "", icon: "", color: "" };
   editorVisible.value = true;
 }

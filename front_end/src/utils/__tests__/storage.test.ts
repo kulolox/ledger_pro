@@ -75,13 +75,13 @@ describe("storage", () => {
   });
 
   describe("currentBookId", () => {
-    it("getCurrentBookId returns undefined when not set", () => {
-      expect(storage.getCurrentBookId()).toBeUndefined();
+    it("getCurrentBookId returns empty string when not set", () => {
+      expect(storage.getCurrentBookId()).toBe("");
     });
 
     it("setCurrentBookId and getCurrentBookId roundtrip", () => {
-      storage.setCurrentBookId(42);
-      expect(storage.getCurrentBookId()).toBe(42);
+      storage.setCurrentBookId("42");
+      expect(storage.getCurrentBookId()).toBe("42");
     });
   });
 
@@ -101,7 +101,7 @@ describe("storage", () => {
       storage.setToken("t1");
       storage.setRefreshToken("r1");
       storage.setUserInfo({ id: 1 });
-      storage.setCurrentBookId(99);
+      storage.setCurrentBookId("99");
       (uni.setStorageSync as any)("local_transactions", [{ id: 1 }]);
       (uni.setStorageSync as any)("category_cache", { "0": [] });
       (uni.setStorageSync as any)("category_etag", "etag1");
@@ -112,7 +112,7 @@ describe("storage", () => {
       expect(storage.getToken()).toBe("");
       expect(storage.getRefreshToken()).toBe("");
       expect(storage.getUserInfo()).toBeNull();
-      expect(storage.getCurrentBookId()).toBeUndefined();
+      expect(storage.getCurrentBookId()).toBe("");
     });
   });
 });

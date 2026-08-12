@@ -1,11 +1,11 @@
 package com.example.back_end.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.CategoryRequest;
 import com.example.back_end.dto.response.CategoryResponse;
 import com.example.back_end.entity.Category;
 import com.example.back_end.entity.UserCategory;
-import com.example.back_end.exception.BizException;
 import com.example.back_end.mapper.CategoryMapper;
 import com.example.back_end.mapper.UserCategoryMapper;
 import com.example.back_end.service.IUserCategoryService;
@@ -91,7 +91,6 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         }
         if (req.visible() != null) uc.setVisible(req.visible());
         if (req.sort_order() != null) uc.setSortOrder(req.sort_order());
-        uc.setUpdatedAt(LocalDateTime.now());
         updateById(uc);
         log.info("更新分类 userId={} categoryId={}", userId, id);
         return CategoryResponse.from(uc);
@@ -142,6 +141,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         saveBatch(list);
     }
 
+    // 获取分类排序下一个序号
     private int nextSortOrder(Long userId, Integer type) {
         UserCategory last = lambdaQuery()
                 .eq(UserCategory::getUserId, userId)

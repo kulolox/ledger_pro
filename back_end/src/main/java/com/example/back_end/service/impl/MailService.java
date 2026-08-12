@@ -1,6 +1,6 @@
 package com.example.back_end.service.impl;
 
-import com.example.back_end.exception.BizException;
+import com.example.back_end.common.BizException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;

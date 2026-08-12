@@ -1,12 +1,12 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.common.Result;
 import com.example.back_end.dto.request.BatchCreateRequest;
 import com.example.back_end.dto.request.BatchDeleteRequest;
 import com.example.back_end.dto.request.TransactionRequest;
 import com.example.back_end.dto.response.TransactionListResponse;
 import com.example.back_end.dto.response.TransactionResponse;
 import com.example.back_end.service.ITransactionService;
-import com.example.back_end.utils.Result;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.Map;

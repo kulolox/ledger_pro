@@ -146,48 +146,48 @@ export function useCategories() {
     type: number;
     icon: string;
     color: string;
-    parent_id?: number;
+    parent_id?: string;
   }) => {
     await createCategory(data);
     await refreshCategories();
   };
 
   const editCategory = async (
-    id: number,
+    id: string,
     data: { name?: string; icon?: string; color?: string; sort_order?: number; visible?: number },
   ) => {
     await updateCategory(id, data);
     await refreshCategories();
   };
 
-  const removeCategory = async (id: number) => {
+  const removeCategory = async (id: string) => {
     await deleteCategory(id);
     await refreshCategories();
   };
 
-  const reorder = async (ids: number[]) => {
+  const reorder = async (ids: string[]) => {
     await reorderCategories({ ids });
     await refreshCategories();
   };
 
-  const toggleVisible = async (id: number, visible: number) => {
+  const toggleVisible = async (id: string, visible: number) => {
     await updateCategory(id, { visible });
     await refreshCategories();
   };
 
-  const getCategoryName = (type: number, categoryId?: number): string => {
+  const getCategoryName = (type: number, categoryId?: string): string => {
     if (categoryId == null) return type === 0 ? "支出" : "收入";
     const cats = categories.value[type] || [];
     return cats.find((c) => c.id === categoryId)?.name || "其他";
   };
 
-  const getCategoryColor = (type: number, categoryId?: number): string => {
+  const getCategoryColor = (type: number, categoryId?: string): string => {
     if (categoryId == null) return "#607d8b";
     const cats = categories.value[type] || [];
     return cats.find((c) => c.id === categoryId)?.color || "#607d8b";
   };
 
-  const getCategoryIcon = (type: number, categoryId?: number): string => {
+  const getCategoryIcon = (type: number, categoryId?: string): string => {
     if (categoryId == null) return "?";
     const cats = categories.value[type] || [];
     return cats.find((c) => c.id === categoryId)?.icon || "?";

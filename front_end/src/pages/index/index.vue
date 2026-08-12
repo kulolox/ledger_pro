@@ -330,7 +330,7 @@ function onEditorSaved() {
 }
 
 // 切换当前账本
-function onSwitchBook(bookId: number) {
+function onSwitchBook(bookId: string) {
   currentBookId.value = bookId;
   setCurrentBookId(bookId);
   showSidebar.value = false;

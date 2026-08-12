@@ -22,9 +22,9 @@
 
 <script setup lang="ts">
 defineProps<{
-  modelValue: number;
+  modelValue: string;
   categories: Array<{
-    id: number;
+    id: string;
     name: string;
     icon?: string;
     color?: string;
@@ -32,7 +32,7 @@ defineProps<{
 }>();
 
 defineEmits<{
-  "update:modelValue": [id: number];
+  "update:modelValue": [id: string];
 }>();
 </script>
 

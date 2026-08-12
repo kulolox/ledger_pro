@@ -131,7 +131,7 @@ const totalIncome = computed(() => statsData.value?.total_income ?? 0);
 const balance = computed(() => totalIncome.value - totalExpense.value);
 
 interface CatItem {
-  category_id: number;
+  category_id: string;
   name: string;
   amount: number;
   count: number;
@@ -140,7 +140,7 @@ interface CatItem {
 }
 
 function buildCategories(
-  rawList: Array<{ category_id: number; amount: number; count: number }>,
+  rawList: Array<{ category_id: string; amount: number; count: number }>,
   type: number,
 ): CatItem[] {
   const total = rawList.reduce((s, c) => s + c.amount, 0);
@@ -245,18 +245,18 @@ async function fetchStats() {
   }
 }
 
-function calcLocalStats(bookId: number) {
+function calcLocalStats(bookId: string) {
   const prefix = `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
-  const map = new Map<number, { amount: number; count: number }>();
+  const map = new Map<string, { amount: number; count: number }>();
   let expense = 0;
   let income = 0;
   const expenseList: Array<{
-    category_id: number;
+    category_id: string;
     amount: number;
     count: number;
   }> = [];
   const incomeList: Array<{
-    category_id: number;
+    category_id: string;
     amount: number;
     count: number;
   }> = [];
@@ -267,19 +267,20 @@ function calcLocalStats(bookId: number) {
     if (tx.book_id !== bookId) continue;
     if (tx.deleted) continue;
 
-    const cid = tx.category_id ?? 0;
+    const cid = tx.category_id ?? "0";
     if (tx.type === 0) {
       expense += tx.amount;
-      const existing = map.get(cid);
+      const key = "e:" + cid;
+      const existing = map.get(key);
       if (existing) {
         existing.amount += tx.amount;
         existing.count++;
       } else {
-        map.set(cid, { amount: tx.amount, count: 1 });
+        map.set(key, { amount: tx.amount, count: 1 });
       }
     } else if (tx.type === 1) {
       income += tx.amount;
-      const key = cid + 10000;
+      const key = "i:" + cid;
       const existing = map.get(key);
       if (existing) {
         existing.amount += tx.amount;
@@ -291,15 +292,15 @@ function calcLocalStats(bookId: number) {
   }
 
   for (const [key, val] of map) {
-    if (key >= 10000) {
+    if (key.startsWith("i:")) {
       incomeList.push({
-        category_id: key - 10000,
+        category_id: key.slice(2),
         amount: val.amount,
         count: val.count,
       });
     } else {
       expenseList.push({
-        category_id: key,
+        category_id: key.slice(2),
         amount: val.amount,
         count: val.count,
       });
