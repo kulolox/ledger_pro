@@ -2,6 +2,7 @@
   <view class="auth-page">
     <view class="auth-card">
       <view class="auth-header">
+        <AppLogo :size="120" />
         <text class="auth-title">注册账号</text>
         <text class="auth-desc">创建您的 LedgerPro 账号</text>
       </view>
@@ -66,6 +67,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue";
+import AppLogo from "@/components/AppLogo.vue";
 import { register } from "@/api/common";
 import { setToken, setRefreshToken, setUserInfo } from "@/utils/storage";
 
@@ -129,6 +131,7 @@ const goLogin = () => {
   justify-content: center;
   background: var(--bg-primary);
   padding: 48rpx;
+  box-sizing: border-box;
 }
 
 .auth-card {
@@ -137,7 +140,9 @@ const goLogin = () => {
 }
 
 .auth-header {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 56rpx;
 
   .auth-title {

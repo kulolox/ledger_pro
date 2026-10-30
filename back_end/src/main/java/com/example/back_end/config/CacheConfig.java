@@ -36,7 +36,7 @@ public class CacheConfig {
                 .build();
     }
 
-    @Bean
+    @Bean 
     @ConditionalOnExpression("'${REDIS_HOST:}'.isEmpty()")
     public CacheManager inMemoryCacheManager() {
         // 无 Redis：进程内内存缓存（@Cacheable 强依赖 CacheManager，无它应用起不来）

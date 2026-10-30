@@ -2,6 +2,7 @@
   <view class="auth-page">
     <view class="auth-card">
       <view class="auth-header">
+        <AppLogo :size="120" />
         <text class="auth-title">找回密码</text>
         <text class="auth-desc">通过邮箱验证码重置密码</text>
       </view>
@@ -67,6 +68,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, onUnmounted } from "vue";
+import AppLogo from "@/components/AppLogo.vue";
 import { sendResetCode, resetPassword } from "@/api/common";
 
 const formData = reactive({
@@ -135,9 +137,10 @@ const handleReset = async () => {
       new_password: formData.new_password,
     });
     uni.showToast({ title: "密码重置成功", icon: "success" });
+    // 延时500
     setTimeout(() => {
       uni.navigateBack();
-    }, 800);
+    }, 500);
   } catch (_e) {
     uni.showToast({ title: "重置失败，请检查验证码是否正确", icon: "error" });
   } finally {
@@ -158,6 +161,7 @@ const goLogin = () => {
   justify-content: center;
   background: var(--bg-primary);
   padding: 48rpx;
+  box-sizing: border-box;
 }
 
 .auth-card {
@@ -166,7 +170,9 @@ const goLogin = () => {
 }
 
 .auth-header {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 56rpx;
 
   .auth-title {

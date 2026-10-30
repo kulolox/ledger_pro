@@ -4,7 +4,9 @@ let cachedPublicKey: string | null = null;
 
 async function fetchPublicKey(): Promise<string> {
   if (cachedPublicKey) return cachedPublicKey;
-  const res = await request.get<{ publicKey: string }>("/api/v1/auth/public-key");
+  const res = await request.get<{ publicKey: string }>(
+    "/api/v1/auth/public-key",
+  );
   cachedPublicKey = res.publicKey;
   return cachedPublicKey;
 }
@@ -36,6 +38,7 @@ async function importPublicKey(base64: string): Promise<CryptoKey> {
   );
 }
 
+// 获取加密凭证并加密登录密码，登录密码密文传递
 export async function encryptPassword(plaintext: string): Promise<string> {
   const publicKeyBase64 = await fetchPublicKey();
   const publicKey = await importPublicKey(publicKeyBase64);

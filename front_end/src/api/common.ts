@@ -5,32 +5,43 @@ import { encryptPassword } from "@/utils/crypto";
 
 export const login = async (data: { email: string; password: string }) => {
   const encryptedPassword = await encryptPassword(data.password);
-  return request.post<{ token: string; refreshToken: string; userInfo: UserInfo }>(
-    "/api/v1/auth/login",
-    {
-      email: data.email,
-      password: encryptedPassword,
-    },
-  );
+  return request.post<{
+    token: string;
+    refreshToken: string;
+    userInfo: UserInfo;
+  }>("/api/v1/auth/login", {
+    email: data.email,
+    password: encryptedPassword,
+  });
 };
 
-export const register = async (data: { email: string; password: string; nickname: string }) => {
+export const register = async (data: {
+  email: string;
+  password: string;
+  nickname: string;
+}) => {
   const encryptedPassword = await encryptPassword(data.password);
-  return request.post<{ token: string; refreshToken: string; userInfo: UserInfo }>(
-    "/api/v1/auth/register",
-    {
-      email: data.email,
-      password: encryptedPassword,
-      nickname: data.nickname,
-    },
-  );
+  console.log("encryptedPassword", encryptedPassword);
+  return request.post<{
+    token: string;
+    refreshToken: string;
+    userInfo: UserInfo;
+  }>("/api/v1/auth/register", {
+    email: data.email,
+    password: encryptedPassword,
+    nickname: data.nickname,
+  });
 };
 
 export const sendResetCode = (data: { email: string }) => {
   return request.post("/api/v1/auth/send-reset-code", data);
 };
 
-export const resetPassword = async (data: { email: string; code: string; new_password: string }) => {
+export const resetPassword = async (data: {
+  email: string;
+  code: string;
+  new_password: string;
+}) => {
   const encryptedPassword = await encryptPassword(data.new_password);
   return request.post("/api/v1/auth/reset-password", {
     email: data.email,
@@ -40,10 +51,11 @@ export const resetPassword = async (data: { email: string; code: string; new_pas
 };
 
 export const refreshToken = (data: { refresh_token: string }) => {
-  return request.post<{ token: string; refreshToken: string; userInfo: UserInfo }>(
-    "/api/v1/auth/refresh",
-    data,
-  );
+  return request.post<{
+    token: string;
+    refreshToken: string;
+    userInfo: UserInfo;
+  }>("/api/v1/auth/refresh", data);
 };
 
 export const logoutApi = (data: { refresh_token: string }) => {
@@ -56,7 +68,11 @@ export const getAccountBooks = () => {
   return request.get<AccountBook[]>("/api/v1/account-books");
 };
 
-export const createAccountBook = (data: { name: string; coverIcon?: string; type?: number }) => {
+export const createAccountBook = (data: {
+  name: string;
+  coverIcon?: string;
+  type?: number;
+}) => {
   return request.post<AccountBook>("/api/v1/account-books", data);
 };
 
@@ -79,8 +95,16 @@ export const updateUserInfo = (data: Partial<UserInfo>) => {
 
 // ========== 记账相关 ==========
 
-export const getTransactions = (params: { book_id: string; month: string; page?: number; size?: number }) => {
-  return request.get<{ list: Transaction[]; total: number; page: number }>("/api/v1/transactions", params);
+export const getTransactions = (params: {
+  book_id: string;
+  month: string;
+  page?: number;
+  size?: number;
+}) => {
+  return request.get<{ list: Transaction[]; total: number; page: number }>(
+    "/api/v1/transactions",
+    params,
+  );
 };
 
 export const createTransaction = (data: {
@@ -96,16 +120,19 @@ export const createTransaction = (data: {
   return request.post<Transaction>("/api/v1/transactions", data);
 };
 
-export const updateTransaction = (id: string, data: {
-  book_id: string;
-  type: number;
-  amount: number;
-  account_id: string;
-  to_account_id?: string;
-  category_id?: string;
-  remark?: string;
-  trans_time: string;
-}) => {
+export const updateTransaction = (
+  id: string,
+  data: {
+    book_id: string;
+    type: number;
+    amount: number;
+    account_id: string;
+    to_account_id?: string;
+    category_id?: string;
+    remark?: string;
+    trans_time: string;
+  },
+) => {
   return request.put<Transaction>(`/api/v1/transactions/${id}`, data);
 };
 
@@ -127,7 +154,13 @@ export const createCategory = (data: {
 
 export const updateCategory = (
   id: string,
-  data: { name?: string; icon?: string; color?: string; sort_order?: number; visible?: number },
+  data: {
+    name?: string;
+    icon?: string;
+    color?: string;
+    sort_order?: number;
+    visible?: number;
+  },
 ) => {
   return request.put<Category>(`/api/v1/categories/${id}`, data);
 };
@@ -208,16 +241,31 @@ export interface SearchParams {
 }
 
 export const searchTransactions = (params: SearchParams) => {
-  return request.get<{ list: Transaction[]; total: number; page: number }>("/api/v1/transactions/search", params);
+  return request.get<{ list: Transaction[]; total: number; page: number }>(
+    "/api/v1/transactions/search",
+    params,
+  );
 };
 
 // ========== 导入导出相关 ==========
 
-export const exportTransactions = (params: { book_id: string; month?: string; year?: string; format: string }) => {
-  return request.download("/api/v1/transactions/export", params as Record<string, any>);
+export const exportTransactions = (params: {
+  book_id: string;
+  month?: string;
+  year?: string;
+  format: string;
+}) => {
+  return request.download(
+    "/api/v1/transactions/export",
+    params as Record<string, any>,
+  );
 };
 
-export const importTransactions = (bookId: string, filePath: string, format: string) => {
+export const importTransactions = (
+  bookId: string,
+  filePath: string,
+  format: string,
+) => {
   return request.upload<{ imported: number; errors: string[]; total: number }>(
     "/api/v1/transactions/import",
     filePath,
@@ -234,14 +282,28 @@ export const downloadTemplate = (format: string) => {
 export interface MonthlyStats {
   total_expense: number;
   total_income: number;
-  expense_by_category: Array<{ category_id: string; amount: number; count: number }>;
-  income_by_category: Array<{ category_id: string; amount: number; count: number }>;
+  expense_by_category: Array<{
+    category_id: string;
+    amount: number;
+    count: number;
+  }>;
+  income_by_category: Array<{
+    category_id: string;
+    amount: number;
+    count: number;
+  }>;
 }
 
-export const getMonthlyStatistics = (params: { book_id: string; month: string }) => {
+export const getMonthlyStatistics = (params: {
+  book_id: string;
+  month: string;
+}) => {
   return request.get<MonthlyStats>("/api/v1/statistics/monthly", params);
 };
 
 export const getTrend = (params: { book_id: string; months?: number }) => {
-  return request.get<{ months: string[]; expense: number[]; income: number[] }>("/api/v1/statistics/trend", params);
+  return request.get<{ months: string[]; expense: number[]; income: number[] }>(
+    "/api/v1/statistics/trend",
+    params,
+  );
 };

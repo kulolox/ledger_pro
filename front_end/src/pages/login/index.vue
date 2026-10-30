@@ -43,7 +43,6 @@
         <text class="link" @click="goRegister">注册账号</text>
         <text class="link" @click="goForgotPassword">忘记密码？</text>
       </view>
-
     </view>
   </view>
 </template>
@@ -60,7 +59,10 @@ const formData = reactive({
 });
 
 const loading = ref(false);
+
+// 登录
 const handleLogin = async () => {
+  // 表单校验
   if (!formData.email) {
     uni.showToast({ title: "请输入邮箱", icon: "none" });
     return;
@@ -97,7 +99,6 @@ const goRegister = () => {
 const goForgotPassword = () => {
   uni.navigateTo({ url: "/pages/forgot-password/index" });
 };
-
 </script>
 
 <style lang="scss" scoped>
