@@ -70,6 +70,9 @@ test.describe("Home - Transactions", () => {
     await homePage.clickStats();
 
     await expect(authenticatedPage.locator(".stats-page")).toBeVisible();
+    await expect(authenticatedPage.locator(".month-capsule")).toBeVisible();
+    await expect(authenticatedPage.locator(".stats-tabs")).toBeVisible();
+    await expect(authenticatedPage.locator(".stats-card")).toBeVisible();
   });
 
   test("create expense transaction", async ({ authenticatedPage }) => {

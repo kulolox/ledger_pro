@@ -32,6 +32,12 @@ public class TransactionController {
         return Result.ok("修改成功", transactionService.update(id, req));
     }
 
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@PathVariable Long id) {
+        transactionService.delete(id);
+        return Result.ok("删除成功", null);
+    }
+
     @PostMapping("/batch")
     public Result<Map<String, Object>> createBatch(@Valid @RequestBody BatchCreateRequest req) {
         return Result.ok("批量记账成功", transactionService.createBatch(req));

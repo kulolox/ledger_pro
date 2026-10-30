@@ -12,6 +12,17 @@ export function formatNumber(val: number): string {
   });
 }
 
+export function yuanToCents(yuan: number | string): number {
+  const num = typeof yuan === "string" ? parseFloat(yuan) : yuan;
+  if (isNaN(num)) return 0;
+  return Math.round(num * 100);
+}
+
+export function centsToYuan(cents: number): number {
+  if (isNaN(cents)) return 0;
+  return Math.round(cents) / 100;
+}
+
 export function getTodayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

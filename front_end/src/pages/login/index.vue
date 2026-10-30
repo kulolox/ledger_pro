@@ -108,20 +108,27 @@ const goForgotPassword = () => {
   align-items: center;
   justify-content: center;
   background: var(--bg-primary);
-  padding: 48rpx;
+  padding: 48rpx 32rpx;
+  box-sizing: border-box;
 }
 
 .login-card {
   width: 100%;
-  max-width: 600rpx;
+  max-width: 680rpx;
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 64rpx 48rpx;
+  box-shadow: var(--shadow-md);
+  box-sizing: border-box;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 72rpx;
+  margin-bottom: 60rpx;
 
   :deep(.app-logo) {
-    margin: 0 auto 32rpx;
+    margin: 0 auto 28rpx;
   }
 
   .app-name {
@@ -129,14 +136,15 @@ const goForgotPassword = () => {
     font-size: 44rpx;
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: 2rpx;
+    letter-spacing: -0.5rpx;
   }
 
   .app-slogan {
     display: block;
-    font-size: 28rpx;
+    font-size: 26rpx;
     color: var(--text-muted);
-    margin-top: 14rpx;
+    margin-top: 10rpx;
+    letter-spacing: 0.5rpx;
   }
 }
 
@@ -149,13 +157,13 @@ const goForgotPassword = () => {
       font-size: 26rpx;
       color: var(--text-label);
       font-weight: 500;
-      margin-bottom: 14rpx;
+      margin-bottom: 12rpx;
     }
   }
 
   :deep(.form-input) {
-    --wd-input-bg: var(--bg-secondary);
-    --wd-input-border: var(--border-primary);
+    --wd-input-bg: var(--bg-primary);
+    --wd-input-border: var(--border-subtle);
     --wd-input-color: var(--text-primary);
     --wd-input-placeholder: var(--text-placeholder);
     --wd-input-radius: var(--radius-md);
@@ -179,12 +187,18 @@ const goForgotPassword = () => {
 }
 
 .login-btn {
-  margin-top: 28rpx;
+  margin-top: 36rpx;
   height: var(--input-height);
   border-radius: var(--radius-md);
   font-size: 32rpx;
   font-weight: 600;
+  letter-spacing: 1rpx;
   box-shadow: var(--shadow-primary-md);
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.98);
+  }
 
   --wot-button-radius-main: var(--radius-md);
 }
@@ -193,12 +207,17 @@ const goForgotPassword = () => {
   display: flex;
   justify-content: space-between;
   margin-top: 36rpx;
-  padding: 0 8rpx;
+  padding: 0 4rpx;
 
   .link {
     font-size: 26rpx;
     color: var(--color-primary);
     font-weight: 500;
+    transition: opacity 0.15s;
+
+    &:active {
+      opacity: 0.7;
+    }
   }
 }
 

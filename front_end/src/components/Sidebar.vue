@@ -2,6 +2,7 @@
   <wd-popup
     :model-value="visible"
     position="left"
+    :z-index="500"
     @update:model-value="$emit('update:visible', $event)"
     @close="$emit('close')"
   >
@@ -112,9 +113,40 @@
           <wd-icon name="sync" size="28rpx" color="var(--text-secondary)" />
           <text class="action-label">同步数据</text>
         </view>
-        <view class="action-item logout-item" @click="onLogout">
-          <wd-icon name="poweroff" size="28rpx" color="var(--color-expense)" />
-          <text class="action-label">退出登录</text>
+      </view>
+
+      <view class="sidebar-divider" />
+
+      <view class="theme-section">
+        <view class="section-header">
+          <text class="section-title">界面外观</text>
+        </view>
+        <view class="theme-segmented">
+          <view
+            class="segmented-item"
+            :class="{ active: themeMode === 'light' }"
+            @click="setTheme('light')"
+          >
+            <text class="segmented-icon">☀️</text>
+            <text class="segmented-label">浅色</text>
+          </view>
+          <view
+            class="segmented-item"
+            :class="{ active: themeMode === 'dark' }"
+            @click="setTheme('dark')"
+          >
+            <text class="segmented-icon">🌙</text>
+            <text class="segmented-label">深色</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="sidebar-divider" />
+
+      <view class="logout-section">
+        <view class="logout-btn logout-item" @click="onLogout">
+          <wd-icon name="poweroff" size="30rpx" color="var(--color-expense)" />
+          <text class="logout-label">退出登录</text>
         </view>
       </view>
     </view>
@@ -128,12 +160,15 @@ import { getRefreshToken, logout } from "@/utils/storage";
 import { fullSync, stopSync } from "@/utils/sync";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
+import { useTheme } from "@/stores/themeStore";
 
 interface AccountBook {
   id: string;
   name: string;
   coverIcon?: string;
 }
+
+const { themeMode, setTheme } = useTheme();
 
 const props = defineProps<{
   visible: boolean;
@@ -452,8 +487,51 @@ function getBookLetter(name: string): string {
   }
 }
 
+.theme-section {
+  padding: 24rpx 36rpx;
+}
+
+.theme-segmented {
+  display: flex;
+  background: var(--bg-primary);
+  padding: 6rpx;
+  border-radius: var(--radius-md);
+  border: 1rpx solid var(--border-subtle);
+  margin-top: 10rpx;
+}
+
+.segmented-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  height: 64rpx;
+  border-radius: calc(var(--radius-md) - 4rpx);
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  transition: all 0.18s var(--spring-default);
+  cursor: pointer;
+
+  &.active {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  .segmented-icon {
+    font-size: 28rpx;
+  }
+}
+
 .sidebar-actions {
-  padding: 20rpx 0 calc(var(--safe-area-bottom, 0px) + 20rpx);
+  padding: 12rpx 0;
 }
 
 .action-item {
@@ -474,9 +552,32 @@ function getBookLetter(name: string): string {
   }
 }
 
-.logout-item {
-  .action-label {
+.logout-section {
+  padding: 20rpx 28rpx calc(var(--safe-area-bottom, 0px) + 24rpx);
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14rpx;
+  height: 84rpx;
+  background: var(--color-expense-bg);
+  border: 1rpx solid rgba(255, 59, 48, 0.2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring-default), opacity 0.15s;
+
+  &:active {
+    transform: scale(0.97);
+    opacity: 0.8;
+  }
+
+  .logout-label {
+    font-size: 28rpx;
+    font-weight: 600;
     color: var(--color-expense);
+    letter-spacing: 0.5rpx;
   }
 }
 </style>

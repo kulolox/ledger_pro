@@ -39,30 +39,37 @@ defineEmits<{
 <style lang="scss" scoped>
 .category-slider {
   width: 100%;
+  white-space: nowrap;
 }
 
 .category-track {
   display: flex;
-  gap: 4rpx;
-  padding: 12rpx 24rpx;
+  gap: 8rpx;
+  padding: 12rpx 20rpx;
 }
 
 .category-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
-  padding: 14rpx 20rpx;
+  gap: 10rpx;
+  padding: 12rpx 16rpx;
   border-radius: var(--radius-md);
-  transition: all 0.2s var(--spring-default);
+  transition: background-color 0.18s var(--spring-default), transform 0.18s var(--spring-default);
   flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+
+  &:active {
+    transform: scale(0.94);
+  }
 
   &.active {
     background: var(--bg-active);
 
     .cat-icon {
-      transform: scale(1.12);
-      box-shadow: var(--shadow-primary-sm);
+      transform: scale(1.06);
+      box-shadow: 0 4rpx 12rpx rgba(0, 122, 255, 0.25);
     }
 
     .cat-name {
@@ -73,23 +80,24 @@ defineEmits<{
 }
 
 .cat-icon {
-  width: 68rpx;
-  height: 68rpx;
-  border-radius: 16rpx;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s var(--spring-bounce), box-shadow 0.2s var(--spring-default);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--spring-default), box-shadow 0.18s var(--spring-default);
 
   text {
-    font-size: 30rpx;
-    color: var(--text-inverse);
+    font-size: 32rpx;
+    color: #ffffff;
     font-weight: 600;
   }
 }
 
 .cat-name {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: var(--text-secondary);
   white-space: nowrap;
   font-weight: 500;

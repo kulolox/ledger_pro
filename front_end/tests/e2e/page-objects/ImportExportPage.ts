@@ -25,8 +25,8 @@ export class ImportExportPage {
   constructor(page: Page) {
     this.page = page;
     this.backBtn = page.locator(".back-btn");
-    this.exportTab = page.locator(".tab").first();
-    this.importTab = page.locator(".tab").nth(1);
+    this.exportTab = page.locator(".wd-tabs__nav-item, .tab").first();
+    this.importTab = page.locator(".wd-tabs__nav-item, .tab").nth(1);
     this.exportBtn = page.locator(".export-btn");
     this.importBtn = page.locator(".import-btn");
     this.formatChips = page.locator(".format-chip");

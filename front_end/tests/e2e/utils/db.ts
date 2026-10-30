@@ -19,33 +19,50 @@ export interface TestUserRow {
 export async function createTestUser(): Promise<TestUserRow> {
   const conn = await mysql.createConnection(DB_CONFIG);
   try {
+    // 幂等清理可能残留的同邮箱测试用户
+    const [existing] = await conn.execute("SELECT id FROM `user` WHERE email = ?", [TEST_USER.email]);
+    for (const u of existing as any[]) {
+      const [books] = await conn.execute("SELECT id FROM `account_book` WHERE owner_id = ?", [u.id]);
+      for (const b of books as any[]) {
+        await conn.execute("DELETE FROM `account` WHERE book_id = ?", [b.id]);
+        await conn.execute("DELETE FROM `transaction` WHERE book_id = ?", [b.id]);
+      }
+      await conn.execute("DELETE FROM `account_book` WHERE owner_id = ?", [u.id]);
+      await conn.execute("DELETE FROM `user_category` WHERE user_id = ?", [u.id]);
+      await conn.execute("DELETE FROM `user` WHERE id = ?", [u.id]);
+    }
+
+    const baseId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+    const userId = baseId;
+    const bookId = baseId + 1;
+    const accountId = baseId + 2;
+
     const hash = await bcrypt.hash(TEST_USER.password, 10);
 
-    const [userResult] = await conn.execute(
-      "INSERT INTO `user` (nickname, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-      [TEST_USER.nickname, TEST_USER.email, hash],
+    await conn.execute(
+      "INSERT INTO `user` (id, nickname, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())",
+      [userId, TEST_USER.nickname, TEST_USER.email, hash],
     );
-    const userId = (userResult as any).insertId;
 
-    const bookId = Date.now();
     await conn.execute(
       "INSERT INTO `account_book` (id, name, owner_id, type, created_at, updated_at) VALUES (?, ?, ?, 0, NOW(), NOW())",
       [bookId, TEST_BOOK_NAME, userId],
     );
 
-    const [accountResult] = await conn.execute(
-      "INSERT INTO `account` (book_id, name, type, icon, created_at, updated_at) VALUES (?, '现金', 0, '💵', NOW(), NOW())",
-      [bookId],
+    await conn.execute(
+      "INSERT INTO `account` (id, book_id, name, type, icon, created_at, updated_at) VALUES (?, ?, '现金', 0, '💵', NOW(), NOW())",
+      [accountId, bookId],
     );
-    const accountId = (accountResult as any).insertId;
 
+    let catId = baseId + 10;
     const [categories] = await conn.execute("SELECT id FROM `category`");
     for (const row of categories as any[]) {
+      catId++;
       await conn.execute(
-        `INSERT INTO user_category (user_id, name, type, icon, color, parent_id, is_system, visible, sort_order, created_at, updated_at)
-         SELECT ?, name, type, icon, color, parent_id, 1, 1, sort_order, NOW(), NOW()
+        `INSERT INTO user_category (id, user_id, name, type, icon, color, parent_id, is_system, visible, sort_order, created_at, updated_at)
+         SELECT ?, ?, name, type, icon, color, parent_id, 1, 1, sort_order, NOW(), NOW()
          FROM category WHERE id = ?`,
-        [userId, row.id],
+        [catId, userId, row.id],
       );
     }
 
@@ -58,12 +75,13 @@ export async function createTestUser(): Promise<TestUserRow> {
 export async function createTestTransactions(bookId: number, accountId: number, categoryIds: { expense: number; income: number; other: number }): Promise<void> {
   const conn = await mysql.createConnection(DB_CONFIG);
   try {
+    let txId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
     await conn.execute(
-      `INSERT INTO transaction (book_id, type, amount, account_id, category_id, remark, trans_time, created_at, updated_at) VALUES
-       (?, 0, 2550, ?, ?, '午餐', '2025-01-15 12:30:00', NOW(), NOW()),
-       (?, 1, 500000, ?, ?, '工资', '2025-01-15 09:00:00', NOW(), NOW()),
-       (?, 0, 1500, ?, ?, '交通费', '2025-01-20 08:00:00', NOW(), NOW())`,
-      [bookId, accountId, categoryIds.expense, bookId, accountId, categoryIds.income, bookId, accountId, categoryIds.expense],
+      `INSERT INTO transaction (id, book_id, type, amount, account_id, category_id, remark, trans_time, created_at, updated_at) VALUES
+       (?, ?, 0, 2550, ?, ?, '午餐', '2025-01-15 12:30:00', NOW(), NOW()),
+       (?, ?, 1, 500000, ?, ?, '工资', '2025-01-15 09:00:00', NOW(), NOW()),
+       (?, ?, 0, 1500, ?, ?, '交通费', '2025-01-20 08:00:00', NOW(), NOW())`,
+      [txId++, bookId, accountId, categoryIds.expense, txId++, bookId, accountId, categoryIds.income, txId++, bookId, accountId, categoryIds.expense],
     );
   } finally {
     await conn.end();

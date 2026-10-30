@@ -60,13 +60,24 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         if (req.name() == null || req.name().isBlank()) {
             throw new BizException("分类名称不能为空");
         }
-        if (req.type() == null) {
-            throw new BizException("分类类型不能为空");
+        if (req.type() == null || (req.type() != 0 && req.type() != 1)) {
+            throw new BizException("分类类型不能为空且必须为0或1");
         }
         Long userId = AuthUtils.getCurrentUserId();
+        String cleanName = SanitizeUtils.escapeHtml(req.name().trim());
+
+        if (lambdaQuery()
+                        .eq(UserCategory::getUserId, userId)
+                        .eq(UserCategory::getType, req.type())
+                        .eq(UserCategory::getName, cleanName)
+                        .count()
+                > 0) {
+            throw new BizException("同类型下已存在同名分类");
+        }
+
         UserCategory uc = new UserCategory();
         uc.setUserId(userId);
-        uc.setName(SanitizeUtils.escapeHtml(req.name()));
+        uc.setName(cleanName);
         uc.setType(req.type());
         uc.setIcon(req.icon() != null ? SanitizeUtils.escapeHtml(req.icon()) : "");
         uc.setColor(req.color() != null ? SanitizeUtils.escapeHtml(req.color()) : "");
@@ -93,7 +104,23 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
             throw new BizException("系统分类不可编辑");
         }
         if (!isSystem && hasIdentityChange) {
-            if (req.name() != null) uc.setName(SanitizeUtils.escapeHtml(req.name()));
+            if (req.name() != null) {
+                if (req.name().isBlank()) {
+                    throw new BizException("分类名称不能为空");
+                }
+                String cleanName = SanitizeUtils.escapeHtml(req.name().trim());
+                if (!cleanName.equals(uc.getName())
+                        && lambdaQuery()
+                                        .eq(UserCategory::getUserId, userId)
+                                        .eq(UserCategory::getType, uc.getType())
+                                        .eq(UserCategory::getName, cleanName)
+                                        .ne(UserCategory::getId, id)
+                                        .count()
+                                > 0) {
+                    throw new BizException("同类型下已存在同名分类");
+                }
+                uc.setName(cleanName);
+            }
             if (req.icon() != null) uc.setIcon(SanitizeUtils.escapeHtml(req.icon()));
             if (req.color() != null) uc.setColor(SanitizeUtils.escapeHtml(req.color()));
         }
@@ -120,6 +147,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
 
     @Transactional
     public void reorder(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return;
         Long userId = AuthUtils.getCurrentUserId();
         for (int i = 0; i < ids.size(); i++) {
             lambdaUpdate()

@@ -7,13 +7,15 @@
         </view>
       </template>
       <template #center>
-        <view class="month-nav">
-          <view class="nav-arrow" @click="prevMonth">
-            <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+        <view class="month-capsule month-nav">
+          <view class="capsule-arrow nav-arrow" @click="prevMonth">
+            <wd-icon name="left" size="14px" color="var(--text-secondary)" />
           </view>
-          <text class="month-label">{{ monthLabel }}</text>
-          <view class="nav-arrow" @click="nextMonth">
-            <wd-icon name="right" size="24px" color="var(--text-secondary)" />
+          <view class="capsule-label-wrap">
+            <text class="capsule-label month-label">{{ monthLabel }}</text>
+          </view>
+          <view class="capsule-arrow nav-arrow" @click="nextMonth">
+            <wd-icon name="right" size="14px" color="var(--text-secondary)" />
           </view>
         </view>
       </template>
@@ -414,14 +416,54 @@ onShow(async () => {
   justify-content: center;
 }
 
+.month-capsule {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-primary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4rpx 8rpx;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s var(--spring-default);
+}
+
+.capsule-arrow {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s var(--spring-default), background-color 0.15s;
+
+  &:active {
+    background: var(--bg-hover);
+    transform: scale(0.9);
+  }
+}
+
+.capsule-label-wrap {
+  padding: 0 16rpx;
+}
+
+.capsule-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.5rpx;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .menu-btn {
-  width: 64rpx;
-  height: 64rpx;
+  width: 68rpx;
+  height: 68rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
   transition: transform 0.15s var(--spring-default);
@@ -432,37 +474,38 @@ onShow(async () => {
 }
 
 .nav-arrow {
-  width: 44rpx;
-  height: 44rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12rpx;
-  background: var(--bg-primary);
-  flex-shrink: 0;
-
-  &:active {
-    opacity: 0.6;
-  }
-}
-
-.month-label {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: var(--text-primary);
-  text-align: center;
-  letter-spacing: 1rpx;
-  flex-shrink: 0;
-}
-
-.stats-btn {
-  width: 64rpx;
-  height: 64rpx;
+  width: 52rpx;
+  height: 52rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-primary);
+  flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default), background-color 0.15s;
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.month-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  letter-spacing: -0.5rpx;
+  flex-shrink: 0;
+}
+
+.stats-btn {
+  width: 68rpx;
+  height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
   transition: transform 0.15s var(--spring-default);
@@ -475,7 +518,7 @@ onShow(async () => {
 .month-summary {
   display: flex;
   gap: 16rpx;
-  padding: 16rpx 32rpx 20rpx;
+  padding: 16rpx 28rpx 20rpx;
   background: var(--bg-primary);
 }
 
@@ -484,11 +527,17 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10rpx;
-  padding: 28rpx 0;
+  gap: 8rpx;
+  padding: 24rpx 8rpx;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.98);
+  }
 
   .summary-label {
     font-size: 22rpx;
@@ -515,7 +564,7 @@ onShow(async () => {
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
-  padding: 0 20rpx 60rpx;
+  padding: 0 24rpx 60rpx;
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -524,23 +573,24 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 240rpx 0;
+  padding: 220rpx 0;
 
   .empty-icon-wrapper {
     width: 140rpx;
     height: 140rpx;
     border-radius: 50%;
     background: var(--bg-secondary);
+    border: 1rpx solid var(--border-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
   }
 
   .empty-title {
     font-size: 32rpx;
     color: var(--text-secondary);
-    margin-top: 40rpx;
+    margin-top: 36rpx;
     font-weight: 600;
   }
 
@@ -554,6 +604,7 @@ onShow(async () => {
 .day-group {
   margin-top: 20rpx;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);

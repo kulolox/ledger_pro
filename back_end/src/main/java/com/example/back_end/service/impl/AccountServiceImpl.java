@@ -22,6 +22,9 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
     // 账本归属校验：账户操作必须发生在当前用户拥有的账本下
     private void validateBookOwnership(Long bookId) {
+        if (bookId == null) {
+            throw new BizException("账本ID不能为空");
+        }
         var book = accountBookMapper.selectById(bookId);
         if (book == null || !book.getOwnerId().equals(AuthUtils.getCurrentUserId())) {
             throw new BizException("无权访问该账本");

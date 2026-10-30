@@ -1,75 +1,191 @@
-/** 运行时主题 **/
-page {
-  --bg-primary: #f2f2f7;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f9f9fb;
-  --bg-active: #e8f2ff;
-  --bg-operator: #f2f2f7;
-  --bg-operator-hover: #e5e5ea;
+/**
+ * 苹果风设计体系 (Apple Design System Tokens)
+ * 纯色分层架构，支持浅色 (Light) 与深色 (Dark) 两套精致主题
+ * 拒绝毛玻璃模糊，追求极简、纯净、细腻的高端质感
+ */
+
+:root,
+[data-theme="light"],
+.theme-light {
+  /* 基础背景色体系 (纯色分层) */
+  --bg-primary: #f2f2f7;          /* iOS System Gray 6 */
+  --bg-secondary: #ffffff;        /* 纯白卡片主背景 */
+  --bg-tertiary: #e5e5ea;         /* iOS System Gray 5 辅助背景 */
+  --bg-card: #ffffff;             /* 卡片纯色 */
+  --bg-card-subtle: #f8f8fa;      /* 嵌套细分卡片 */
+  --bg-active: #e8f2ff;           /* 选中轻量高亮 */
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-overlay: rgba(0, 0, 0, 0.03);
+
+  /* 键盘与操作区专用纯色 */
   --bg-key: #ffffff;
   --bg-key-hover: #e5e5ea;
-  --bg-blur: rgba(242, 242, 247, 0.72);
+  --bg-operator: #f2f2f7;
+  --bg-operator-hover: #e5e5ea;
 
-  --border-primary: #e5e5ea;
+  /* 边框体系 (细微、克制) */
+  --border-primary: rgba(60, 60, 67, 0.12);
+  --border-subtle: rgba(60, 60, 67, 0.06);
+  --border-focus: #007aff;
   --border-active: #007aff;
-  --border-subtle: rgba(60, 60, 67, 0.08);
 
-  --text-primary: #1d1d1f;
-  --text-secondary: #3c3c43;
-  --text-tertiary: #48484a;
-  --text-label: #8e8e93;
-  --text-muted: #aeaeb2;
+  /* 字体与排版颜色 (Apple System Labels) */
+  --text-primary: #1c1c1e;        /* 主文字，极高对比度 */
+  --text-secondary: #3c3c43;      /* 次级文字 */
+  --text-tertiary: #8e8e93;       /* 辅助提示、时间戳 */
+  --text-label: #8e8e93;          /* 表单与分组标签 */
+  --text-muted: #aeaeb2;          /* 占位与静默文字 */
   --text-dim: #c7c7cc;
   --text-placeholder: #c7c7cc;
+  --text-inverse: #ffffff;        /* 反色纯白 */
 
-  --color-primary: #007aff;
+  /* 苹果核心色彩规范 (Apple Human Interface Guidelines) */
+  --color-primary: #007aff;       /* iOS 经典蓝 */
   --color-primary-hover: #0062cc;
+  --color-expense: #ff3b30;       /* 支出 - Apple Red */
+  --color-expense-bg: rgba(255, 59, 48, 0.08);
+  --color-income: #34c759;        /* 收入 - Apple Green */
+  --color-income-bg: rgba(52, 199, 89, 0.08);
   --color-save: #34c759;
   --color-save-hover: #30b350;
-  --color-expense: #ff3b30;
-  --color-income: #34c759;
   --color-transfer: #007aff;
+  --color-warning: #ff9500;
   --color-handle: #d1d1d6;
 
-  --shadow-sm: 0 1rpx 3rpx rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 12rpx 40rpx rgba(0, 0, 0, 0.08);
-  --shadow-fab: 0 8rpx 32rpx rgba(0, 122, 255, 0.3);
+  /* 极简阴影 (轻微自然弥散，无噪点) */
+  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 6rpx 20rpx rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16rpx 48rpx rgba(0, 0, 0, 0.08);
+  --shadow-fab: 0 8rpx 28rpx rgba(0, 122, 255, 0.28);
+  --shadow-key: 0 2rpx 4rpx rgba(0, 0, 0, 0.04);
+  --shadow-save: 0 6rpx 20rpx rgba(52, 199, 89, 0.35);
 
-  --radius-xs: 6rpx;
-  --radius-sm: 10rpx;
-  --radius-md: 16rpx;
-  --radius-lg: 24rpx;
-  --radius-xl: 32rpx;
-  --radius-full: 9999rpx;
-
-  --input-height: 88rpx;
-
-  --font-weight-light: 300;
-  --font-weight-regular: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-
-  --spring-default: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  --text-inverse: #ffffff;
-
-  --font-family-base: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
-
-  --shadow-primary-sm: 0 4rpx 16rpx rgba(0, 122, 255, 0.25);
-  --shadow-primary-md: 0 4rpx 20rpx rgba(0, 122, 255, 0.3);
-  --shadow-fab-active: 0 4rpx 14rpx rgba(0, 122, 255, 0.25);
-  --shadow-key: 0 1rpx 2rpx rgba(0, 0, 0, 0.04);
-  --shadow-save: 0 6rpx 24rpx rgba(52, 199, 89, 0.4);
-
-  --bg-overlay: rgba(0, 0, 0, 0.02);
-
+  /* Wot UI 组件主题覆盖映射 */
+  --wot-color-theme: #007aff;
+  --wot-bg-color: #ffffff;
   --wot-input-text-color: var(--text-primary);
   --wot-input-bg-color: var(--bg-secondary);
   --wot-input-placeholder-color: var(--text-placeholder);
   --wot-input-border-color: var(--border-primary);
   --wot-primary: var(--color-primary);
   --wot-radius: var(--radius-md);
+}
+
+/* 苹果风设计体系 - 深色模式 (Apple Dark Mode - OLED True Black) */
+:root[data-theme="dark"],
+[data-theme="dark"],
+.theme-dark,
+[data-theme="dark"] uni-page-body,
+[data-theme="dark"] page,
+[data-theme="dark"] uni-app,
+.theme-dark uni-page-body,
+.theme-dark page {
+  /* 基础背景色体系 (纯黑深邃分层) */
+  --bg-primary: #000000;          /* OLED 纯黑背景 */
+  --bg-secondary: #1c1c1e;        /* iOS Gray 6 Dark 卡片背景 */
+  --bg-tertiary: #2c2c2e;         /* iOS Gray 5 Dark 次级背景 */
+  --bg-card: #1c1c1e;             /* 卡片纯色 */
+  --bg-card-subtle: #242426;      /* 细分卡片 */
+  --bg-active: #0a2540;           /* 深色高亮 */
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-overlay: rgba(255, 255, 255, 0.05);
+
+  /* 键盘与操作区专用纯色 */
+  --bg-key: #2c2c2e;
+  --bg-key-hover: #3a3a3c;
+  --bg-operator: #1c1c1e;
+  --bg-operator-hover: #2c2c2e;
+
+  /* 边框体系 (微光边缘) */
+  --border-primary: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-focus: #0a84ff;
+  --border-active: #0a84ff;
+
+  /* 字体与排版颜色 */
+  --text-primary: #ffffff;        /* 纯白主字 */
+  --text-secondary: #ebebf5;      /* 次级白 (80%) */
+  --text-tertiary: #8e8e93;       /* 灰色标签 */
+  --text-label: #8e8e93;
+  --text-muted: #636366;
+  --text-dim: #48484a;
+  --text-placeholder: #636366;
+  --text-inverse: #000000;        /* 反色纯黑 */
+
+  /* 苹果深色调校核心色彩 (Apple Dark Mode Accents) */
+  --color-primary: #0a84ff;       /* Apple Dark Blue */
+  --color-primary-hover: #409cff;
+  --color-expense: #ff453a;       /* Apple Dark Red */
+  --color-expense-bg: rgba(255, 69, 58, 0.15);
+  --color-income: #30d158;        /* Apple Dark Green */
+  --color-income-bg: rgba(48, 209, 88, 0.15);
+  --color-save: #30d158;
+  --color-save-hover: #28b84c;
+  --color-transfer: #0a84ff;
+  --color-warning: #ff9f0a;
+  --color-handle: #48484a;
+
+  /* 深色阴影 */
+  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6rpx 20rpx rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 16rpx 48rpx rgba(0, 0, 0, 0.8);
+  --shadow-fab: 0 8rpx 28rpx rgba(10, 132, 255, 0.4);
+  --shadow-key: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
+  --shadow-save: 0 6rpx 20rpx rgba(48, 209, 88, 0.4);
+
+  /* Wot UI 组件深色覆盖映射 */
+  --wot-color-theme: #0a84ff;
+  --wot-bg-color: #1c1c1e;
+  --wot-input-text-color: var(--text-primary);
+  --wot-input-bg-color: var(--bg-secondary);
+  --wot-input-placeholder-color: var(--text-placeholder);
+  --wot-input-border-color: var(--border-primary);
+  --wot-primary: var(--color-primary);
+}
+
+/* 统一几何与排版尺度 (Geometry & Typography Scale) */
+:root,
+page {
+  --radius-xs: 8rpx;
+  --radius-sm: 14rpx;
+  --radius-md: 20rpx;
+  --radius-lg: 28rpx;
+  --radius-xl: 36rpx;
+  --radius-full: 9999rpx;
+
+  --input-height: 92rpx;
+
+  --font-family-base: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+
+  /* Apple 物理弹簧动效规范 */
+  --spring-default: cubic-bezier(0.25, 1, 0.5, 1);
+  --spring-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 苹果通用卡片类 (纯色、微边框、大圆角) */
+.apple-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1rpx solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.18s var(--spring-default), background 0.18s var(--spring-default);
+}
+
+/* 苹果通用按钮类 (触觉微缩放反馈) */
+.apple-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.16s var(--spring-default), opacity 0.16s var(--spring-default);
+
+  &:active {
+    transform: scale(0.96);
+    opacity: 0.88;
+  }
 }

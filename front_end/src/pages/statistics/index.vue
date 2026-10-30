@@ -8,12 +8,16 @@
       </template>
       <template #center>
         <view class="nav-center">
-          <view class="nav-arrow" @click="prevMonth">
-            <wd-icon name="left" size="24px" color="var(--text-secondary)" />
-          </view>
-          <text class="month-label">{{ monthLabel }}</text>
-          <view class="nav-arrow" @click="nextMonth">
-            <wd-icon name="right" size="24px" color="var(--text-secondary)" />
+          <view class="month-capsule month-nav">
+            <view class="capsule-arrow nav-arrow" @click="prevMonth">
+              <wd-icon name="left" size="14px" color="var(--text-secondary)" />
+            </view>
+            <view class="capsule-label-wrap">
+              <text class="capsule-label month-label">{{ monthLabel }}</text>
+            </view>
+            <view class="capsule-arrow nav-arrow" @click="nextMonth">
+              <wd-icon name="right" size="14px" color="var(--text-secondary)" />
+            </view>
           </view>
         </view>
       </template>
@@ -58,40 +62,49 @@
 
       <scroll-view scroll-y class="stats-body">
         <view class="stats-card">
-          <!-- <view v-if="currentCategories.length > 0" class="chart-section">
-          <EChart :options="pieOption" :height="420" />
-        </view> -->
+          <!-- 有数据时展示：Apple 甜甜圈图表 + 分类列表 -->
+          <template v-if="currentCategories.length > 0">
+            <view class="chart-section">
+              <EChart :options="pieOption" :height="280" />
+            </view>
 
-          <view v-if="currentCategories.length > 0" class="category-list">
-            <view
-              v-for="(cat, idx) in currentCategories"
-              :key="cat.category_id"
-              class="category-item"
-            >
-              <view class="cat-left">
-                <view class="cat-dot" :style="{ background: cat.color }" />
-                <text class="cat-name">{{ cat.name }}</text>
-              </view>
-              <view class="cat-right">
-                <text
-                  class="cat-amount"
-                  :class="{ 'income-text': activeTab === 1 }"
-                  >{{ activeTab === 0 ? "-" : "+"
-                  }}{{ formatCents(cat.amount) }}</text
-                >
-                <text class="cat-percent">{{ cat.percent }}%</text>
+            <view class="category-list">
+              <view
+                v-for="cat in currentCategories"
+                :key="cat.category_id"
+                class="category-item"
+              >
+                <view class="cat-left">
+                  <view class="cat-dot" :style="{ background: cat.color }" />
+                  <text class="cat-name">{{ cat.name }}</text>
+                </view>
+                <view class="cat-right">
+                  <text
+                    class="cat-amount"
+                    :class="{ 'income-text': activeTab === 1 }"
+                  >
+                    {{ activeTab === 0 ? "-" : "+" }}{{ formatCents(cat.amount) }}
+                  </text>
+                  <text class="cat-percent">{{ cat.percent }}%</text>
+                </view>
               </view>
             </view>
-          </view>
+          </template>
 
-          <view
-            v-if="
-              expenseCategories.length === 0 && incomeCategories.length === 0
-            "
-            class="empty-state"
-          >
-            <wd-icon name="dashboard" size="72rpx" color="var(--text-muted)" />
-            <text class="empty-title">本月暂无数据</text>
+          <!-- 无数据时展示：Apple 空状态精致圆环占位图 + 引导记账按钮 -->
+          <view v-else class="empty-chart-section">
+            <view class="empty-donut-ring">
+              <view class="empty-donut-center">
+                <text class="empty-donut-symbol">¥</text>
+                <text class="empty-donut-value">0.00</text>
+                <text class="empty-donut-label">暂无{{ activeTab === 0 ? "支出" : "收入" }}</text>
+              </view>
+            </view>
+            <text class="empty-hint-text">本月还没有{{ activeTab === 0 ? "支出" : "收入" }}账单数据</text>
+            <view class="empty-action-btn" @click="goRecord">
+              <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
+              <text class="empty-action-label">记一笔</text>
+            </view>
           </view>
         </view>
 
@@ -105,7 +118,7 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
-// import EChart from "@/components/EChart.vue";
+import EChart from "@/components/EChart.vue";
 import PageLoader from "@/components/PageLoader.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
@@ -168,38 +181,88 @@ const currentCategories = computed(() =>
   activeTab.value === 0 ? expenseCategories.value : incomeCategories.value,
 );
 
+const currentTotal = computed(() =>
+  activeTab.value === 0 ? totalExpense.value : totalIncome.value,
+);
+
 const pieOption = computed(() => {
   const cats = currentCategories.value;
   const prefix = activeTab.value === 0 ? "-" : "+";
+  const totalAmount = currentTotal.value;
   const data = cats.map((c) => ({
     name: c.name,
     value: c.amount,
     itemStyle: { color: c.color },
   }));
 
+  const isDark =
+    typeof document !== "undefined" &&
+    document.documentElement.getAttribute("data-theme") === "dark";
+  const textColor = isDark ? "#ffffff" : "#1c1c1e";
+  const subTextColor = isDark ? "#8e8e93" : "#8e8e93";
+
   return {
+    backgroundColor: "transparent",
     tooltip: {
       trigger: "item",
+      backgroundColor: isDark ? "#1c1c1e" : "#ffffff",
+      borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(60,60,67,0.12)",
+      textStyle: {
+        color: textColor,
+        fontSize: 12,
+      },
       formatter: (params: any) => {
         const val = (params.value / 100).toFixed(2);
-        return `${params.name}: ${prefix}${val} (${params.percent}%)`;
+        return `${params.name}: ${prefix}¥${val} (${params.percent}%)`;
+      },
+    },
+    title: {
+      text: `${prefix}¥${(totalAmount / 100).toFixed(2)}`,
+      subtext: activeTab.value === 0 ? "总支出" : "总收入",
+      left: "center",
+      top: "40%",
+      textStyle: {
+        fontSize: 17,
+        fontWeight: 700,
+        color: activeTab.value === 0 ? "#ff3b30" : "#34c759",
+      },
+      subtextStyle: {
+        fontSize: 11,
+        color: subTextColor,
+        fontWeight: 500,
       },
     },
     series: [
       {
         type: "pie",
-        radius: ["30%", "55%"],
+        radius: ["46%", "68%"],
         center: ["50%", "50%"],
         data,
+        padAngle: 3,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: isDark ? "#1c1c1e" : "#ffffff",
+          borderWidth: 2,
+        },
         label: {
-          formatter: (params: any) => `${params.name}\n${params.percent}%`,
+          show: true,
+          formatter: (params: any) => `${params.name} ${params.percent}%`,
           fontSize: 11,
+          color: textColor,
+        },
+        labelLine: {
+          length: 6,
+          length2: 10,
+          lineStyle: {
+            color: subTextColor,
+          },
         },
         emphasis: {
+          scale: true,
+          scaleSize: 6,
           itemStyle: {
             shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: "rgba(0,0,0,0.3)",
+            shadowColor: "rgba(0,0,0,0.15)",
           },
         },
       },
@@ -229,6 +292,10 @@ function goBack() {
   uni.navigateBack();
 }
 
+function goRecord() {
+  uni.reLaunch({ url: "/pages/index/index" });
+}
+
 function getMonthStr(): string {
   return `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
 }
@@ -236,10 +303,21 @@ function getMonthStr(): string {
 async function fetchStats() {
   const bookId = getCurrentBookId();
   try {
-    statsData.value = await getMonthlyStatistics({
+    const res = await getMonthlyStatistics({
       book_id: bookId,
       month: getMonthStr(),
     });
+    if (
+      res &&
+      (res.total_expense > 0 ||
+        res.total_income > 0 ||
+        (res.expense_by_category && res.expense_by_category.length > 0) ||
+        (res.income_by_category && res.income_by_category.length > 0))
+    ) {
+      statsData.value = res;
+    } else {
+      calcLocalStats(bookId);
+    }
   } catch {
     calcLocalStats(bookId);
   }
@@ -350,15 +428,21 @@ onShow(async () => {
 }
 
 .nav-left {
-  width: 64rpx;
-  height: 64rpx;
+  width: 68rpx;
+  height: 68rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.92);
+  }
 }
 
 .nav-center {
@@ -367,40 +451,79 @@ onShow(async () => {
   justify-content: center;
 }
 
-.nav-arrow {
-  width: 44rpx;
-  height: 44rpx;
+.month-capsule {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-primary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4rpx 8rpx;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s var(--spring-default);
+}
+
+.capsule-arrow {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12rpx;
-  background: var(--bg-primary);
-  flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default), background-color 0.15s;
 
   &:active {
-    opacity: 0.6;
+    background: var(--bg-hover);
+    transform: scale(0.9);
+  }
+}
+
+.capsule-label-wrap {
+  padding: 0 16rpx;
+}
+
+.capsule-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.5rpx;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nav-arrow {
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default), background-color 0.15s;
+
+  &:active {
+    transform: scale(0.9);
   }
 }
 
 .month-label {
-  font-size: 32rpx;
-  font-weight: 700;
+  font-size: 28rpx;
+  font-weight: 600;
   color: var(--text-primary);
   text-align: center;
-  letter-spacing: 1rpx;
+  letter-spacing: -0.5rpx;
   flex-shrink: 0;
 }
 
 .nav-right {
-  width: 64rpx;
-  height: 64rpx;
+  width: 68rpx;
+  height: 68rpx;
   flex-shrink: 0;
 }
 
 .month-summary {
   display: flex;
   gap: 16rpx;
-  padding: 16rpx 32rpx 16rpx;
+  padding: 16rpx 28rpx 20rpx;
   background: var(--bg-primary);
 }
 
@@ -409,11 +532,17 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10rpx;
-  padding: 28rpx 0;
+  gap: 8rpx;
+  padding: 24rpx 8rpx;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.98);
+  }
 
   .summary-label {
     font-size: 22rpx;
@@ -437,15 +566,19 @@ onShow(async () => {
 
 .stats-card {
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-top: none;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
 .stats-tabs {
-  margin: 0 20rpx;
+  margin: 0 24rpx;
   padding: 0 24rpx;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-bottom: none;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
@@ -533,16 +666,81 @@ onShow(async () => {
   text-align: right;
 }
 
-.empty-state {
+.empty-chart-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 120rpx 0;
+  padding: 60rpx 40rpx 70rpx;
+}
 
-  .empty-title {
-    font-size: 30rpx;
+.empty-donut-ring {
+  width: 260rpx;
+  height: 260rpx;
+  border-radius: 50%;
+  border: 14rpx solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.empty-donut-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+
+  .empty-donut-symbol {
+    font-size: 24rpx;
     color: var(--text-muted);
-    margin-top: 24rpx;
+    font-weight: 500;
+  }
+
+  .empty-donut-value {
+    font-size: 40rpx;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5rpx;
+  }
+
+  .empty-donut-label {
+    font-size: 22rpx;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 2rpx;
+  }
+}
+
+.empty-hint-text {
+  font-size: 26rpx;
+  color: var(--text-muted);
+  margin-top: 36rpx;
+  font-weight: 500;
+}
+
+.empty-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-top: 28rpx;
+  padding: 16rpx 44rpx;
+  background: var(--bg-primary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  .empty-action-label {
+    font-size: 28rpx;
+    font-weight: 600;
+    color: var(--color-primary);
   }
 }
 

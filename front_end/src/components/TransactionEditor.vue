@@ -2,16 +2,19 @@
   <wd-popup
     :model-value="visible"
     position="bottom"
+    :z-index="500"
     @update:model-value="$emit('close')"
     @close="$emit('close')"
   >
     <view class="editor">
+      <view class="sheet-grabber" />
+
       <view class="editor-header">
         <text class="editor-title">{{
           editId != null ? "编辑账单" : "记一笔"
         }}</text>
         <view class="editor-close" @click="$emit('close')">
-          <text>✕</text>
+          <wd-icon name="close" size="24rpx" color="var(--text-secondary)" />
         </view>
       </view>
 
@@ -35,12 +38,13 @@
       </view>
 
       <view class="amount-area">
-        <text class="amount-number">{{ rawInput || "0" }}</text>
+        <text class="amount-currency">¥</text>
+        <text class="amount-number">{{ rawInput || "0.00" }}</text>
       </view>
 
       <view class="meta-row">
         <view class="meta-btn" @click="showDatePicker = true">
-          <text class="meta-icon">📅</text>
+          <wd-icon name="calendar" size="28rpx" color="var(--color-primary)" />
           <text class="meta-text">{{ transDate }}</text>
         </view>
         <wd-input
@@ -68,7 +72,7 @@ import NumberKeyboard from "@/components/NumberKeyboard.vue";
 import CategorySlider from "@/components/CategorySlider.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
-import { timestampToDateStr } from "@/utils/format";
+import { timestampToDateStr, yuanToCents } from "@/utils/format";
 
 const { add, update } = useTransactions();
 const { categories } = useCategories();
@@ -224,7 +228,7 @@ const handleSave = (keepOpen: boolean) => {
     return;
   }
 
-  const amountCents = Math.round(amount * 100);
+  const amountCents = yuanToCents(amount);
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
@@ -304,20 +308,30 @@ watch(
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
+  border-top: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   overflow: hidden;
+}
+
+.sheet-grabber {
+  width: 72rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: var(--border-primary);
+  margin: 18rpx auto 0;
 }
 
 .editor-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32rpx 32rpx 20rpx;
+  padding: 16rpx 32rpx 20rpx;
 
   .editor-title {
-    font-size: 34rpx;
+    font-size: 32rpx;
     font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.5rpx;
   }
 
   .editor-close {
@@ -325,6 +339,7 @@ watch(
     height: 56rpx;
     border-radius: 50%;
     background: var(--bg-secondary);
+    border: 1rpx solid var(--border-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -334,38 +349,35 @@ watch(
     &:active {
       transform: scale(0.9);
     }
-
-    text {
-      font-size: 28rpx;
-      color: var(--text-secondary);
-      line-height: 1;
-    }
   }
 }
 
 .type-tabs {
   display: flex;
-  gap: 16rpx;
-  padding: 0 32rpx 16rpx;
+  gap: 8rpx;
+  margin: 0 32rpx 16rpx;
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 6rpx;
 }
 
 .type-tab {
   flex: 1;
   text-align: center;
-  padding: 18rpx 0;
+  padding: 14rpx 0;
   border-radius: var(--radius-sm);
   font-size: 26rpx;
   font-weight: 500;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  background: transparent;
   transition: all 0.2s var(--spring-default);
 
   &.active {
     background: var(--color-primary);
     color: var(--text-inverse);
     font-weight: 600;
-    box-shadow: var(--shadow-primary-sm);
+    box-shadow: var(--shadow-sm);
   }
 }
 
@@ -375,27 +387,27 @@ watch(
 
 .amount-area {
   display: flex;
-  align-items: flex-end;
+  align-items: baseline;
   justify-content: flex-end;
-  padding: 24rpx 40rpx 8rpx;
-  min-height: 140rpx;
-  gap: 4rpx;
+  padding: 16rpx 40rpx 12rpx;
+  min-height: 120rpx;
+  gap: 8rpx;
 
-  .amount-sign {
-    font-size: 56rpx;
-    font-weight: 300;
-    color: var(--text-muted);
-    margin-right: -4rpx;
+  .amount-currency {
+    font-size: 40rpx;
+    font-weight: 600;
+    color: var(--color-primary);
   }
 
   .amount-number {
     font-size: 64rpx;
-    font-weight: 300;
+    font-weight: 700;
     text-align: right;
     color: var(--text-primary);
-    letter-spacing: 2rpx;
+    letter-spacing: -0.5rpx;
     line-height: 1.1;
     word-break: break-all;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -403,14 +415,16 @@ watch(
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding-bottom: 12rpx;
+  padding: 0 32rpx 16rpx;
 
   .meta-btn {
     display: flex;
     align-items: center;
-    gap: 6rpx;
-    padding: 24rpx;
+    gap: 8rpx;
+    padding: 20rpx 24rpx;
     background: var(--bg-secondary);
+    border: 1rpx solid var(--border-subtle);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     font-size: 24rpx;
     font-weight: 500;
@@ -419,7 +433,7 @@ watch(
     transition: all 0.15s var(--spring-default);
 
     &:active {
-      transform: scale(0.94);
+      transform: scale(0.96);
     }
 
     &.active {
@@ -434,16 +448,17 @@ watch(
       font-size: 24rpx;
     }
   }
+
   :deep(.remark-input) {
     &.wd-input {
       flex: 1;
       --wd-input-bg: var(--bg-secondary);
-      --wd-input-border: transparent;
-      --wd-input-color: var(--text-secondary);
+      --wd-input-border: var(--border-subtle);
+      --wd-input-color: var(--text-primary);
       --wd-input-placeholder: var(--text-placeholder);
-      --wd-input-radius: var(--radius-sm);
+      --wd-input-radius: var(--radius-md);
       box-shadow: var(--shadow-sm);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
     }
   }
 }

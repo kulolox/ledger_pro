@@ -1,6 +1,5 @@
 import {
   loadTransactions,
-  getPendingDeletes,
   type LocalTransaction,
 } from "@/stores/transactionStore";
 import { getToken } from "@/utils/storage";
@@ -170,7 +169,10 @@ export async function pushPending(): Promise<{ success: number; fail: number }> 
 // 拉取当月全量数据，合并到本地，跳过已存在的记录
 // 将本地已删除且有 server_id 的记录批量同步到服务端做软删除
 export async function pushDeletes(): Promise<number> {
-  const pending = getPendingDeletes();
+  const localList = getLocalTransactions();
+  const pending = localList.filter(
+    (t) => t.sync_status === "pending" && t.deleted === 1 && Boolean(t.server_id),
+  );
   if (pending.length === 0) return 0;
 
   const ids = pending.map((t) => t.server_id!).filter(Boolean);
@@ -182,7 +184,6 @@ export async function pushDeletes(): Promise<number> {
       data: { ids },
     });
 
-    const localList = getLocalTransactions();
     const deleteIds = new Set(pending.map((t) => t.id));
     const remaining = localList.filter((t) => !deleteIds.has(t.id));
     setLocalTransactions(remaining);

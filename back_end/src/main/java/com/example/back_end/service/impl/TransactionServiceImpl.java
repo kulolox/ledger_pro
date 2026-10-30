@@ -66,6 +66,9 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
 
     // 多账本隔离核心校验：交易只能属于当前用户拥有的账本
     private void validateBookOwnership(Long bookId) {
+        if (bookId == null) {
+            throw new BizException("账本ID不能为空");
+        }
         var book = accountBookMapper.selectById(bookId);
         if (book == null || !book.getOwnerId().equals(AuthUtils.getCurrentUserId())) {
             throw new BizException("无权访问该账本");
@@ -109,6 +112,12 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
 
     @Transactional
     public TransactionResponse create(TransactionRequest req) {
+        if (req.amount() == null || req.amount() <= 0) {
+            throw new BizException("交易金额必须大于0");
+        }
+        if (req.type() == null || (req.type() != 0 && req.type() != 1 && req.type() != 2)) {
+            throw new BizException("无效的交易类型");
+        }
         validateBookOwnership(req.book_id());
         Transaction tx = toEntity(req);
         save(tx);
@@ -129,23 +138,63 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         if (tx == null) {
             throw new BizException("交易不存在");
         }
-        validateBookOwnership(req.book_id());
+        validateBookOwnership(tx.getBookId());
+        if (req.book_id() != null && !req.book_id().equals(tx.getBookId())) {
+            validateBookOwnership(req.book_id());
+            tx.setBookId(req.book_id());
+        }
 
-        tx.setType(req.type());
-        tx.setAmount(req.amount());
-        tx.setAccountId(req.account_id());
+        if (req.amount() != null) {
+            if (req.amount() <= 0) {
+                throw new BizException("交易金额必须大于0");
+            }
+            tx.setAmount(req.amount());
+        }
+        if (req.type() != null) {
+            if (req.type() != 0 && req.type() != 1 && req.type() != 2) {
+                throw new BizException("无效的交易类型");
+            }
+            tx.setType(req.type());
+        }
+        if (req.account_id() != null) {
+            tx.setAccountId(req.account_id());
+        }
         tx.setToAccountId(req.to_account_id());
-        tx.setCategoryId(req.category_id());
-        tx.setRemark(req.remark() != null ? SanitizeUtils.escapeHtml(req.remark()) : "");
+        if (req.category_id() != null) {
+            tx.setCategoryId(req.category_id());
+        }
+        if (req.remark() != null) {
+            tx.setRemark(SanitizeUtils.escapeHtml(req.remark()));
+        }
         if (req.trans_time() != null && !req.trans_time().isBlank()) {
             tx.setTransTime(
                     LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
         }
         updateById(tx);
 
-        evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));
-        log.info("更新交易 userId={} bookId={} txId={}", AuthUtils.getCurrentUserId(), req.book_id(), id);
+        evictTransactionCache(
+                tx.getBookId(),
+                extractMonth(
+                        req.trans_time() != null
+                                ? req.trans_time()
+                                : (tx.getTransTime() != null ? tx.getTransTime().toString() : null)));
+        log.info("更新交易 userId={} bookId={} txId={}", AuthUtils.getCurrentUserId(), tx.getBookId(), id);
         return TransactionResponse.from(tx);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Transaction tx = getById(id);
+        if (tx == null) {
+            throw new BizException("交易不存在");
+        }
+        validateBookOwnership(tx.getBookId());
+        tx.setDeleted(1);
+        updateById(tx);
+        evictTransactionCache(
+                tx.getBookId(),
+                extractMonth(tx.getTransTime() != null ? tx.getTransTime().toString() : null));
+        log.info("删除交易 userId={} bookId={} txId={}", AuthUtils.getCurrentUserId(), tx.getBookId(), id);
     }
 
     @Transactional
@@ -155,6 +204,12 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         }
         var bookIds = new java.util.HashSet<Long>();
         for (var item : body.items()) {
+            if (item.amount() == null || item.amount() <= 0) {
+                throw new BizException("交易金额必须大于0");
+            }
+            if (item.type() == null || (item.type() != 0 && item.type() != 1 && item.type() != 2)) {
+                throw new BizException("无效的交易类型");
+            }
             validateBookOwnership(item.book_id());
             bookIds.add(item.book_id());
         }

@@ -28,8 +28,12 @@ public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, Accou
         if (req.name() == null || req.name().isBlank()) {
             throw new BizException("账本名称不能为空");
         }
+        String trimmed = req.name().trim();
+        if (trimmed.length() > 50) {
+            throw new BizException("账本名称长度不能超过50个字符");
+        }
         AccountBook book = new AccountBook();
-        book.setName(SanitizeUtils.escapeHtml(req.name().trim()));
+        book.setName(SanitizeUtils.escapeHtml(trimmed));
         book.setOwnerId(AuthUtils.getCurrentUserId());
         if (req.coverIcon() != null) book.setCoverIcon(SanitizeUtils.escapeHtml(req.coverIcon()));
         if (req.type() != null) book.setType(req.type());

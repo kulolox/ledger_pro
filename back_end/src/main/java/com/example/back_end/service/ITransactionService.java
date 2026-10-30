@@ -16,6 +16,8 @@ public interface ITransactionService extends IService<Transaction> {
 
     TransactionResponse update(Long id, TransactionRequest req);
 
+    void delete(Long id);
+
     Map<String, Object> createBatch(BatchCreateRequest body);
 
     int batchDelete(BatchDeleteRequest body);

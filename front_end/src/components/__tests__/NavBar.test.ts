@@ -35,7 +35,7 @@ describe("NavBar", () => {
 
   it("has default rightWidth prop", () => {
     const wrapper = mountNav();
-    expect(wrapper.props("rightWidth")).toBe("64rpx");
+    expect(wrapper.props("rightWidth")).toBe("72rpx");
   });
 
   it("accepts custom rightWidth prop", () => {

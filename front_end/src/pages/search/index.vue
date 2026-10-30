@@ -480,15 +480,21 @@ onShow(async () => {
 }
 
 .nav-left {
-  width: 64rpx;
-  height: 64rpx;
+  width: 68rpx;
+  height: 68rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.92);
+  }
 }
 
 .nav-title {
@@ -498,13 +504,14 @@ onShow(async () => {
 }
 
 .nav-right {
-  width: 64rpx;
+  width: 68rpx;
   flex-shrink: 0;
 }
 
 .filter-section {
   margin: 16rpx 24rpx;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -519,7 +526,8 @@ onShow(async () => {
       padding: 0 20rpx;
       height: 72rpx;
       background: var(--bg-primary);
-      border-radius: var(--radius-lg);
+      border: 1rpx solid var(--border-subtle);
+      border-radius: var(--radius-md);
 
       .search-input {
         flex: 1;
@@ -584,9 +592,10 @@ onShow(async () => {
       border-radius: var(--radius-md);
       font-size: 28rpx;
       font-weight: 600;
+      transition: transform 0.15s var(--spring-default);
 
       &:active {
-        opacity: 0.7;
+        transform: scale(0.97);
       }
     }
 
@@ -597,6 +606,7 @@ onShow(async () => {
 
     .reset-action {
       background: var(--bg-primary);
+      border: 1rpx solid var(--border-subtle);
       color: var(--text-secondary);
     }
   }
@@ -614,6 +624,7 @@ onShow(async () => {
 .day-group {
   margin-top: 20rpx;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);

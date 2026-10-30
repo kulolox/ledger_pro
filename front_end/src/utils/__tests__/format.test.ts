@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   formatCents,
   formatNumber,
+  yuanToCents,
+  centsToYuan,
   getTodayStr,
   formatDayHeader,
   formatWeekday,
@@ -39,6 +41,25 @@ describe("formatNumber", () => {
   });
 });
 
+describe("yuanToCents & centsToYuan", () => {
+  it("converts yuan number to cents with precision", () => {
+    expect(yuanToCents(29.99)).toBe(2999);
+    expect(yuanToCents(0.1 + 0.2)).toBe(30);
+    expect(yuanToCents(0)).toBe(0);
+  });
+
+  it("converts yuan string to cents", () => {
+    expect(yuanToCents("10.50")).toBe(1050);
+    expect(yuanToCents("invalid")).toBe(0);
+  });
+
+  it("converts cents to yuan float with precision", () => {
+    expect(centsToYuan(2999)).toBe(29.99);
+    expect(centsToYuan(1050)).toBe(10.5);
+    expect(centsToYuan(0)).toBe(0);
+  });
+});
+
 describe("getTodayStr", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -52,17 +73,17 @@ describe("getTodayStr", () => {
 
   it("pads single digit month and day", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 0, 1)); // Jan 1, 2026
-    expect(getTodayStr()).toBe("2026-01-01");
+    vi.setSystemTime(new Date(2026, 0, 5)); // Jan 5, 2026
+    expect(getTodayStr()).toBe("2026-01-05");
   });
 });
 
 describe("formatDayHeader", () => {
-  it("formats date string to MM月DD日", () => {
+  it("formats 2026-06-17 to 6月17日", () => {
     expect(formatDayHeader("2026-06-17")).toBe("6月17日");
   });
 
-  it("handles single digit month", () => {
+  it("strips leading zeros from month and day", () => {
     expect(formatDayHeader("2026-01-05")).toBe("1月5日");
   });
 });

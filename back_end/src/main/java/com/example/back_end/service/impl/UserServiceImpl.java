@@ -32,9 +32,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             throw new BizException("用户不存在");
         }
 
-        if (req.nickname() != null) user.setNickname(SanitizeUtils.escapeHtml(req.nickname()));
-        if (req.avatar() != null) user.setAvatarUrl(SanitizeUtils.escapeHtml(req.avatar()));
-        if (req.phone() != null) user.setPhone(req.phone());
+        if (req.nickname() != null) {
+            String trimmed = req.nickname().trim();
+            if (trimmed.length() > 50) {
+                throw new BizException("昵称长度不能超过50个字符");
+            }
+            user.setNickname(SanitizeUtils.escapeHtml(trimmed));
+        }
+        if (req.avatar() != null) {
+            user.setAvatarUrl(SanitizeUtils.escapeHtml(req.avatar()));
+        }
+        if (req.phone() != null && !req.phone().isBlank()) {
+            String phone = req.phone().trim();
+            if (!phone.matches("^1[3-9]\\d{9}$")) {
+                throw new BizException("手机号格式不正确");
+            }
+            user.setPhone(phone);
+        }
 
         updateById(user);
         log.info("更新用户信息 userId={}", userId);

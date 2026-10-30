@@ -43,12 +43,21 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
     private final ITokenBlacklistService tokenBlacklistService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String EMAIL_REGEX = "^[\\w.+-]+@[\\w-]+\\.[\\w.]+$";
 
     @Override
     @Transactional // 事务回滚注解（所有数据库操作要么都成功，要么都失败）
     public LoginResponse register(RegisterRequest req) {
+        if (req.email() == null || !req.email().matches(EMAIL_REGEX)) {
+            throw new BizException("邮箱格式不正确");
+        }
+
         // 前端 RSA 公钥加密传输，后端私钥解密；仅解密后的明文参与 BCrypt 哈希
         String rawPassword = rsaUtils.decrypt(req.password());
+        if (rawPassword == null || rawPassword.length() < 6 || rawPassword.length() > 32) {
+            throw new BizException("密码长度必须在6-32位之间");
+        }
+
         if (lambdaQuery().eq(User::getEmail, req.email()).count() > 0) {
             throw new BizException("邮箱已注册");
         }
@@ -57,7 +66,8 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         User user = new User();
         user.setEmail(req.email());
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
-        user.setNickname(req.nickname() != null ? SanitizeUtils.escapeHtml(req.nickname()) : "");
+        user.setNickname(
+                req.nickname() != null ? SanitizeUtils.escapeHtml(req.nickname().trim()) : "");
         save(user);
 
         // 注册时初始化默认数据：日常账本 + 现金账户（与用户数据同事务）
@@ -85,6 +95,9 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
 
     @Override
     public LoginResponse login(LoginRequest req) {
+        if (req.email() == null || req.password() == null) {
+            throw new BizException(401, "邮箱或密码错误");
+        }
         // 解密 → 按邮箱查用户 → BCrypt 比对；用户不存在与密码错误返回同一提示，防账号枚举
         String rawPassword = rsaUtils.decrypt(req.password());
         User user = lambdaQuery().eq(User::getEmail, req.email()).one();
@@ -129,7 +142,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
 
     @Override
     public void sendResetCode(String email) {
-        if (email == null || !email.matches("^[\\w.+-]+@[\\w-]+\\.[\\w.]+$")) {
+        if (email == null || !email.matches(EMAIL_REGEX)) {
             throw new BizException("邮箱格式不正确");
         }
 
@@ -173,6 +186,9 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         }
 
         String rawPassword = rsaUtils.decrypt(newPassword);
+        if (rawPassword == null || rawPassword.length() < 6 || rawPassword.length() > 32) {
+            throw new BizException("密码长度必须在6-32位之间");
+        }
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setResetCode(null);
         user.setResetCodeExpiresAt(null);

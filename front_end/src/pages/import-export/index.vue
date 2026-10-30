@@ -164,6 +164,7 @@ import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { getAccountBooks, exportTransactions, importTransactions, downloadTemplate, type AccountBook } from "@/api/common";
+import { yuanToCents } from "@/utils/format";
 
 const activeTab = ref<"export" | "import">("export");
 
@@ -273,11 +274,7 @@ function parsePreviewType(val: string): number {
 }
 
 function parsePreviewAmount(val: string): number {
-  if (!val) return 0;
-  const n = parseFloat(val.trim());
-  if (isNaN(n)) return 0;
-  if (n < 0) return 0;
-  return Math.round(n * 100);
+  return yuanToCents(val);
 }
 
 function previewFile(filePath: string) {

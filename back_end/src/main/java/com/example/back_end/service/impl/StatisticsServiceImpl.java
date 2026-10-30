@@ -28,6 +28,9 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
     }
 
     public StatisticsResponse monthly(Long bookId, String month) {
+        if (month == null || !month.matches("^\\d{4}-\\d{2}$")) {
+            throw new BizException("月份格式不正确，应为 YYYY-MM");
+        }
         validateBookOwnership(bookId);
         LocalDateTime monthStart = LocalDateTime.parse(month + "-01T00:00:00");
         LocalDateTime monthEnd = monthStart.plusMonths(1);
@@ -61,9 +64,10 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
 
     public TrendResponse trend(Long bookId, int months) {
         validateBookOwnership(bookId);
+        int safeMonths = months <= 0 ? 6 : Math.min(months, 36);
 
         YearMonth current = YearMonth.now();
-        LocalDateTime start = current.minusMonths(months - 1L).atDay(1).atStartOfDay();
+        LocalDateTime start = current.minusMonths(safeMonths - 1L).atDay(1).atStartOfDay();
         LocalDateTime end = current.plusMonths(1).atDay(1).atStartOfDay();
 
         Map<String, Long> expenseByMonth = new HashMap<>();
@@ -79,7 +83,7 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
         List<String> monthLabels = new ArrayList<>();
         List<Long> expenseList = new ArrayList<>();
         List<Long> incomeList = new ArrayList<>();
-        for (int i = months - 1; i >= 0; i--) {
+        for (int i = safeMonths - 1; i >= 0; i--) {
             String label = current.minusMonths(i).toString();
             monthLabels.add(label);
             expenseList.add(expenseByMonth.getOrDefault(label, 0L));
@@ -90,6 +94,9 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
     }
 
     private void validateBookOwnership(Long bookId) {
+        if (bookId == null) {
+            throw new BizException("账本ID不能为空");
+        }
         AccountBook book = accountBookMapper.selectById(bookId);
         if (book == null || !book.getOwnerId().equals(AuthUtils.getCurrentUserId())) {
             throw new BizException("无权访问该账本");

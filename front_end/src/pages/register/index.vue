@@ -130,13 +130,19 @@ const goLogin = () => {
   align-items: center;
   justify-content: center;
   background: var(--bg-primary);
-  padding: 48rpx;
+  padding: 48rpx 32rpx;
   box-sizing: border-box;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 600rpx;
+  max-width: 680rpx;
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 64rpx 48rpx;
+  box-shadow: var(--shadow-md);
+  box-sizing: border-box;
 }
 
 .auth-header {
@@ -150,14 +156,15 @@ const goLogin = () => {
     font-size: 40rpx;
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: 1rpx;
+    letter-spacing: -0.5rpx;
   }
 
   .auth-desc {
     display: block;
-    font-size: 28rpx;
+    font-size: 26rpx;
     color: var(--text-muted);
-    margin-top: 14rpx;
+    margin-top: 10rpx;
+    letter-spacing: 0.5rpx;
   }
 }
 
@@ -170,13 +177,13 @@ const goLogin = () => {
       font-size: 26rpx;
       color: var(--text-label);
       font-weight: 500;
-      margin-bottom: 14rpx;
+      margin-bottom: 12rpx;
     }
   }
 
   :deep(.form-input) {
-    --wd-input-bg: var(--bg-secondary);
-    --wd-input-border: var(--border-primary);
+    --wd-input-bg: var(--bg-primary);
+    --wd-input-border: var(--border-subtle);
     --wd-input-color: var(--text-primary);
     --wd-input-placeholder: var(--text-placeholder);
     --wd-input-radius: var(--radius-md);
@@ -200,12 +207,20 @@ const goLogin = () => {
 }
 
 .submit-btn {
-  margin-top: 28rpx;
+  margin-top: 36rpx;
   height: var(--input-height);
   border-radius: var(--radius-md);
   font-size: 32rpx;
   font-weight: 600;
+  letter-spacing: 1rpx;
   box-shadow: var(--shadow-primary-md);
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  --wot-button-radius-main: var(--radius-md);
 }
 
 .auth-footer {
@@ -216,6 +231,11 @@ const goLogin = () => {
     font-size: 26rpx;
     color: var(--color-primary);
     font-weight: 500;
+    transition: opacity 0.15s;
+
+    &:active {
+      opacity: 0.7;
+    }
   }
 }
 </style>

@@ -372,15 +372,17 @@ onShow(() => {
 }
 
 .nav-back {
-  width: 64rpx;
-  height: 64rpx;
+  width: 68rpx;
+  height: 68rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default);
 
   &:active {
     transform: scale(0.92);
@@ -395,21 +397,24 @@ onShow(() => {
 }
 
 .nav-sort {
-  padding: 14rpx 24rpx;
+  padding: 12rpx 28rpx;
   border-radius: var(--radius-full);
   font-size: 26rpx;
   color: var(--color-primary);
   font-weight: 500;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   flex-shrink: 0;
+  transition: transform 0.15s var(--spring-default);
 
   &:active {
-    transform: scale(0.92);
+    transform: scale(0.94);
   }
 
   &.active {
     background: var(--color-primary);
     color: var(--text-inverse);
+    border-color: var(--color-primary);
   }
 }
 
@@ -453,6 +458,7 @@ onShow(() => {
   justify-content: space-between;
   padding: 24rpx 28rpx;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-md);
   margin-bottom: 12rpx;
   box-shadow: var(--shadow-sm);
@@ -571,11 +577,13 @@ onShow(() => {
   gap: 12rpx;
   padding: 26rpx 0;
   background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: background 0.15s;
+  transition: transform 0.15s var(--spring-default), background 0.15s;
 
   &:active {
+    transform: scale(0.98);
     background: var(--bg-overlay);
   }
 
@@ -588,6 +596,7 @@ onShow(() => {
 
 .editor {
   background: var(--bg-secondary);
+  border-top: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   padding: 0 32rpx calc(var(--safe-area-bottom, 0px) + 40rpx);
 }
