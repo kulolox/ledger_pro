@@ -1,5 +1,6 @@
 package com.example.back_end.utils;
 
+import com.example.back_end.common.BizException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -10,6 +11,6 @@ public class AuthUtils {
         if (auth != null && auth.getPrincipal() instanceof Long) {
             return (Long) auth.getPrincipal();
         }
-        throw new RuntimeException("未登录");
+        throw new BizException(401, "未登录");
     }
 }

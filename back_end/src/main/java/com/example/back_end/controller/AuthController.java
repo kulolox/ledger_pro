@@ -56,8 +56,7 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public Result<Map<String, String>> resetPassword(@RequestBody Map<String, String> params) {
-        authService.resetPassword(
-                params.get("email"), params.get("code"), params.get("new_password"));
+        authService.resetPassword(params.get("email"), params.get("code"), params.get("new_password"));
         return Result.ok("密码重置成功", Map.of());
     }
 

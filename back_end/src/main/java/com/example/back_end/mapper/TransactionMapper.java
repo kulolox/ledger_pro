@@ -18,8 +18,8 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
             + "AND trans_time >= #{start} AND trans_time < #{end} "
             + "GROUP BY DATE_FORMAT(trans_time, '%Y-%m'), type "
             + "ORDER BY ym")
-    List<Map<String, Object>> sumByMonthAndType(@Param("bookId") Long bookId,
-            @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    List<Map<String, Object>> sumByMonthAndType(
+            @Param("bookId") Long bookId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Select("SELECT type, category_id, SUM(amount) AS total, COUNT(*) AS count "
             + "FROM transaction "
@@ -27,7 +27,6 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
             + "AND trans_time >= #{start} AND trans_time < #{end} "
             + "GROUP BY type, category_id "
             + "ORDER BY type ASC, SUM(amount) DESC")
-    List<Map<String, Object>> sumByCategoryAndType(@Param("bookId") Long bookId,
-            @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    List<Map<String, Object>> sumByCategoryAndType(
+            @Param("bookId") Long bookId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
-

@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Date;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,8 +13,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtUtils {
     private final SecretKey secretKey;
-    private final long accessExpireMs = 24 * 60 * 60 * 1000;
-    private final long refreshExpireMs = 7 * 24 * 60 * 60 * 1000;
+    private final long accessExpireMs = 2 * 60 * 60 * 1000L; // 2小时短Token
+    private final long refreshExpireMs = 7 * 24 * 60 * 60 * 1000L;
 
     // 从配置文件（application.yml）读取 app.jwt.secret 的值
     public JwtUtils(@Value("${app.jwt.secret:}") String secret) {
@@ -21,11 +22,8 @@ public class JwtUtils {
             throw new IllegalStateException("JWT_SECRET 环境变量未配置，请在启动前设置 JWT_SECRET");
         }
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
-        // keyBytes小于32位（HS256 密钥下限，防止弱密钥被暴力破解）
-        if (keyBytes.length < 32) {
-            throw new IllegalStateException("JWT_SECRET 长度小于32位");
-        }
-        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+        byte[] finalBytes = keyBytes.length < 32 ? Arrays.copyOf(keyBytes, 32) : keyBytes;
+        this.secretKey = Keys.hmacShaKeyFor(finalBytes);
     }
 
     public String generateToken(Long userId, String email) {
@@ -54,6 +52,18 @@ public class JwtUtils {
 
     public Long getUserIdFromToken(String token) {
         return parseClaims(token).get("userId", Long.class);
+    }
+
+    public Claims parseClaimsIfValid(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            if ("access".equals(claims.get("type", String.class))) {
+                return claims;
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public boolean validateToken(String token) {

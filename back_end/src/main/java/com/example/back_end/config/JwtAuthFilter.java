@@ -2,6 +2,7 @@ package com.example.back_end.config;
 
 import com.example.back_end.service.ITokenBlacklistService;
 import com.example.back_end.utils.JwtUtils;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,7 +32,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (jwtUtils.validateToken(token)) {
+            Claims claims = jwtUtils.parseClaimsIfValid(token);
+            if (claims != null) {
                 boolean blacklisted = false;
                 try {
                     blacklisted = tokenBlacklistService.isBlacklisted(token);
@@ -40,8 +42,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     log.error("黑名单查询失败，按未拉黑处理 path={}", request.getRequestURI(), e);
                 }
                 if (!blacklisted) {
-                    String email = jwtUtils.getEmailFromToken(token);
-                    Long userId = jwtUtils.getUserIdFromToken(token);
+                    Long userId = claims.get("userId", Long.class);
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
                     SecurityContextHolder.getContext().setAuthentication(auth);

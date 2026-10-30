@@ -40,7 +40,7 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
         long totalIncome = 0;
 
         for (Map<String, Object> row : rows) {
-            Integer type = (Integer) row.get("type");
+            Integer type = row.get("type") != null ? ((Number) row.get("type")).intValue() : 0;
             Long categoryId = row.get("category_id") != null ? ((Number) row.get("category_id")).longValue() : 0L;
             Long total = row.get("total") != null ? ((Number) row.get("total")).longValue() : 0L;
             Long count = row.get("count") != null ? ((Number) row.get("count")).longValue() : 0L;
@@ -70,7 +70,7 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
         Map<String, Long> incomeByMonth = new HashMap<>();
         for (Map<String, Object> row : baseMapper.sumByMonthAndType(bookId, start, end)) {
             String ym = (String) row.get("ym");
-            Integer type = (Integer) row.get("type");
+            Integer type = row.get("type") != null ? ((Number) row.get("type")).intValue() : 0;
             Long total = row.get("total") != null ? ((Number) row.get("total")).longValue() : 0L;
             if (type != null && type == 0) expenseByMonth.put(ym, total);
             else if (type != null && type == 1) incomeByMonth.put(ym, total);

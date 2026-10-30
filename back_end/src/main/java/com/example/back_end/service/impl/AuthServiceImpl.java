@@ -1,7 +1,6 @@
 package com.example.back_end.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-
 import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.dto.request.RegisterRequest;
@@ -25,7 +24,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Date;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -33,7 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor  // 自动生成所有 final 字段的构造方法
+@RequiredArgsConstructor // 自动生成所有 final 字段的构造方法
 @Slf4j
 public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IAuthService {
     private final AccountBookMapper accountBookMapper;
@@ -45,7 +43,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
     private final ITokenBlacklistService tokenBlacklistService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
-
 
     @Override
     @Transactional // 事务回滚注解（所有数据库操作要么都成功，要么都失败）
@@ -142,8 +139,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements IA
         }
 
         // 防频繁请求：验证码 5 分钟内不重发
-        if (user.getResetCodeExpiresAt() != null
-                && user.getResetCodeExpiresAt().isAfter(LocalDateTime.now())) {
+        if (user.getResetCodeExpiresAt() != null && user.getResetCodeExpiresAt().isAfter(LocalDateTime.now())) {
             throw new BizException("验证码已发送，请稍后再试");
         }
 

@@ -8,7 +8,6 @@ import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.AccountMapper;
 import com.example.back_end.service.IAccountService;
 import com.example.back_end.utils.AuthUtils;
-
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -31,9 +30,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
 
     public List<AccountResponse> listByBookId(Long bookId) {
         validateBookOwnership(bookId);
-        return lambdaQuery().eq(Account::getBookId, bookId)
-                .orderByAsc(Account::getSortOrder)
-                .list().stream()
+        return lambdaQuery().eq(Account::getBookId, bookId).orderByAsc(Account::getSortOrder).list().stream()
                 .map(AccountResponse::from)
                 .toList();
     }

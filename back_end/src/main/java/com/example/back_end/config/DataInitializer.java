@@ -3,7 +3,6 @@ package com.example.back_end.config;
 import com.example.back_end.entity.Category;
 import com.example.back_end.service.ICategoryService;
 import java.util.List;
-
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.boot.CommandLineRunner;

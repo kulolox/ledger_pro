@@ -57,7 +57,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     private final AccountBookMapper accountBookMapper;
     private final CacheManager cacheManager;
 
-    public TransactionServiceImpl(IUserCategoryService userCategoryService, AccountBookMapper accountBookMapper, CacheManager cacheManager) {
+    public TransactionServiceImpl(
+            IUserCategoryService userCategoryService, AccountBookMapper accountBookMapper, CacheManager cacheManager) {
         this.userCategoryService = userCategoryService;
         this.accountBookMapper = accountBookMapper;
         this.cacheManager = cacheManager;
@@ -72,9 +73,9 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     }
 
     private List<Long> getOwnedBookIds() {
-        return accountBookMapper.selectList(
-                        new LambdaQueryWrapper<AccountBook>()
-                                .eq(AccountBook::getOwnerId, AuthUtils.getCurrentUserId()))
+        return accountBookMapper
+                .selectList(
+                        new LambdaQueryWrapper<AccountBook>().eq(AccountBook::getOwnerId, AuthUtils.getCurrentUserId()))
                 .stream()
                 .map(AccountBook::getId)
                 .toList();
@@ -112,8 +113,13 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         Transaction tx = toEntity(req);
         save(tx);
         evictTransactionCache(req.book_id(), extractMonth(req.trans_time()));
-        log.info("新增交易 userId={} bookId={} txId={} amount={} type={}",
-                AuthUtils.getCurrentUserId(), req.book_id(), tx.getId(), tx.getAmount(), tx.getType());
+        log.info(
+                "新增交易 userId={} bookId={} txId={} amount={} type={}",
+                AuthUtils.getCurrentUserId(),
+                req.book_id(),
+                tx.getId(),
+                tx.getAmount(),
+                tx.getType());
         return TransactionResponse.from(tx);
     }
 
@@ -132,7 +138,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         tx.setCategoryId(req.category_id());
         tx.setRemark(req.remark() != null ? SanitizeUtils.escapeHtml(req.remark()) : "");
         if (req.trans_time() != null && !req.trans_time().isBlank()) {
-            tx.setTransTime(LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
+            tx.setTransTime(
+                    LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
         }
         updateById(tx);
 
@@ -186,7 +193,10 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             }
         }
         UpdateWrapper<Transaction> wrapper = new UpdateWrapper<>();
-        wrapper.in("id", body.ids()).in("book_id", ownedBookIds).set("deleted", 1).set("updated_at", LocalDateTime.now());
+        wrapper.in("id", body.ids())
+                .in("book_id", ownedBookIds)
+                .set("deleted", 1)
+                .set("updated_at", LocalDateTime.now());
         int actualDeleted = baseMapper.update(null, wrapper);
         var evictMonths = txs.stream()
                 .filter(tx -> ownedBookIds.contains(tx.getBookId()))
@@ -194,13 +204,20 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 .distinct()
                 .toList();
         affectedBookIds.forEach(bid -> evictTransactionCache(bid, evictMonths.toArray(new String[0])));
-        log.info("批量删除交易 userId={} requested={} deleted={}",
-                AuthUtils.getCurrentUserId(), body.ids().size(), actualDeleted);
+        log.info(
+                "批量删除交易 userId={} requested={} deleted={}",
+                AuthUtils.getCurrentUserId(),
+                body.ids().size(),
+                actualDeleted);
         return actualDeleted;
     }
 
     // 列表缓存按 userId::bookId::month::page 分片，写操作后驱逐对应月份；unless 空结果不缓存
-    @Cacheable(value = "transactions", key = "T(com.example.back_end.utils.AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month + '::' + #page", unless = "#result == null")
+    @Cacheable(
+            value = "transactions",
+            key =
+                    "T(com.example.back_end.utils.AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month + '::' + #page",
+            unless = "#result == null")
     public TransactionListResponse list(Long bookId, String month, Integer page, Integer size) {
         validateBookOwnership(bookId);
 
@@ -218,14 +235,22 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 .orderByDesc(Transaction::getTransTime)
                 .page(pageObj);
 
-        List<TransactionResponse> list = result.getRecords().stream()
-                .map(TransactionResponse::from)
-                .toList();
+        List<TransactionResponse> list =
+                result.getRecords().stream().map(TransactionResponse::from).toList();
         return new TransactionListResponse(list, (int) result.getTotal());
     }
 
-    public TransactionListResponse search(Long bookId, String keyword, Integer type, Long categoryId,
-            Integer amountMin, Integer amountMax, String dateFrom, String dateTo, Integer page, Integer size) {
+    public TransactionListResponse search(
+            Long bookId,
+            String keyword,
+            Integer type,
+            Long categoryId,
+            Integer amountMin,
+            Integer amountMax,
+            String dateFrom,
+            String dateTo,
+            Integer page,
+            Integer size) {
         Long userId = AuthUtils.getCurrentUserId();
 
         List<Long> bookIds;
@@ -262,7 +287,13 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         if (dateFrom != null && !dateFrom.isBlank()) {
             wrapper.ge(Transaction::getTransTime, LocalDateTime.parse(dateFrom.trim() + "T00:00:00"));
         } else {
-            wrapper.ge(Transaction::getTransTime, LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0));
+            wrapper.ge(
+                    Transaction::getTransTime,
+                    LocalDateTime.now()
+                            .withDayOfMonth(1)
+                            .withHour(0)
+                            .withMinute(0)
+                            .withSecond(0));
         }
         if (dateTo != null && !dateTo.isBlank()) {
             wrapper.lt(Transaction::getTransTime, LocalDateTime.parse(dateTo.trim() + "T23:59:59"));
@@ -271,13 +302,13 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         wrapper.orderByDesc(Transaction::getTransTime);
 
         var result = page(pageObj, wrapper);
-        List<TransactionResponse> list = result.getRecords().stream()
-                .map(TransactionResponse::from)
-                .toList();
+        List<TransactionResponse> list =
+                result.getRecords().stream().map(TransactionResponse::from).toList();
         return new TransactionListResponse(list, (int) result.getTotal());
     }
 
-    public void exportTransactions(Long bookId, String month, String year, String format, HttpServletResponse response) {
+    public void exportTransactions(
+            Long bookId, String month, String year, String format, HttpServletResponse response) {
         validateBookOwnership(bookId);
         Map<Long, String> categoryMap = categoryNameMap();
 
@@ -313,8 +344,13 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         } catch (Exception e) {
             throw new RuntimeException("导出失败", e);
         } finally {
-            log.info("导出交易 userId={} bookId={} format={} period={} count={}",
-                    AuthUtils.getCurrentUserId(), bookId, format, safePeriod, txs.size());
+            log.info(
+                    "导出交易 userId={} bookId={} format={} period={} count={}",
+                    AuthUtils.getCurrentUserId(),
+                    bookId,
+                    format,
+                    safePeriod,
+                    txs.size());
         }
     }
 
@@ -341,6 +377,10 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 throw new BizException("文件中没有有效数据");
             }
 
+            if (items.size() > 5000) {
+                throw new BizException("单次导入流水记录不能超过 5000 条");
+            }
+
             List<Transaction> txs = new ArrayList<>();
             List<String> errors = new ArrayList<>();
             // 逐行转换：坏行收集错误信息，好行入库，不整体失败
@@ -365,8 +405,14 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                     .distinct()
                     .toList();
             evictTransactionCache(bookId, importMonths.toArray(new String[0]));
-            log.info("导入交易 userId={} bookId={} format={} total={} imported={} errors={}",
-                    AuthUtils.getCurrentUserId(), bookId, format, items.size(), txs.size(), errors.size());
+            log.info(
+                    "导入交易 userId={} bookId={} format={} total={} imported={} errors={}",
+                    AuthUtils.getCurrentUserId(),
+                    bookId,
+                    format,
+                    items.size(),
+                    txs.size(),
+                    errors.size());
             return Map.of("imported", txs.size(), "errors", errors, "total", items.size());
         } catch (BizException e) {
             throw e;
@@ -392,7 +438,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     }
 
     private Map<Long, String> categoryNameMap() {
-        return userCategoryService.listAll().stream().collect(Collectors.toMap(c -> c.id(), c -> c.name(), (a, b) -> a));
+        return userCategoryService.listAll().stream()
+                .collect(Collectors.toMap(c -> c.id(), c -> c.name(), (a, b) -> a));
     }
 
     private String formatType(Integer type) {
@@ -434,7 +481,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         }
     }
 
-    private Long parseCategory(String s, Integer type, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) {
+    private Long parseCategory(
+            String s, Integer type, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) {
         if (s == null || s.isBlank()) return otherCategoryByType.get(type);
         String trimmed = s.trim();
         Long id = nameToId.get(trimmed);
@@ -528,7 +576,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(response.getOutputStream(), data);
     }
 
-    private List<TransactionRequest> parseCsv(MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
+    private List<TransactionRequest> parseCsv(
+            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
         List<TransactionRequest> items = new ArrayList<>();
         try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
                 CSVReader csvReader = new CSVReader(reader)) {
@@ -564,7 +613,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return items;
     }
 
-    private List<TransactionRequest> parseExcel(MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
+    private List<TransactionRequest> parseExcel(
+            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
         List<TransactionRequest> items = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -600,7 +650,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         return items;
     }
 
-    private List<TransactionRequest> parseJson(MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
+    private List<TransactionRequest> parseJson(
+            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
         List<Map<String, Object>> rawList = objectMapper.readValue(
                 file.getInputStream(), objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
 
@@ -617,7 +668,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                     parseAmount(amountVal != null ? amountVal.toString() : ""),
                     toLong(map.get("account_id")),
                     toLong(map.get("to_account_id")),
-                    parseCategory(categoryVal != null ? categoryVal.toString() : "", type, nameToId, otherCategoryByType),
+                    parseCategory(
+                            categoryVal != null ? categoryVal.toString() : "", type, nameToId, otherCategoryByType),
                     map.get("remark") != null ? map.get("remark").toString() : "",
                     map.get("trans_time") != null ? map.get("trans_time").toString() : ""));
         }
@@ -703,9 +755,11 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             switch (format) {
                 case "csv" -> {
                     response.setContentType("text/csv;charset=UTF-8");
-                    response.setHeader("Content-Disposition",
+                    response.setHeader(
+                            "Content-Disposition",
                             "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
-                    CSVWriter writer = new CSVWriter(new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
+                    CSVWriter writer =
+                            new CSVWriter(new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8));
                     writer.writeNext(CSV_HEADERS);
                     writer.writeNext(new String[] {"支出", "25.50", "餐饮", "1", "", "午餐", "2025-01-15 12:30:00"});
                     writer.flush();
@@ -713,7 +767,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 }
                 case "excel" -> {
                     response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-                    response.setHeader("Content-Disposition",
+                    response.setHeader(
+                            "Content-Disposition",
                             "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
                     Workbook workbook = new XSSFWorkbook();
                     Sheet sheet = workbook.createSheet("import_template");
@@ -734,7 +789,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                 }
                 case "json" -> {
                     response.setContentType("application/json;charset=UTF-8");
-                    response.setHeader("Content-Disposition",
+                    response.setHeader(
+                            "Content-Disposition",
                             "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
                     List<Map<String, Object>> example = List.of(Map.of(
                             "type", "支出",

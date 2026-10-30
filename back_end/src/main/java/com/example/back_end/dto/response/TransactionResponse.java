@@ -25,7 +25,7 @@ public record TransactionResponse(
                 tx.getToAccountId(),
                 tx.getCategoryId(),
                 tx.getRemark(),
-                tx.getTransTime().toString(),
-                tx.getCreatedAt().toString());
+                tx.getTransTime() != null ? tx.getTransTime().toString() : "",
+                tx.getCreatedAt() != null ? tx.getCreatedAt().toString() : "");
     }
 }

@@ -8,7 +8,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 
+@Slf4j
 public class DbTokenBlacklistService implements ITokenBlacklistService {
     private final TokenBlacklistMapper mapper;
 
@@ -32,6 +35,16 @@ public class DbTokenBlacklistService implements ITokenBlacklistService {
                                 .eq(TokenBlacklist::getTokenHash, sha256(token))
                                 .gt(TokenBlacklist::getExpiresAt, LocalDateTime.now()))
                 > 0;
+    }
+
+    @Scheduled(cron = "0 0 3 * * ?") // 每天凌晨3点定时清理过期Token，防止降级表膨胀
+    public void cleanExpiredTokens() {
+        int deleted =
+                mapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TokenBlacklist>()
+                        .le(TokenBlacklist::getExpiresAt, LocalDateTime.now()));
+        if (deleted > 0) {
+            log.info("已清理过期黑名单 Token 数量: {}", deleted);
+        }
     }
 
     private String sha256(String input) {

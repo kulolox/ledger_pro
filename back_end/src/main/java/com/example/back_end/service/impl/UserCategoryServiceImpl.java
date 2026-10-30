@@ -11,7 +11,6 @@ import com.example.back_end.mapper.UserCategoryMapper;
 import com.example.back_end.service.IUserCategoryService;
 import com.example.back_end.utils.AuthUtils;
 import com.example.back_end.utils.SanitizeUtils;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
-public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, UserCategory> implements IUserCategoryService {
+public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, UserCategory>
+        implements IUserCategoryService {
 
     private final CategoryMapper categoryMapper;
 
@@ -28,20 +28,28 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         this.categoryMapper = categoryMapper;
     }
 
-    public synchronized List<CategoryResponse> listAll() {
+    public List<CategoryResponse> listAll() {
         Long userId = AuthUtils.getCurrentUserId();
         List<UserCategory> list = lambdaQuery()
                 .eq(UserCategory::getUserId, userId)
                 .orderByAsc(UserCategory::getSortOrder)
                 .list();
 
-        // 用户首次访问分类时懒初始化：从模板表复制到 user_category（synchronized 防并发重复复制）
+        // 用户首次访问分类时懒初始化：仅对当前 userId 细粒度同步，防止全局串行阻塞
         if (list.isEmpty()) {
-            initForUser(userId);
-            list = lambdaQuery()
-                    .eq(UserCategory::getUserId, userId)
-                    .orderByAsc(UserCategory::getSortOrder)
-                    .list();
+            synchronized (("init-user-cat-" + userId).intern()) {
+                list = lambdaQuery()
+                        .eq(UserCategory::getUserId, userId)
+                        .orderByAsc(UserCategory::getSortOrder)
+                        .list();
+                if (list.isEmpty()) {
+                    initForUser(userId);
+                    list = lambdaQuery()
+                            .eq(UserCategory::getUserId, userId)
+                            .orderByAsc(UserCategory::getSortOrder)
+                            .list();
+                }
+            }
         }
 
         return list.stream().map(CategoryResponse::from).toList();

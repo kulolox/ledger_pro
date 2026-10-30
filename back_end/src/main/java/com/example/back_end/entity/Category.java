@@ -1,8 +1,8 @@
 package com.example.back_end.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * 系统分类实体（内置分类，非用户自定义）

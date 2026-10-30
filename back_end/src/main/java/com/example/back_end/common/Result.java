@@ -29,5 +29,4 @@ public class Result<T> {
     public static <T> Result<T> fail(int code, String message) {
         return new Result<>(code, message, null);
     }
-
 }

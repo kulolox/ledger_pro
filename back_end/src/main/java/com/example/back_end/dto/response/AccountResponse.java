@@ -14,7 +14,14 @@ public record AccountResponse(
         Integer deleted) {
     public static AccountResponse from(Account a) {
         return new AccountResponse(
-                a.getId(), a.getName(), a.getType(), a.getIcon(), a.getCurrency(),
-                a.getInitialBalance(), a.getIsIncludeTotal(), a.getSortOrder(), a.getDeleted());
+                a.getId(),
+                a.getName(),
+                a.getType(),
+                a.getIcon(),
+                a.getCurrency(),
+                a.getInitialBalance(),
+                a.getIsIncludeTotal(),
+                a.getSortOrder(),
+                a.getDeleted());
     }
 }

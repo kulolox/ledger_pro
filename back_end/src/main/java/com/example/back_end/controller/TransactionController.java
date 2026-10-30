@@ -88,9 +88,7 @@ public class TransactionController {
     }
 
     @GetMapping("/template")
-    public void downloadTemplate(
-            @RequestParam(defaultValue = "csv") String format,
-            HttpServletResponse response) {
+    public void downloadTemplate(@RequestParam(defaultValue = "csv") String format, HttpServletResponse response) {
         transactionService.downloadTemplate(format, response);
     }
 }

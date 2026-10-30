@@ -45,12 +45,14 @@ public class SecurityConfig {
                     res.setContentType("application/json;charset=UTF-8");
                     res.getWriter().write("{\"code\":401,\"message\":\"未登录\"}");
                 }))
-                .headers(headers -> headers.xssProtection(
-                                xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
-                        .contentTypeOptions(cfg -> {})
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
-                        .contentSecurityPolicy(csp -> csp.policyDirectives(
-                                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'")));
+                .headers(
+                        headers -> headers.xssProtection(xss ->
+                                        xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+                                .contentTypeOptions(cfg -> {})
+                                .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                                .contentSecurityPolicy(
+                                        csp -> csp.policyDirectives(
+                                                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'")));
         return http.build();
     }
 

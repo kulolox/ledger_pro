@@ -1,6 +1,7 @@
 package com.example.back_end.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -23,6 +24,12 @@ public class GlobalExceptionHandler {
                 .reduce((a, b) -> a + "; " + b)
                 .orElse("参数校验失败");
         return Result.fail(400, msg);
+    }
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    public Result<Void> handleDuplicateKey(DuplicateKeyException e) {
+        log.warn("DuplicateKeyException: {}", e.getMessage());
+        return Result.fail(400, "数据已存在或邮箱已被注册");
     }
 
     @ExceptionHandler(RuntimeException.class)

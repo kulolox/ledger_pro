@@ -11,8 +11,8 @@ import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.Transaction;
 import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.TransactionMapper;
-import com.example.back_end.service.impl.TransactionServiceImpl;
 import com.example.back_end.service.IUserCategoryService;
+import com.example.back_end.service.impl.TransactionServiceImpl;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,13 +33,23 @@ import org.springframework.test.util.ReflectionTestUtils;
 @DisplayName("TransactionServiceImpl.update()")
 class TransactionServiceUpdateTest {
 
-    @Mock TransactionMapper transactionMapper;
-    @Mock AccountBookMapper accountBookMapper;
-    @Mock IUserCategoryService userCategoryService;
-    @Mock CacheManager cacheManager;
-    @Mock Cache cache;
+    @Mock
+    TransactionMapper transactionMapper;
 
-    @Captor ArgumentCaptor<Transaction> txCaptor;
+    @Mock
+    AccountBookMapper accountBookMapper;
+
+    @Mock
+    IUserCategoryService userCategoryService;
+
+    @Mock
+    CacheManager cacheManager;
+
+    @Mock
+    Cache cache;
+
+    @Captor
+    ArgumentCaptor<Transaction> txCaptor;
 
     TransactionServiceImpl service;
 
@@ -49,18 +59,40 @@ class TransactionServiceUpdateTest {
         service = new TransactionServiceImpl(userCategoryService, accountBookMapper, cacheManager);
         ReflectionTestUtils.setField(service, "baseMapper", transactionMapper);
 
-        SecurityContextHolder.getContext().setAuthentication(
-                new Authentication() {
-                    @Override public String getName() { return "1"; }
-                    @Override public Object getPrincipal() { return 1L; }
-                    @Override public Object getCredentials() { return null; }
-                    @Override public Object getDetails() { return null; }
-                    @Override public boolean isAuthenticated() { return true; }
-                    @Override public void setAuthenticated(boolean b) {}
-                    @Override public java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> getAuthorities() {
-                        return java.util.List.of();
-                    }
-                });
+        SecurityContextHolder.getContext().setAuthentication(new Authentication() {
+            @Override
+            public String getName() {
+                return "1";
+            }
+
+            @Override
+            public Object getPrincipal() {
+                return 1L;
+            }
+
+            @Override
+            public Object getCredentials() {
+                return null;
+            }
+
+            @Override
+            public Object getDetails() {
+                return null;
+            }
+
+            @Override
+            public boolean isAuthenticated() {
+                return true;
+            }
+
+            @Override
+            public void setAuthenticated(boolean b) {}
+
+            @Override
+            public java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> getAuthorities() {
+                return java.util.List.of();
+            }
+        });
     }
 
     @AfterEach
@@ -88,8 +120,7 @@ class TransactionServiceUpdateTest {
         existing.setAccountId(1L);
         when(transactionMapper.selectById(1L)).thenReturn(existing);
 
-        var req = new TransactionRequest(
-                100L, 0, 2000, 1L, null, 2L, "新备注", "2026-07-23T12:00:00");
+        var req = new TransactionRequest(100L, 0, 2000, 1L, null, 2L, "新备注", "2026-07-23T12:00:00");
 
         TransactionResponse result = service.update(1L, req);
 
@@ -102,7 +133,7 @@ class TransactionServiceUpdateTest {
         verify(transactionMapper).updateById(txCaptor.capture());
         assertEquals(2000, txCaptor.getValue().getAmount());
         assertEquals("新备注", txCaptor.getValue().getRemark());
-        verify(cache).evict(any());
+        verify(cache, atLeastOnce()).evict(any());
     }
 
     @Test

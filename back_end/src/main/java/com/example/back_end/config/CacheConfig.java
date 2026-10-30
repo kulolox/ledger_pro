@@ -27,16 +27,15 @@ public class CacheConfig {
         ObjectMapper mapper = new ObjectMapper();
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(30))
-                .serializeKeysWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
-                        new JacksonSerializer(mapper)));
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(new JacksonSerializer(mapper)));
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(config)
                 .build();
     }
 
-    @Bean 
+    @Bean
     @ConditionalOnExpression("'${REDIS_HOST:}'.isEmpty()")
     public CacheManager inMemoryCacheManager() {
         // 无 Redis：进程内内存缓存（@Cacheable 强依赖 CacheManager，无它应用起不来）
