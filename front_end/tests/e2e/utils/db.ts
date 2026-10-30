@@ -173,13 +173,4 @@ export async function destroyTestUser(userId: number, bookId: number): Promise<v
   }
 }
 
-export async function getResetCode(userId: number): Promise<string> {
-  const conn = await mysql.createConnection(DB_CONFIG);
-  try {
-    const [rows] = await conn.execute("SELECT reset_code FROM `user` WHERE id = ?", [userId]);
-    const row = (rows as any[])[0];
-    return row?.reset_code || "";
-  } finally {
-    await conn.end();
-  }
-}
+

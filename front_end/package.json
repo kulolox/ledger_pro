@@ -35,8 +35,8 @@
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
     "type-check": "vue-tsc --noEmit",
-    "test:unit": "vitest run --config vitest.config.ts 'src/**/__tests__/*.test.ts'",
-    "test:comp": "vitest run --config vitest.config.ts 'src/components/__tests__/*.test.ts'",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:comp": "vitest run --config vitest.config.ts src/components/__tests__",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:e2e:headed": "playwright test --config playwright.config.ts --headed",
     "test": "npm run test:unit && npm run test:comp && npm run test:e2e"
