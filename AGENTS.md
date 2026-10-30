@@ -28,6 +28,12 @@
    * 用户密码传输：前端使用 RSA 公钥加密 $\rightarrow$ 后端私钥解密 $\rightarrow$ BCrypt Hash 校验/入库。
    * 双 Token 认证：Access Token（有效期 24h）+ Refresh Token（有效期 7d），通过 `type` claim 区分。
    * 401 自动无感刷新：前端捕获 401 后自动调用 `/api/v1/auth/refresh` 换取新 Token 并无感重试。
+6. **数据库设计规范（MySQL 8.0）**：
+   * 字符集统一 `utf8mb4`。
+   * 状态与布尔字段（如 `deleted`, `type`, `visible`）统一使用 `TINYINT`，严禁使用 4 字节的 `INT`。
+   * 字段强制 `NOT NULL` 并赋默认值，禁止随意留 `NULL`。
+   * 核心流水表建立 `(book_id, deleted, trans_time)` 覆盖复合索引；`account_id`、`category_id` 必须建立索引。
+   * 具备唯一性特征的字段（如 `email`）必须建立物理 `UNIQUE KEY` 防并发重复。
 
 ---
 
