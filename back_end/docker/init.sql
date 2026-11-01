@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS `user` (
     `phone` VARCHAR(20) NOT NULL DEFAULT '',
     `email` VARCHAR(100) NOT NULL DEFAULT '',
     `password_hash` VARCHAR(255) NOT NULL DEFAULT '',
-    `data_key_salt` VARCHAR(255) DEFAULT NULL,
     `reset_code` VARCHAR(10) DEFAULT NULL,
     `reset_code_expires_at` DATETIME DEFAULT NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,7 +64,6 @@ CREATE TABLE IF NOT EXISTS `category` (
 CREATE TABLE IF NOT EXISTS `user_category` (
     `id` BIGINT NOT NULL,
     `user_id` BIGINT NOT NULL,
-    `source_id` BIGINT DEFAULT NULL,
     `parent_id` BIGINT NOT NULL DEFAULT 0,
     `name` VARCHAR(32) NOT NULL DEFAULT '',
     `type` TINYINT NOT NULL DEFAULT 0,
@@ -87,19 +85,11 @@ CREATE TABLE IF NOT EXISTS `transaction` (
     `book_id` BIGINT NOT NULL,
     `type` TINYINT NOT NULL DEFAULT 0,
     `amount` INT NOT NULL DEFAULT 0,
-    `fee` INT NOT NULL DEFAULT 0,
     `account_id` BIGINT NOT NULL,
     `to_account_id` BIGINT DEFAULT NULL,
     `category_id` BIGINT DEFAULT NULL,
     `trans_time` DATETIME NOT NULL,
-    `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai',
     `remark` VARCHAR(255) NOT NULL DEFAULT '',
-    `merchant` VARCHAR(100) NOT NULL DEFAULT '',
-    `location` VARCHAR(255) NOT NULL DEFAULT '',
-    `image_urls` TEXT,
-    `status` TINYINT NOT NULL DEFAULT 0,
-    `periodic_rule_id` BIGINT DEFAULT NULL,
-    `template_id` BIGINT DEFAULT NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted` TINYINT NOT NULL DEFAULT 0,
@@ -107,23 +97,6 @@ CREATE TABLE IF NOT EXISTS `transaction` (
     INDEX `idx_book_del_time` (`book_id`, `deleted`, `trans_time`),
     INDEX `idx_account_id` (`account_id`),
     INDEX `idx_category_id` (`category_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `budget` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `book_id` BIGINT NOT NULL,
-    `user_id` BIGINT NOT NULL,
-    `category_id` BIGINT DEFAULT NULL,
-    `amount` INT NOT NULL,
-    `start_date` DATE NOT NULL,
-    `period_type` TINYINT NOT NULL DEFAULT 0,
-    `carry_over` TINYINT NOT NULL DEFAULT 0,
-    `status` TINYINT NOT NULL DEFAULT 1,
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    INDEX `idx_book_id` (`book_id`),
-    INDEX `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `token_blacklist` (
