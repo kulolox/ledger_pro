@@ -104,10 +104,54 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     }
 
     private String extractMonth(String transTime) {
-        if (transTime != null && transTime.length() >= 7) {
-            return transTime.substring(0, 7);
+        if (transTime != null && !transTime.isBlank()) {
+            try {
+                LocalDateTime dt = parseTransTime(transTime);
+                return String.format("%04d-%02d", dt.getYear(), dt.getMonthValue());
+            } catch (Exception ignored) {
+                if (transTime.length() >= 7) {
+                    return transTime.substring(0, 7);
+                }
+            }
         }
         return java.time.YearMonth.now().toString();
+    }
+
+    private LocalDateTime parseTransTime(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return LocalDateTime.now();
+        }
+        String s = raw.trim().replace('/', '-').replace('T', ' ');
+        int dotIdx = s.indexOf('.');
+        if (dotIdx > 0) {
+            s = s.substring(0, dotIdx);
+        }
+        if (s.endsWith("Z") || s.endsWith("z")) {
+            s = s.substring(0, s.length() - 1).trim();
+        }
+        int plusIdx = s.indexOf('+');
+        if (plusIdx > 0) {
+            s = s.substring(0, plusIdx).trim();
+        }
+
+        String[] parts = s.split("\\s+");
+        String datePart = parts[0];
+        String timePart = parts.length > 1 ? parts[1] : "00:00:00";
+
+        String[] d = datePart.split("-");
+        if (d.length != 3) {
+            throw new IllegalArgumentException("无效的日期格式: " + raw);
+        }
+        int year = Integer.parseInt(d[0]);
+        int month = Integer.parseInt(d[1]);
+        int day = Integer.parseInt(d[2]);
+
+        String[] t = timePart.split(":");
+        int hour = t.length > 0 && !t[0].isEmpty() ? Integer.parseInt(t[0]) : 0;
+        int minute = t.length > 1 && !t[1].isEmpty() ? Integer.parseInt(t[1]) : 0;
+        int second = t.length > 2 && !t[2].isEmpty() ? Integer.parseInt(t[2]) : 0;
+
+        return LocalDateTime.of(year, month, day, hour, minute, second);
     }
 
     @Transactional
@@ -167,8 +211,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             tx.setRemark(SanitizeUtils.escapeHtml(req.remark()));
         }
         if (req.trans_time() != null && !req.trans_time().isBlank()) {
-            tx.setTransTime(
-                    LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
+            tx.setTransTime(parseTransTime(req.trans_time()));
         }
         updateById(tx);
 
@@ -413,10 +456,13 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     public Map<String, Object> importTransactions(Long bookId, MultipartFile file, String format) {
         validateBookOwnership(bookId);
         try {
-            Map<Long, String> categoryMap = categoryNameMap();
-            Map<String, Long> nameToId = categoryMap.entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey, (a, b) -> a));
-            Map<Integer, Long> otherCategoryByType = userCategoryService.listAll().stream()
+            var allCategories = userCategoryService.listAll();
+            Map<String, Long> nameToId = new java.util.HashMap<>();
+            for (var c : allCategories) {
+                nameToId.putIfAbsent(c.type() + ":" + c.name(), c.id());
+                nameToId.putIfAbsent(c.name(), c.id());
+            }
+            Map<Integer, Long> otherCategoryByType = allCategories.stream()
                     .filter(c -> "其他".equals(c.name()))
                     .collect(Collectors.toMap(c -> c.type(), c -> c.id(), (a, b) -> a));
 
@@ -540,7 +586,10 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             String s, Integer type, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) {
         if (s == null || s.isBlank()) return otherCategoryByType.get(type);
         String trimmed = s.trim();
-        Long id = nameToId.get(trimmed);
+        Long id = nameToId.get(type + ":" + trimmed);
+        if (id == null) {
+            id = nameToId.get(trimmed);
+        }
         if (id != null) return id;
         try {
             return Long.parseLong(trimmed);
@@ -877,8 +926,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
         tx.setCategoryId(req.category_id());
         tx.setRemark(req.remark() != null ? SanitizeUtils.escapeHtml(req.remark()) : "");
         if (req.trans_time() != null && !req.trans_time().isBlank()) {
-            tx.setTransTime(
-                    LocalDateTime.parse(req.trans_time().replace(" ", "T").substring(0, 19)));
+            tx.setTransTime(parseTransTime(req.trans_time()));
         } else {
             tx.setTransTime(LocalDateTime.now());
         }

@@ -25,9 +25,21 @@ describe("formatCents", () => {
     expect(result).toContain("5.00");
   });
 
-  it("handles large amounts with thousands separator", () => {
-    const result = formatCents(123456789);
-    expect(result).toContain("1,234,567.89");
+  it("handles amounts under 10,000 yuan with thousands separator", () => {
+    const result = formatCents(999999);
+    expect(result).toContain("9,999.99");
+  });
+
+  it("formats large amounts (>= 10,000 yuan) with 万 unit", () => {
+    expect(formatCents(1000000)).toBe("1.00万");
+    expect(formatCents(123456789)).toBe("123.46万");
+    expect(formatCents(889888700)).toBe("889.89万");
+    expect(formatCents(-5000000)).toBe("-5.00万");
+  });
+
+  it("formats huge amounts (>= 100,000,000 yuan) with 亿 unit", () => {
+    expect(formatCents(10000000000)).toBe("1.00亿");
+    expect(formatCents(123456789000)).toBe("12.35亿");
   });
 });
 
@@ -38,6 +50,11 @@ describe("formatNumber", () => {
 
   it("formats zero", () => {
     expect(formatNumber(0)).toBe("0.00");
+  });
+
+  it("formats large numbers with 万 and 亿 units", () => {
+    expect(formatNumber(8898887)).toBe("889.89万");
+    expect(formatNumber(150000000)).toBe("1.50亿");
   });
 });
 

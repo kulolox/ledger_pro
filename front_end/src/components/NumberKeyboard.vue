@@ -53,33 +53,34 @@ const onKeyClick = (key: (typeof keys)[number]) => {
 
 <style lang="scss" scoped>
 .keyboard {
-  background: var(--bg-tertiary);
-  padding: 16rpx 16rpx calc(var(--safe-area-bottom, 0px) + 20rpx);
-  border-top: 1rpx solid var(--border-subtle);
+  background: var(--bg-secondary);
+  padding: 12rpx 32rpx calc(var(--safe-area-bottom, 0px) + 28rpx);
   transition: background-color 0.2s var(--spring-default);
 }
 
 .kb-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12rpx;
-  grid-template-rows: repeat(4, 104rpx);
+  gap: 16rpx;
+  grid-template-rows: repeat(4, 100rpx);
 }
 
 .kb-key {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-key);
+  background: var(--bg-card-subtle);
   border-radius: var(--radius-md);
   user-select: none;
   box-shadow: var(--shadow-key);
   border: 1rpx solid var(--border-subtle);
-  transition: transform 0.12s var(--spring-default), background-color 0.12s var(--spring-default);
+  transition:
+    transform 0.1s var(--spring-default),
+    background-color 0.1s var(--spring-default);
   cursor: pointer;
 
   .kb-key-text {
-    font-size: 42rpx;
+    font-size: 40rpx;
     color: var(--text-primary);
     font-weight: 500;
     line-height: 1;
@@ -88,7 +89,7 @@ const onKeyClick = (key: (typeof keys)[number]) => {
 
   &:active {
     background: var(--bg-key-hover);
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
 }
 
@@ -124,15 +125,15 @@ const onKeyClick = (key: (typeof keys)[number]) => {
 .kb-key-save {
   background: var(--color-primary);
   border: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-primary-md);
 
   &:active {
     background: var(--color-primary-hover);
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
 
   .kb-key-text {
-    color: var(--text-inverse);
+    color: #ffffff;
     font-size: 32rpx;
     font-weight: 600;
     letter-spacing: 1rpx;

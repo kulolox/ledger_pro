@@ -1,51 +1,68 @@
 <template>
   <view class="auth-page">
+    <view class="auth-topbar">
+      <view class="nav-back-link" @click="goLogin">
+        <wd-icon name="left" size="34rpx" color="var(--color-primary)" />
+        <text class="nav-back-text">返回</text>
+      </view>
+      <view class="theme-pill" @click="toggleTheme">
+        <text class="theme-pill-icon">{{ themeMode === "dark" ? "🌙" : "☀️" }}</text>
+        <text class="theme-pill-text">{{ themeMode === "dark" ? "深色" : "浅色" }}</text>
+      </view>
+    </view>
+
     <view class="auth-card">
       <view class="auth-header">
-        <AppLogo :size="120" />
+        <AppLogo :size="144" />
         <text class="auth-title">找回密码</text>
-        <text class="auth-desc">通过邮箱验证码重置密码</text>
+        <text class="auth-desc">通过注册邮箱验证码重置密码</text>
       </view>
 
       <view class="auth-form">
         <view class="form-item">
           <text class="form-label">邮箱</text>
-          <wd-input
-            v-model="formData.email"
-            class="form-input"
-            placeholder="请输入注册邮箱"
-            clearable
-          />
+          <view class="input-surface">
+            <wd-input
+              v-model="formData.email"
+              class="form-input"
+              placeholder="请输入注册邮箱"
+              clearable
+            />
+          </view>
         </view>
         <view class="form-item">
           <text class="form-label">验证码</text>
           <view class="code-row">
-            <wd-input
-              v-model="formData.code"
-              class="form-input code-input"
-              placeholder="请输入验证码"
-              clearable
-            />
-            <wd-button
+            <view class="input-surface code-surface">
+              <wd-input
+                v-model="formData.code"
+                class="form-input code-input"
+                placeholder="请输入验证码"
+                clearable
+              />
+            </view>
+            <view
               class="send-code-btn"
-              type="success"
-              :disabled="countdown > 0"
-              :loading="sending"
+              :class="{ disabled: countdown > 0 || sending }"
               @click="handleSendCode"
             >
-              {{ countdown > 0 ? `${countdown}s` : "发送验证码" }}
-            </wd-button>
+              <text class="send-code-text">
+                {{ countdown > 0 ? `${countdown}s 后重新发送` : "发送验证码" }}
+              </text>
+            </view>
           </view>
         </view>
         <view class="form-item">
           <text class="form-label">新密码</text>
-          <wd-input
-            v-model="formData.new_password"
-            class="form-input"
-            show-password
-            placeholder="请设置新密码（至少6位）"
-            clearable
-          />
+          <view class="input-surface">
+            <wd-input
+              v-model="formData.new_password"
+              class="form-input"
+              show-password
+              placeholder="请设置新密码 (至少6位)"
+              clearable
+            />
+          </view>
         </view>
 
         <wd-button
@@ -70,6 +87,9 @@
 import { reactive, ref, onUnmounted } from "vue";
 import AppLogo from "@/components/AppLogo.vue";
 import { sendResetCode, resetPassword } from "@/api/common";
+import { useTheme } from "@/stores/themeStore";
+
+const { themeMode, toggleTheme } = useTheme();
 
 const formData = reactive({
   email: "",
@@ -89,6 +109,7 @@ onUnmounted(() => {
 });
 
 const handleSendCode = async () => {
+  if (countdown.value > 0 || sending.value) return;
   if (!formData.email) {
     uni.showToast({ title: "请输入邮箱", icon: "none" });
     return;
@@ -137,7 +158,6 @@ const handleReset = async () => {
       new_password: formData.new_password,
     });
     uni.showToast({ title: "密码重置成功", icon: "success" });
-    // 延时500
     setTimeout(() => {
       uni.navigateBack();
     }, 500);
@@ -157,81 +177,215 @@ const goLogin = () => {
 .auth-page {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   background: var(--bg-primary);
-  padding: 48rpx;
+  padding: calc(var(--status-bar-height, 24px) + 16rpx) 48rpx 48rpx;
   box-sizing: border-box;
+  transition: background-color 0.2s var(--spring-default);
+}
+
+.auth-topbar {
+  width: 100%;
+  max-width: 680rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 76rpx;
+  margin-bottom: 12rpx;
+}
+
+.nav-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
+  margin-left: -10rpx;
+  padding: 10rpx;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:active {
+    opacity: 0.55;
+  }
+
+  .nav-back-text {
+    font-size: 32rpx;
+    color: var(--color-primary);
+    font-weight: 400;
+  }
+}
+
+.theme-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 10rpx 22rpx;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  .theme-pill-icon {
+    font-size: 26rpx;
+    line-height: 1;
+  }
+
+  .theme-pill-text {
+    font-size: 24rpx;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
 }
 
 .auth-card {
   width: 100%;
-  max-width: 600rpx;
+  max-width: 680rpx;
+  margin: auto 0;
+  box-sizing: border-box;
 }
 
 .auth-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 56rpx;
+  margin-bottom: 60rpx;
+
+  :deep(.app-logo) {
+    margin-bottom: 28rpx;
+  }
 
   .auth-title {
     display: block;
-    font-size: 40rpx;
+    font-size: 52rpx;
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: 1rpx;
+    letter-spacing: -0.5rpx;
   }
 
   .auth-desc {
     display: block;
     font-size: 28rpx;
-    color: var(--text-muted);
-    margin-top: 14rpx;
+    color: var(--text-tertiary);
+    margin-top: 12rpx;
   }
 }
 
 .auth-form {
   .form-item {
-    margin-bottom: 28rpx;
+    margin-bottom: 32rpx;
 
     .form-label {
       display: block;
       font-size: 26rpx;
       color: var(--text-label);
       font-weight: 500;
-      margin-bottom: 14rpx;
+      margin-bottom: 12rpx;
+      padding-left: 8rpx;
     }
 
     .code-row {
       display: flex;
-      gap: 16rpx;
+      align-items: center;
+      gap: 20rpx;
 
-      .code-input {
+      .code-surface {
         flex: 1;
+        min-width: 0;
       }
 
       .send-code-btn {
         flex-shrink: 0;
-        height: var(--input-height);
-        font-size: 24rpx;
-        font-weight: 500;
-        border-radius: var(--radius-md);
+        height: 100rpx;
+        box-sizing: border-box;
+        padding: 0 32rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-lg);
+        background: var(--bg-active);
+        border: 1rpx solid rgba(0, 122, 255, 0.22);
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.15s var(--spring-default), opacity 0.15s;
+
+        &:active {
+          transform: scale(0.97);
+        }
+
+        &.disabled {
+          opacity: 0.5;
+          pointer-events: none;
+        }
+
+        .send-code-text {
+          font-size: 28rpx;
+          font-weight: 600;
+          color: var(--color-primary);
+          white-space: nowrap;
+        }
       }
     }
   }
 
+  .input-surface {
+    height: 100rpx;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    background: var(--bg-secondary);
+    border: 1rpx solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 0 8rpx;
+    transition:
+      border-color 0.2s var(--spring-default),
+      box-shadow 0.2s var(--spring-default),
+      background-color 0.2s var(--spring-default);
+
+    &:focus-within {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 6rpx var(--ring-focus);
+    }
+  }
+
   :deep(.form-input) {
-    --wd-input-bg: var(--bg-secondary);
-    --wd-input-border: var(--border-primary);
+    flex: 1;
+    width: 100%;
+    height: 96rpx !important;
+    padding: 0 20rpx !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    --wd-input-bg: transparent;
+    --wd-input-border: transparent;
     --wd-input-color: var(--text-primary);
     --wd-input-placeholder: var(--text-placeholder);
-    --wd-input-radius: var(--radius-md);
-    --wd-input-height: var(--input-height);
+    --wd-input-radius: var(--radius-lg);
+    --wd-input-height: 96rpx;
+    background: transparent !important;
+
+    &::after {
+      display: none !important;
+    }
+
+    .wd-input__body {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
 
     .wd-input__inner {
       color: var(--text-primary);
       font-size: 30rpx;
+      height: 96rpx !important;
+      padding: 0 !important;
       caret-color: var(--color-primary);
 
       &::placeholder {
@@ -240,29 +394,47 @@ const goLogin = () => {
     }
 
     .wd-input__clear,
-    .wd-input__password {
-      color: var(--color-primary);
+    .wd-input__password,
+    .wd-input__icon {
+      color: var(--text-tertiary);
     }
   }
 }
 
-.submit-btn {
-  margin-top: 28rpx;
-  height: var(--input-height);
-  border-radius: var(--radius-md);
-  font-size: 32rpx;
-  font-weight: 600;
+:deep(.submit-btn) {
+  margin-top: 52rpx;
+  height: 104rpx !important;
+  border-radius: var(--radius-lg) !important;
+  font-size: 32rpx !important;
+  font-weight: 600 !important;
+  letter-spacing: 1rpx;
+  background: var(--color-primary) !important;
+  border: none !important;
   box-shadow: var(--shadow-primary-md);
+  transition: transform 0.15s var(--spring-default), opacity 0.15s;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.92;
+  }
 }
 
 .auth-footer {
   text-align: center;
-  margin-top: 36rpx;
+  margin-top: 44rpx;
 
   .link {
-    font-size: 26rpx;
+    display: inline-block;
+    font-size: 28rpx;
     color: var(--color-primary);
     font-weight: 500;
+    padding: 12rpx 24rpx;
+    cursor: pointer;
+    transition: opacity 0.15s;
+
+    &:active {
+      opacity: 0.6;
+    }
   }
 }
 </style>

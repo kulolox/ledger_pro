@@ -3,11 +3,11 @@
     <NavBar>
       <template #left>
         <view class="nav-left" @click="goBack">
-          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+          <wd-icon name="left" size="36rpx" color="var(--text-primary)" />
         </view>
       </template>
       <template #center>
-        <text class="nav-title">搜索</text>
+        <text class="nav-title">账单查询</text>
       </template>
       <template #right>
         <view class="nav-right" />
@@ -18,15 +18,21 @@
       <view class="filter-search">
         <view class="search-row">
           <view class="search-input-wrap">
-            <wd-icon name="search-line" size="28rpx" color="var(--text-muted)" />
+            <wd-icon
+              name="search-line"
+              size="30rpx"
+              color="var(--text-tertiary)"
+            />
             <input
               class="search-input"
               v-model="keyword"
-              placeholder="搜索备注..."
+              placeholder="请输入备注"
               confirm-type="search"
               @confirm="doSearch"
             />
-            <text v-if="keyword" class="search-clear" @click="keyword = ''">✕</text>
+            <text v-if="keyword" class="search-clear" @click="keyword = ''"
+              >✕</text
+            >
           </view>
         </view>
       </view>
@@ -36,28 +42,28 @@
           <text class="cell-title">类型</text>
           <view class="cell-value">
             <text>{{ typeLabel }}</text>
-            <wd-icon name="right" size="24rpx" color="var(--text-muted)" />
+            <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
           </view>
         </view>
         <view class="filter-cell" @click="showDateRangePopup = true">
           <text class="cell-title">时间</text>
           <view class="cell-value">
-            <text>{{ dateLabel }}</text>
-            <wd-icon name="right" size="24rpx" color="var(--text-muted)" />
+            <text class="num-text">{{ dateLabel }}</text>
+            <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
           </view>
         </view>
         <view class="filter-cell" @click="showCategoryPicker = true">
           <text class="cell-title">分类</text>
           <view class="cell-value">
             <text>{{ categoryLabel }}</text>
-            <wd-icon name="right" size="24rpx" color="var(--text-muted)" />
+            <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
           </view>
         </view>
         <view class="filter-cell" @click="showBookPicker = true">
           <text class="cell-title">账本</text>
           <view class="cell-value">
             <text>{{ bookLabel }}</text>
-            <wd-icon name="right" size="24rpx" color="var(--text-muted)" />
+            <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
           </view>
         </view>
       </view>
@@ -72,93 +78,136 @@
       </view>
     </view>
 
-    <scroll-view
-      scroll-y
-      class="results-body"
-      @scrolltolower="loadMore"
-    >
+    <scroll-view scroll-y class="results-body" @scrolltolower="loadMore">
       <view class="results-inner">
-      <view v-if="loading && results.length === 0" class="loading-state">
-        <wd-icon name="loading" size="72rpx" color="var(--text-muted)" />
-        <text class="loading-text">搜索中...</text>
-      </view>
-
-      <view v-else-if="results.length === 0 && hasSearched" class="empty-state">
-        <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
-        <text class="empty-title">未找到匹配的交易</text>
-        <text class="empty-hint">试试调整筛选条件</text>
-      </view>
-
-      <view v-else-if="results.length === 0 && !hasSearched" class="empty-state">
-        <wd-icon name="search-line" size="72rpx" color="var(--text-muted)" />
-        <text class="empty-title">输入关键字或选择筛选条件</text>
-        <text class="empty-hint">点击搜索开始查找</text>
-      </view>
-
-      <view v-for="day in dayGroups" :key="day.date" class="day-group">
-        <view class="day-header">
-          <view class="day-info">
-            <text class="day-date">{{ formatDayHeader(day.date) }}</text>
-            <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
-          </view>
-          <view class="day-totals">
-            <text v-if="day.expense > 0" class="day-expense">-{{ formatCents(day.expense) }}</text>
-            <text v-if="day.income > 0" class="day-income">+{{ formatCents(day.income) }}</text>
-          </view>
+        <view v-if="loading && results.length === 0" class="loading-state">
+          <wd-icon name="loading" size="72rpx" color="var(--text-tertiary)" />
+          <text class="loading-text">搜索中...</text>
         </view>
 
         <view
-          v-for="tx in day.items"
-          :key="tx.id"
-          class="tx-item"
-          :class="{
-            'tx-item-pending': tx.sync_status === 'pending',
-            'tx-item-failed': tx.sync_status === 'failed',
-          }"
+          v-else-if="results.length === 0 && hasSearched"
+          class="empty-state"
         >
-          <view class="tx-left">
-            <view
-              class="tx-icon"
-              :style="{ background: getCategoryColor(tx.type, tx.category_id) }"
-            >
-              <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
+          <wd-icon
+            name="search-line"
+            size="72rpx"
+            color="var(--text-tertiary)"
+          />
+          <text class="empty-title">未找到匹配的交易</text>
+          <text class="empty-hint">试试调整筛选条件</text>
+        </view>
+
+        <view
+          v-else-if="results.length === 0 && !hasSearched"
+          class="empty-state"
+        >
+          <wd-icon
+            name="search-line"
+            size="72rpx"
+            color="var(--text-tertiary)"
+          />
+          <text class="empty-title">输入关键字或选择筛选条件</text>
+          <text class="empty-hint">点击搜索开始查找</text>
+        </view>
+
+        <view v-for="day in dayGroups" :key="day.date" class="day-group">
+          <view class="day-header">
+            <view class="day-info">
+              <text class="day-date">{{ formatDayHeader(day.date) }}</text>
+              <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
             </view>
-            <view class="tx-info">
-              <text class="tx-category">{{ getCategoryName(tx.type, tx.category_id) }}</text>
-              <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
+            <view class="day-totals">
+              <text v-if="day.expense > 0" class="day-expense"
+                >-{{ formatCents(day.expense) }}</text
+              >
+              <text v-if="day.income > 0" class="day-income"
+                >+{{ formatCents(day.income) }}</text
+              >
             </view>
           </view>
-          <view class="tx-right">
-            <text class="tx-amount" :class="tx.type === 1 ? 'income' : 'expense'">
-              {{ tx.type === 1 ? '+' : '-' }}{{ formatCents(tx.amount) }}
-            </text>
-            <text v-if="tx.sync_status === 'pending'" class="tx-sync-badge tx-sync-pending">待同步</text>
-            <text v-else-if="tx.sync_status === 'failed'" class="tx-sync-badge tx-sync-failed">同步失败</text>
+
+          <view
+            v-for="tx in day.items"
+            :key="tx.id"
+            class="tx-item"
+            :class="{
+              'tx-item-pending': tx.sync_status === 'pending',
+              'tx-item-failed': tx.sync_status === 'failed',
+            }"
+          >
+            <view class="tx-left">
+              <view
+                class="tx-icon"
+                :style="{
+                  background: getCategoryColor(tx.type, tx.category_id),
+                }"
+              >
+                <text>{{ getCategoryIcon(tx.type, tx.category_id) }}</text>
+              </view>
+              <view class="tx-info">
+                <text class="tx-category">{{
+                  getCategoryName(tx.type, tx.category_id)
+                }}</text>
+                <text v-if="tx.remark" class="tx-remark">{{ tx.remark }}</text>
+              </view>
+            </view>
+            <view class="tx-right">
+              <text
+                class="tx-amount"
+                :class="tx.type === 1 ? 'income' : 'expense'"
+              >
+                {{ tx.type === 1 ? "+" : "-" }}{{ formatCents(tx.amount) }}
+              </text>
+              <text
+                v-if="tx.sync_status === 'pending'"
+                class="tx-sync-badge tx-sync-pending"
+                >待同步</text
+              >
+              <text
+                v-else-if="tx.sync_status === 'failed'"
+                class="tx-sync-badge tx-sync-failed"
+                >同步失败</text
+              >
+            </view>
           </view>
         </view>
-      </view>
 
-      <view v-if="hasMore" class="loading-more">
-        <text>加载更多...</text>
-      </view>
-      <view class="list-bottom" />
+        <view v-if="hasMore" class="loading-more">
+          <text>加载更多...</text>
+        </view>
+        <view class="list-bottom" />
       </view>
     </scroll-view>
 
-    <wd-popup :model-value="showDateRangePopup" @update:model-value="showDateRangePopup = $event" position="bottom">
+    <wd-popup
+      :model-value="showDateRangePopup"
+      @update:model-value="showDateRangePopup = $event"
+      position="bottom"
+      custom-class="editor-popup"
+      custom-style="background: transparent;"
+    >
       <view class="picker-content">
         <view class="picker-header">
           <text class="picker-title">选择时间范围</text>
-          <text class="picker-close" @click="showDateRangePopup = false">完成</text>
+          <text class="picker-close" @click="showDateRangePopup = false"
+            >完成</text
+          >
         </view>
         <view class="date-range-content">
           <view class="date-range-row-inline">
-            <view class="date-range-btn date-btn-start" @click="showDateStartPicker = true">
-              <text>{{ dateFrom || '开始' }}</text>
+            <view
+              class="date-range-btn date-btn-start"
+              @click="showDateStartPicker = true"
+            >
+              <text>{{ dateFrom || "开始" }}</text>
             </view>
             <text class="date-sep">至</text>
-            <view class="date-range-btn date-btn-end" @click="showDateEndPicker = true">
-              <text>{{ dateTo || '结束' }}</text>
+            <view
+              class="date-range-btn date-btn-end"
+              @click="showDateEndPicker = true"
+            >
+              <text>{{ dateTo || "结束" }}</text>
             </view>
           </view>
           <view class="date-quick-actions">
@@ -220,9 +269,20 @@ import { useCategories } from "@/stores/categoryStore";
 import { useTransactions } from "@/stores/transactionStore";
 import { isLoggedIn } from "@/utils/storage";
 import { formatCents, formatWeekday } from "@/utils/format";
-import { searchTransactions, getAccountBooks, type SearchParams, type AccountBook } from "@/api/common";
+import {
+  searchTransactions,
+  getAccountBooks,
+  type SearchParams,
+  type AccountBook,
+} from "@/api/common";
 
-const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories, categories } = useCategories();
+const {
+  getCategoryName,
+  getCategoryColor,
+  getCategoryIcon,
+  loadCategories,
+  categories,
+} = useCategories();
 const { transactions } = useTransactions();
 
 const keyword = ref("");
@@ -249,19 +309,22 @@ const books = ref<AccountBook[]>([]);
 
 const categoryLabel = computed(() => {
   if (selectedCategoryId.value === undefined) return "全部分类";
-  const name = getCategoryName(0, selectedCategoryId.value) || getCategoryName(1, selectedCategoryId.value);
+  const name =
+    getCategoryName(0, selectedCategoryId.value) ||
+    getCategoryName(1, selectedCategoryId.value);
   return name || "全部分类";
 });
 
 const bookLabel = computed(() => {
   if (selectedBookId.value === undefined) return "全部账本";
-  const book = books.value.find(b => b.id === selectedBookId.value);
+  const book = books.value.find((b) => b.id === selectedBookId.value);
   return book?.name || "全部账本";
 });
 
 const dateLabel = computed(() => {
   if (!dateFrom.value && !dateTo.value) return "全部时间";
-  if (dateFrom.value && dateTo.value) return `${dateFrom.value} 至 ${dateTo.value}`;
+  if (dateFrom.value && dateTo.value)
+    return `${dateFrom.value} 至 ${dateTo.value}`;
   if (dateFrom.value) return `${dateFrom.value} 起`;
   return `至 ${dateTo.value}`;
 });
@@ -349,7 +412,7 @@ function onTypeConfirm({ value }: { value: number[] }) {
 const bookPickerValue = ref<number[]>([]);
 const bookColumns = computed(() => {
   const all = [{ label: "全部账本", value: 0 }];
-  const list = books.value.map(b => ({ label: b.name, value: b.id }));
+  const list = books.value.map((b) => ({ label: b.name, value: b.id }));
   return [...all, ...list];
 });
 const selectedBookId = ref<string | undefined>(undefined);
@@ -363,7 +426,9 @@ function onBookConfirm({ value }: { value: number[] }) {
 const categoryPickerValue = ref<number[]>([]);
 const categoryColumns = computed(() => {
   const all = [{ label: "全部分类", value: 0 }];
-  const cats = (categories.value[0] || []).concat(categories.value[1] || []).filter((c: any) => c.visible !== 0);
+  const cats = (categories.value[0] || [])
+    .concat(categories.value[1] || [])
+    .filter((c: any) => c.visible !== 0);
   const list = cats.map((c: any) => ({ label: c.name, value: c.id }));
   return [...all, ...list];
 });
@@ -390,8 +455,10 @@ async function fetchResults() {
     };
     if (keyword.value.trim()) params.keyword = keyword.value.trim();
     if (selectedType.value !== undefined) params.type = selectedType.value;
-    if (selectedCategoryId.value !== undefined) params.category_id = selectedCategoryId.value;
-    if (selectedBookId.value !== undefined) params.book_id = selectedBookId.value;
+    if (selectedCategoryId.value !== undefined)
+      params.category_id = selectedCategoryId.value;
+    if (selectedBookId.value !== undefined)
+      params.book_id = selectedBookId.value;
     if (dateFrom.value) params.date_from = dateFrom.value;
     if (dateTo.value) params.date_to = dateTo.value;
 
@@ -411,14 +478,25 @@ async function fetchResults() {
 
 function fallbackLocalSearch() {
   const kw = keyword.value.trim().toLowerCase();
-  const filtered = transactions.value.filter(tx => {
+  const filtered = transactions.value.filter((tx) => {
     if (tx.deleted) return false;
     if (kw && !tx.remark?.toLowerCase().includes(kw)) return false;
-    if (selectedType.value !== undefined && tx.type !== selectedType.value) return false;
-    if (selectedCategoryId.value !== undefined && tx.category_id !== selectedCategoryId.value) return false;
-    if (selectedBookId.value !== undefined && tx.book_id !== selectedBookId.value) return false;
-    if (dateFrom.value && tx.trans_time.substring(0, 10) < dateFrom.value) return false;
-    if (dateTo.value && tx.trans_time.substring(0, 10) > dateTo.value) return false;
+    if (selectedType.value !== undefined && tx.type !== selectedType.value)
+      return false;
+    if (
+      selectedCategoryId.value !== undefined &&
+      tx.category_id !== selectedCategoryId.value
+    )
+      return false;
+    if (
+      selectedBookId.value !== undefined &&
+      tx.book_id !== selectedBookId.value
+    )
+      return false;
+    if (dateFrom.value && tx.trans_time.substring(0, 10) < dateFrom.value)
+      return false;
+    if (dateTo.value && tx.trans_time.substring(0, 10) > dateTo.value)
+      return false;
     return true;
   });
 
@@ -435,7 +513,10 @@ function loadMore() {
 }
 
 const dayGroups = computed(() => {
-  const map = new Map<string, { date: string; income: number; expense: number; items: any[] }>();
+  const map = new Map<
+    string,
+    { date: string; income: number; expense: number; items: any[] }
+  >();
   for (const tx of results.value) {
     const dateKey = tx.trans_time.substring(0, 10);
     if (!map.has(dateKey)) {
@@ -477,6 +558,7 @@ onShow(async () => {
   flex-direction: column;
   background: var(--bg-primary);
   overflow: hidden;
+  transition: background-color 0.2s var(--spring-default);
 }
 
 .nav-left {
@@ -486,21 +568,23 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default);
+  cursor: pointer;
+  transition:
+    transform 0.15s var(--spring-default),
+    background-color 0.15s;
 
   &:active {
+    background: var(--bg-hover);
     transform: scale(0.92);
   }
 }
 
 .nav-title {
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.5rpx;
 }
 
 .nav-right {
@@ -509,29 +593,35 @@ onShow(async () => {
 }
 
 .filter-section {
-  margin: 16rpx 24rpx;
+  margin: 24rpx 28rpx 16rpx;
+  padding: 28rpx 32rpx;
   background: var(--bg-secondary);
   border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  transition: background-color 0.2s var(--spring-default);
 
   .filter-search {
-    padding: 16rpx 20rpx;
+    margin-bottom: 16rpx;
 
     .search-input-wrap {
       display: flex;
       align-items: center;
-      gap: 12rpx;
-      padding: 0 20rpx;
-      height: 72rpx;
-      background: var(--bg-primary);
-      border: 1rpx solid var(--border-subtle);
+      gap: 16rpx;
+      padding: 0 24rpx;
+      height: 76rpx;
+      background: var(--bg-input-filled);
       border-radius: var(--radius-md);
+      transition: box-shadow 0.2s;
+
+      &:focus-within {
+        box-shadow: 0 0 0 4rpx var(--ring-focus);
+      }
 
       .search-input {
         flex: 1;
-        font-size: 28rpx;
+        font-size: 30rpx;
         color: var(--text-primary);
         background: transparent;
         border: none;
@@ -541,8 +631,9 @@ onShow(async () => {
 
       .search-clear {
         font-size: 28rpx;
-        color: var(--text-muted);
+        color: var(--text-tertiary);
         padding: 8rpx;
+        cursor: pointer;
       }
     }
   }
@@ -552,28 +643,39 @@ onShow(async () => {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 22rpx 20rpx;
-      border-top: 1rpx solid var(--border-subtle);
+      padding: 24rpx 8rpx;
+      border-bottom: 1rpx solid var(--border-subtle);
+      cursor: pointer;
+      transition: opacity 0.15s;
+
+      &:last-child {
+        border-bottom: none;
+      }
 
       &:active {
-        background: var(--bg-overlay);
+        opacity: 0.65;
       }
 
       .cell-title {
-        font-size: 28rpx;
-        color: var(--text-secondary);
+        font-size: 30rpx;
+        color: var(--text-primary);
+        font-weight: 400;
         flex-shrink: 0;
       }
 
       .cell-value {
         display: flex;
         align-items: center;
-        gap: 8rpx;
+        gap: 10rpx;
 
         text {
-          font-size: 28rpx;
-          color: var(--text-primary);
-          font-weight: 500;
+          font-size: 30rpx;
+          color: var(--text-tertiary);
+          font-weight: 400;
+        }
+
+        .num-text {
+          font-variant-numeric: tabular-nums;
         }
       }
     }
@@ -581,33 +683,38 @@ onShow(async () => {
 
   .filter-actions {
     display: flex;
-    gap: 12rpx;
-    padding: 16rpx 20rpx 20rpx;
-    border-top: 1rpx solid var(--border-subtle);
+    gap: 24rpx;
+    padding-top: 24rpx;
 
     .action-btn {
       flex: 1;
       text-align: center;
-      padding: 22rpx 0;
+      height: 84rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border-radius: var(--radius-md);
-      font-size: 28rpx;
+      font-size: 30rpx;
       font-weight: 600;
-      transition: transform 0.15s var(--spring-default);
+      cursor: pointer;
+      transition:
+        transform 0.15s var(--spring-default),
+        opacity 0.15s;
 
       &:active {
-        transform: scale(0.97);
+        transform: scale(0.98);
       }
     }
 
     .search-action {
       background: var(--color-primary);
-      color: var(--text-inverse);
+      color: #ffffff;
+      box-shadow: var(--shadow-sm);
     }
 
     .reset-action {
-      background: var(--bg-primary);
-      border: 1rpx solid var(--border-subtle);
-      color: var(--text-secondary);
+      background: var(--bg-input-filled);
+      color: var(--text-primary);
     }
   }
 }
@@ -618,11 +725,11 @@ onShow(async () => {
 }
 
 .results-inner {
-  padding: 16rpx 20rpx 60rpx;
+  padding: 12rpx 28rpx 60rpx;
 }
 
 .day-group {
-  margin-top: 20rpx;
+  margin-top: 24rpx;
   background: var(--bg-secondary);
   border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -635,34 +742,36 @@ onShow(async () => {
 
   .day-header {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    padding: 24rpx 24rpx 18rpx;
+    padding: 26rpx 32rpx 20rpx;
+    border-bottom: 1rpx solid var(--border-subtle);
   }
 
   .day-info {
     display: flex;
     align-items: baseline;
-    gap: 14rpx;
+    gap: 16rpx;
 
     .day-date {
       font-size: 34rpx;
       font-weight: 700;
       color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
     }
 
     .day-weekday {
-      font-size: 24rpx;
-      color: var(--text-muted);
-      font-weight: 500;
+      font-size: 26rpx;
+      color: var(--text-tertiary);
+      font-weight: 400;
     }
   }
 
   .day-totals {
     display: flex;
     gap: 18rpx;
-    font-size: 26rpx;
-    font-weight: 600;
+    font-size: 32rpx;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
 
     .day-expense {
@@ -678,9 +787,13 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22rpx 24rpx;
+  padding: 28rpx 32rpx;
   transition: background 0.15s var(--spring-default);
   border-top: 1rpx solid var(--border-subtle);
+
+  &:first-of-type {
+    border-top: none;
+  }
 
   &:active {
     background: var(--bg-overlay);
@@ -690,24 +803,25 @@ onShow(async () => {
 .tx-left {
   display: flex;
   align-items: center;
-  gap: 18rpx;
+  gap: 24rpx;
   flex: 1;
   overflow: hidden;
 }
 
 .tx-icon {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 20rpx;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 28rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 
   text {
-    color: var(--text-inverse);
-    font-size: 32rpx;
-    font-weight: 600;
+    color: #ffffff;
+    font-size: 38rpx;
+    line-height: 1;
   }
 }
 
@@ -718,14 +832,14 @@ onShow(async () => {
   overflow: hidden;
 
   .tx-category {
-    font-size: 30rpx;
-    font-weight: 500;
+    font-size: 32rpx;
+    font-weight: 600;
     color: var(--text-primary);
   }
 
   .tx-remark {
-    font-size: 24rpx;
-    color: var(--text-muted);
+    font-size: 26rpx;
+    color: var(--text-tertiary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -741,8 +855,8 @@ onShow(async () => {
 }
 
 .tx-amount {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 34rpx;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 
   &.expense {
@@ -755,12 +869,12 @@ onShow(async () => {
 
 .tx-item-pending {
   border-left: 6rpx solid #ff9500;
-  padding-left: 18rpx;
+  padding-left: 26rpx;
 }
 
 .tx-item-failed {
   border-left: 6rpx solid var(--color-expense);
-  padding-left: 18rpx;
+  padding-left: 26rpx;
 }
 
 .tx-sync-badge {
@@ -772,12 +886,12 @@ onShow(async () => {
 
   &.tx-sync-pending {
     color: #ff9500;
-    background: rgba(255, 149, 0, 0.1);
+    background: rgba(255, 149, 0, 0.12);
   }
 
   &.tx-sync-failed {
     color: var(--color-expense);
-    background: rgba(255, 59, 48, 0.1);
+    background: var(--color-expense-bg);
   }
 }
 
@@ -789,7 +903,7 @@ onShow(async () => {
 
   .loading-text {
     font-size: 28rpx;
-    color: var(--text-muted);
+    color: var(--text-tertiary);
     margin-top: 20rpx;
   }
 }
@@ -798,28 +912,29 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 160rpx 0;
+  padding: 140rpx 0;
 
   .empty-title {
     font-size: 30rpx;
-    color: var(--text-muted);
+    color: var(--text-primary);
+    font-weight: 600;
     margin-top: 24rpx;
   }
 
   .empty-hint {
     font-size: 26rpx;
-    color: var(--text-dim);
-    margin-top: 12rpx;
+    color: var(--text-tertiary);
+    margin-top: 10rpx;
   }
 }
 
 .loading-more {
   text-align: center;
-  padding: 32rpx 0;
+  padding: 24rpx 0;
 
   text {
     font-size: 24rpx;
-    color: var(--text-muted);
+    color: var(--text-tertiary);
   }
 }
 
@@ -827,84 +942,84 @@ onShow(async () => {
   height: 40rpx;
 }
 
-// Picker styles
-.date-range-content {
-  padding: 24rpx 32rpx;
+.picker-content {
+  padding: 32rpx 32rpx calc(var(--safe-area-bottom, 0px) + 40rpx);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 
-  .date-range-row-inline {
+  .picker-header {
     display: flex;
     align-items: center;
-    gap: 16rpx;
+    justify-content: space-between;
+    margin-bottom: 32rpx;
 
-    .date-sep {
-      font-size: 26rpx;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .date-range-btn {
-      flex: 1;
-      text-align: center;
-      padding: 20rpx 0;
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
-      font-size: 28rpx;
+    .picker-title {
+      font-size: 34rpx;
+      font-weight: 700;
       color: var(--text-primary);
-      font-weight: 500;
-
-      &:active {
-        opacity: 0.7;
-      }
     }
-  }
 
-  .date-quick-actions {
-    display: flex;
-    gap: 16rpx;
-    padding: 20rpx 0 8rpx;
-
-    .quick-btn {
-      flex: 1;
-      text-align: center;
-      padding: 16rpx 0;
-      background: var(--bg-secondary);
-      border-radius: var(--radius-md);
-      font-size: 24rpx;
+    .picker-close {
+      font-size: 30rpx;
       color: var(--color-primary);
-      font-weight: 500;
-
-      &:active {
-        opacity: 0.7;
-      }
+      font-weight: 600;
+      cursor: pointer;
     }
   }
-}
 
-.picker-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
-}
+  .date-range-content {
+    display: flex;
+    flex-direction: column;
+    gap: 28rpx;
 
-.picker-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 32rpx 32rpx 16rpx;
-  border-bottom: 1rpx solid var(--border-subtle);
+    .date-range-row-inline {
+      display: flex;
+      align-items: center;
+      gap: 16rpx;
 
-  .picker-title {
-    font-size: 32rpx;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
+      .date-range-btn {
+        flex: 1;
+        height: 84rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-input-filled);
+        border-radius: var(--radius-md);
+        font-size: 28rpx;
+        color: var(--text-primary);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
 
-  .picker-close {
-    font-size: 28rpx;
-    color: var(--color-primary);
-    font-weight: 600;
+      .date-sep {
+        font-size: 26rpx;
+        color: var(--text-tertiary);
+      }
+    }
+
+    .date-quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16rpx;
+
+      .quick-btn {
+        height: 72rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-input-filled);
+        border-radius: var(--radius-md);
+        font-size: 26rpx;
+        color: var(--text-secondary);
+        font-weight: 500;
+        cursor: pointer;
+
+        &:active {
+          background: var(--bg-active);
+          color: var(--color-primary);
+        }
+      }
+    }
   }
 }
 </style>

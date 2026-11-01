@@ -1,11 +1,26 @@
 export function formatCents(cents: number): string {
-  return (cents / 100).toLocaleString("zh-CN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return formatNumber(cents / 100);
 }
 
 export function formatNumber(val: number): string {
+  if (isNaN(val)) return "0.00";
+  const sign = val < 0 ? "-" : "";
+  const abs = Math.abs(val);
+
+  if (abs >= 100_000_000) {
+    return `${sign}${(abs / 100_000_000).toLocaleString("zh-CN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}亿`;
+  }
+
+  if (abs >= 10_000) {
+    return `${sign}${(abs / 10_000).toLocaleString("zh-CN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}万`;
+  }
+
   return val.toLocaleString("zh-CN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

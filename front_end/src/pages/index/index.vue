@@ -1,31 +1,27 @@
 <template>
   <view class="home-page">
-    <NavBar>
+    <NavBar floating>
       <template #left>
         <view class="menu-btn" @click="showSidebar = true">
-          <wd-icon name="menu" size="32rpx" color="var(--text-secondary)" />
+          <wd-icon name="menu" size="36rpx" color="var(--text-primary)" />
         </view>
       </template>
       <template #center>
         <view class="month-capsule month-nav">
           <view class="capsule-arrow nav-arrow" @click="prevMonth">
-            <wd-icon name="left" size="14px" color="var(--text-secondary)" />
+            <wd-icon name="left" size="28rpx" color="var(--text-tertiary)" />
           </view>
           <view class="capsule-label-wrap">
             <text class="capsule-label month-label">{{ monthLabel }}</text>
           </view>
           <view class="capsule-arrow nav-arrow" @click="nextMonth">
-            <wd-icon name="right" size="14px" color="var(--text-secondary)" />
+            <wd-icon name="right" size="28rpx" color="var(--text-tertiary)" />
           </view>
         </view>
       </template>
       <template #right>
         <view class="stats-btn" @click="goStats">
-          <wd-icon
-            name="dashboard"
-            size="32rpx"
-            color="var(--text-secondary)"
-          />
+          <wd-icon name="dashboard" size="36rpx" color="var(--text-primary)" />
         </view>
       </template>
     </NavBar>
@@ -63,13 +59,15 @@
         class="transaction-list"
         refresher-enabled
         :refresher-triggered="refreshing"
+        :refresher-background="themeMode === 'dark' ? '#000000' : '#f2f2f7'"
+        :refresher-default-style="themeMode === 'dark' ? 'white' : 'black'"
         @refresherrefresh="onRefresh"
         @scrolltolower="loadMore"
       >
         <!-- 无账单数据显示 -->
         <view v-if="dayGroups.length === 0" class="empty-state">
           <view class="empty-icon-wrapper">
-            <wd-icon name="book" size="72rpx" color="var(--text-label)" />
+            <wd-icon name="book" size="72rpx" color="var(--text-tertiary)" />
           </view>
           <text class="empty-title">暂无账单</text>
           <text class="empty-hint">点击右下角 + 开始记账</text>
@@ -93,7 +91,7 @@
           </view>
 
           <view
-            v-for="(tx, idx) in day.items"
+            v-for="tx in day.items"
             :key="tx.id"
             class="tx-item"
             :class="{
@@ -146,7 +144,7 @@
       </scroll-view>
 
       <view class="fab" @click="onAdd">
-        <wd-icon name="plus" size="48rpx" color="var(--text-inverse)" />
+        <wd-icon name="plus" size="52rpx" color="#ffffff" />
       </view>
 
       <wd-dialog selector="delete-confirm" />
@@ -186,6 +184,7 @@ import {
   type LocalTransaction,
 } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
+import { useTheme } from "@/stores/themeStore";
 import {
   isLoggedIn,
   getUserInfo,
@@ -197,6 +196,7 @@ import { formatCents, formatDayHeader, formatWeekday } from "@/utils/format";
 import { getAccountBooks, type UserInfo, type AccountBook } from "@/api/common";
 
 const { load, delete: removeTx, getByDate } = useTransactions();
+const { themeMode } = useTheme();
 
 const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
   useCategories();
@@ -283,7 +283,7 @@ function nextMonth() {
 // 格式化交易金额显示
 function formatTxAmount(tx: LocalTransaction): string {
   const sign = tx.type === 1 ? "+" : tx.type === 0 ? "-" : "";
-  return `${sign}${(tx.amount / 100).toFixed(2)}`;
+  return `${sign}${formatCents(tx.amount)}`;
 }
 
 // 根据交易类型返回金额 CSS 类名
@@ -408,33 +408,37 @@ onShow(async () => {
   position: relative;
   background: var(--bg-primary);
   overflow: hidden;
+  transition: background-color 0.2s var(--spring-default);
 }
 
 .month-nav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8rpx;
 }
 
 .month-capsule {
   display: inline-flex;
   align-items: center;
-  background: var(--bg-primary);
-  border: 1rpx solid var(--border-subtle);
-  border-radius: var(--radius-full);
   padding: 4rpx 8rpx;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
   transition: all 0.2s var(--spring-default);
 }
 
-.capsule-arrow {
-  width: 52rpx;
-  height: 52rpx;
+.capsule-arrow,
+.nav-arrow {
+  width: 56rpx;
+  height: 56rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s var(--spring-default), background-color 0.15s;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition:
+    transform 0.15s var(--spring-default),
+    background-color 0.15s;
 
   &:active {
     background: var(--bg-hover);
@@ -443,113 +447,92 @@ onShow(async () => {
 }
 
 .capsule-label-wrap {
-  padding: 0 16rpx;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 12rpx;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s;
+
+  &:active {
+    background: var(--bg-hover);
+  }
 }
 
-.capsule-label {
-  font-size: 28rpx;
-  font-weight: 600;
+.capsule-label,
+.month-label {
+  font-size: 34rpx;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5rpx;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.menu-btn {
-  width: 68rpx;
-  height: 68rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-  flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default);
-
-  &:active {
-    transform: scale(0.92);
-  }
-}
-
-.nav-arrow {
-  width: 52rpx;
-  height: 52rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default), background-color 0.15s;
-
-  &:active {
-    transform: scale(0.9);
-  }
-}
-
-.month-label {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-align: center;
-  letter-spacing: -0.5rpx;
-  flex-shrink: 0;
-}
-
+.menu-btn,
 .stats-btn {
-  width: 68rpx;
-  height: 68rpx;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default);
+  cursor: pointer;
+  transition:
+    transform 0.15s var(--spring-default),
+    background-color 0.15s;
 
   &:active {
+    background: var(--bg-hover);
     transform: scale(0.92);
   }
 }
 
 .month-summary {
-  display: flex;
-  gap: 16rpx;
-  padding: 16rpx 28rpx 20rpx;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+  padding: 12rpx 24rpx 20rpx;
   background: var(--bg-primary);
 }
 
 .summary-item {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8rpx;
-  padding: 24rpx 8rpx;
+  padding: 26rpx 12rpx;
+  min-width: 0;
+  overflow: hidden;
   background: var(--bg-secondary);
   border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.15s var(--spring-default);
+  transition:
+    transform 0.15s var(--spring-default),
+    background-color 0.2s var(--spring-default);
 
   &:active {
     transform: scale(0.98);
   }
 
   .summary-label {
-    font-size: 22rpx;
-    color: var(--text-label);
+    font-size: 24rpx;
+    color: var(--text-tertiary);
     font-weight: 500;
-    letter-spacing: 1rpx;
   }
 
   .summary-value {
     font-size: 30rpx;
     font-weight: 700;
+    letter-spacing: -0.5rpx;
     font-variant-numeric: tabular-nums;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 
     &.expense {
       color: var(--color-expense);
@@ -564,8 +547,7 @@ onShow(async () => {
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
-  padding: 0 24rpx 60rpx;
-  border-radius: var(--radius-lg);
+  padding: 4rpx 24rpx 60rpx;
   overflow: hidden;
 }
 
@@ -573,11 +555,11 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 220rpx 0;
+  padding: 200rpx 0;
 
   .empty-icon-wrapper {
-    width: 140rpx;
-    height: 140rpx;
+    width: 144rpx;
+    height: 144rpx;
     border-radius: 50%;
     background: var(--bg-secondary);
     border: 1rpx solid var(--border-subtle);
@@ -589,25 +571,26 @@ onShow(async () => {
 
   .empty-title {
     font-size: 32rpx;
-    color: var(--text-secondary);
-    margin-top: 36rpx;
+    color: var(--text-primary);
+    margin-top: 32rpx;
     font-weight: 600;
   }
 
   .empty-hint {
     font-size: 26rpx;
-    color: var(--text-muted);
+    color: var(--text-tertiary);
     margin-top: 12rpx;
   }
 }
 
 .day-group {
-  margin-top: 20rpx;
+  margin-top: 24rpx;
   background: var(--bg-secondary);
   border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  transition: background-color 0.2s var(--spring-default);
 
   &:first-child {
     margin-top: 0;
@@ -618,31 +601,33 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 24rpx 18rpx;
+  padding: 24rpx 32rpx;
+  border-bottom: 1rpx solid var(--border-subtle);
 }
 
 .day-info {
   display: flex;
   align-items: baseline;
-  gap: 14rpx;
+  gap: 16rpx;
 
   .day-date {
-    font-size: 34rpx;
+    font-size: 30rpx;
     font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.5rpx;
   }
 
   .day-weekday {
     font-size: 24rpx;
-    color: var(--text-muted);
-    font-weight: 500;
+    color: var(--text-tertiary);
+    font-weight: 400;
   }
 }
 
 .day-totals {
   display: flex;
   gap: 18rpx;
-  font-size: 26rpx;
+  font-size: 28rpx;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 
@@ -658,36 +643,45 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22rpx 24rpx;
-  transition: background 0.15s var(--spring-default);
+  padding: 28rpx 32rpx;
   border-top: 1rpx solid var(--border-subtle);
+  cursor: pointer;
+  transition:
+    transform 0.12s var(--spring-default),
+    background-color 0.15s var(--spring-default);
+
+  &:first-of-type {
+    border-top: none;
+  }
 
   &:active {
     background: var(--bg-overlay);
+    transform: scale(0.99);
   }
 }
 
 .tx-left {
   display: flex;
   align-items: center;
-  gap: 18rpx;
+  gap: 24rpx;
   flex: 1;
   overflow: hidden;
 }
 
 .tx-icon {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 20rpx;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 28rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 
   text {
-    color: var(--text-inverse);
-    font-size: 32rpx;
-    font-weight: 600;
+    color: #ffffff;
+    font-size: 38rpx;
+    line-height: 1;
   }
 }
 
@@ -698,14 +692,15 @@ onShow(async () => {
   overflow: hidden;
 
   .tx-category {
-    font-size: 30rpx;
-    font-weight: 500;
+    font-size: 32rpx;
+    font-weight: 600;
     color: var(--text-primary);
+    letter-spacing: -0.3rpx;
   }
 
   .tx-remark {
     font-size: 24rpx;
-    color: var(--text-muted);
+    color: var(--text-tertiary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -715,14 +710,15 @@ onShow(async () => {
 .tx-right {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 12rpx;
   flex-shrink: 0;
   margin-left: 20rpx;
 }
 
 .tx-amount {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 34rpx;
+  font-weight: 700;
+  letter-spacing: -0.5rpx;
   font-variant-numeric: tabular-nums;
 
   &.expense {
@@ -738,12 +734,12 @@ onShow(async () => {
 
 .tx-item-pending {
   border-left: 6rpx solid #ff9500;
-  padding-left: 18rpx;
+  padding-left: 26rpx;
 }
 
 .tx-item-failed {
   border-left: 6rpx solid var(--color-expense);
-  padding-left: 18rpx;
+  padding-left: 26rpx;
 }
 
 .tx-sync-badge {
@@ -755,38 +751,42 @@ onShow(async () => {
 
   &.tx-sync-pending {
     color: #ff9500;
-    background: rgba(255, 149, 0, 0.1);
+    background: rgba(255, 149, 0, 0.12);
   }
 
   &.tx-sync-failed {
     color: var(--color-expense);
-    background: rgba(255, 59, 48, 0.1);
+    background: var(--color-expense-bg);
   }
 }
 
 .list-bottom {
-  text-align: center;
-  padding: 32rpx 0 60rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56rpx 0 80rpx;
+  gap: 16rpx;
 
   .bottom-divider {
-    width: 80rpx;
-    height: 4rpx;
-    background: var(--border-primary);
-    border-radius: 2rpx;
-    margin: 0 auto 20rpx;
+    width: 64rpx;
+    height: 8rpx;
+    background: var(--text-dim);
+    border-radius: var(--radius-full);
   }
 
   .bottom-text {
-    font-size: 22rpx;
-    color: var(--text-dim);
+    font-size: 24rpx;
+    color: var(--text-tertiary);
     font-weight: 500;
+    letter-spacing: 0.5rpx;
   }
 }
 
 .fab {
   position: fixed;
-  right: 36rpx;
-  bottom: calc(100rpx + var(--safe-area-bottom, 0px));
+  right: 40rpx;
+  bottom: calc(64rpx + var(--safe-area-bottom, 0px));
   width: 112rpx;
   height: 112rpx;
   border-radius: 50%;
@@ -795,14 +795,15 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-fab);
-  z-index: 1;
+  z-index: 30;
+  cursor: pointer;
   transition:
-    transform 0.2s var(--spring-bounce),
-    box-shadow 0.2s var(--spring-default);
+    transform 0.18s var(--spring-bounce),
+    background-color 0.18s;
 
   &:active {
-    transform: scale(0.88);
-    box-shadow: var(--shadow-fab-active);
+    transform: scale(0.92);
+    background: var(--color-primary-hover);
   }
 }
 </style>

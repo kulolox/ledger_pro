@@ -3,6 +3,8 @@
     :model-value="visible"
     position="bottom"
     :z-index="500"
+    custom-class="editor-popup"
+    custom-style="background: transparent;"
     @update:model-value="$emit('close')"
     @close="$emit('close')"
   >
@@ -14,7 +16,7 @@
           editId != null ? "编辑账单" : "记一笔"
         }}</text>
         <view class="editor-close" @click="$emit('close')">
-          <wd-icon name="close" size="24rpx" color="var(--text-secondary)" />
+          <wd-icon name="close" size="26rpx" color="var(--text-tertiary)" />
         </view>
       </view>
 
@@ -38,8 +40,7 @@
       </view>
 
       <view class="amount-area">
-        <text class="amount-currency">¥</text>
-        <text class="amount-number">{{ rawInput || "0.00" }}</text>
+        <text class="amount-number">{{ rawInput || "0" }}</text>
       </view>
 
       <view class="meta-row">
@@ -113,8 +114,8 @@ const transTimestamp = ref(Date.now());
 const transDate = computed(() => timestampToDateStr(transTimestamp.value));
 const showDatePicker = ref(false);
 
-const currentCategories = computed(
-  () => (categories.value[currentType.value] || []).filter((c) => c.visible !== 0),
+const currentCategories = computed(() =>
+  (categories.value[currentType.value] || []).filter((c) => c.visible !== 0),
 );
 
 const rawInput = computed(() => {
@@ -305,30 +306,33 @@ watch(
 
 <style lang="scss" scoped>
 .editor {
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
   border-top: 1rpx solid var(--border-subtle);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-radius: 64rpx 64rpx 0 0;
+  box-shadow: 0 -16rpx 60rpx rgba(0, 0, 0, 0.12);
   overflow: hidden;
+  transition: background-color 0.2s var(--spring-default);
 }
 
 .sheet-grabber {
   width: 72rpx;
-  height: 8rpx;
-  border-radius: 4rpx;
-  background: var(--border-primary);
-  margin: 18rpx auto 0;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: var(--color-handle);
+  margin: 20rpx auto 8rpx;
+  opacity: 0.85;
 }
 
 .editor-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16rpx 32rpx 20rpx;
+  padding: 12rpx 36rpx 24rpx;
 
   .editor-title {
-    font-size: 32rpx;
+    font-size: 34rpx;
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.5rpx;
@@ -338,13 +342,14 @@ watch(
     width: 56rpx;
     height: 56rpx;
     border-radius: 50%;
-    background: var(--bg-secondary);
-    border: 1rpx solid var(--border-subtle);
+    background: var(--bg-tertiary);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.15s var(--spring-default);
+    cursor: pointer;
+    transition:
+      transform 0.15s var(--spring-default),
+      background-color 0.15s;
 
     &:active {
       transform: scale(0.9);
@@ -354,57 +359,62 @@ watch(
 
 .type-tabs {
   display: flex;
-  gap: 8rpx;
   margin: 0 32rpx 16rpx;
-  background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 6rpx;
+  background: var(--bg-seg-track);
+  border-radius: 18rpx;
+  padding: 4rpx;
+  box-sizing: border-box;
 }
 
 .type-tab {
   flex: 1;
   text-align: center;
-  padding: 14rpx 0;
-  border-radius: var(--radius-sm);
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 16rpx;
+  box-sizing: border-box;
+  border-radius: 14rpx;
   font-size: 26rpx;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   background: transparent;
+  cursor: pointer;
   transition: all 0.2s var(--spring-default);
 
   &.active {
-    background: var(--color-primary);
-    color: var(--text-inverse);
+    background: var(--bg-seg-thumb);
+    color: var(--text-primary);
     font-weight: 600;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-seg);
   }
 }
 
 .category-area {
-  padding: 4rpx 0 8rpx;
+  padding: 4rpx 0 4rpx;
 }
 
 .amount-area {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  padding: 16rpx 40rpx 12rpx;
-  min-height: 120rpx;
-  gap: 8rpx;
+  margin: 0 32rpx;
+  padding: 8rpx 8rpx 16rpx;
+  min-height: 92rpx;
+  gap: 10rpx;
+  border-bottom: 1rpx solid var(--border-subtle);
 
   .amount-currency {
-    font-size: 40rpx;
-    font-weight: 600;
+    font-size: 44rpx;
+    font-weight: 700;
     color: var(--color-primary);
   }
 
   .amount-number {
-    font-size: 64rpx;
+    font-size: 72rpx;
     font-weight: 700;
     text-align: right;
     color: var(--text-primary);
-    letter-spacing: -0.5rpx;
+    letter-spacing: -1rpx;
     line-height: 1.1;
     word-break: break-all;
     font-variant-numeric: tabular-nums;
@@ -414,51 +424,60 @@ watch(
 .meta-row {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  padding: 0 32rpx 16rpx;
+  gap: 18rpx;
+  padding: 20rpx 32rpx 12rpx;
 
   .meta-btn {
     display: flex;
     align-items: center;
-    gap: 8rpx;
-    padding: 20rpx 24rpx;
-    background: var(--bg-secondary);
-    border: 1rpx solid var(--border-subtle);
+    gap: 10rpx;
+    height: 76rpx;
+    box-sizing: border-box;
+    padding: 0 26rpx;
+    background: var(--bg-input-filled);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    font-size: 24rpx;
+    font-size: 26rpx;
     font-weight: 500;
     color: var(--text-secondary);
     flex-shrink: 0;
+    cursor: pointer;
     transition: all 0.15s var(--spring-default);
 
     &:active {
       transform: scale(0.96);
     }
 
-    &.active {
-      color: var(--color-primary);
-    }
-
-    .meta-icon {
-      font-size: 24rpx;
-    }
-
     .meta-text {
-      font-size: 24rpx;
+      font-size: 26rpx;
+      font-variant-numeric: tabular-nums;
     }
   }
 
   :deep(.remark-input) {
     &.wd-input {
       flex: 1;
-      --wd-input-bg: var(--bg-secondary);
-      --wd-input-border: var(--border-subtle);
+      height: 76rpx !important;
+      padding: 0 24rpx !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      align-items: center !important;
+      background: var(--bg-input-filled) !important;
+      --wd-input-bg: transparent;
+      --wd-input-border: transparent;
       --wd-input-color: var(--text-primary);
       --wd-input-placeholder: var(--text-placeholder);
-      --wd-input-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm);
       border-radius: var(--radius-md);
+
+      &::after {
+        display: none !important;
+      }
+
+      .wd-input__inner {
+        color: var(--text-primary);
+        font-size: 28rpx;
+        height: 76rpx !important;
+        padding: 0 !important;
+      }
     }
   }
 }

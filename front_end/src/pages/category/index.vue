@@ -1,9 +1,9 @@
 <template>
   <view class="category-page">
-    <NavBar rightWidth="auto">
+    <NavBar rightWidth="108rpx">
       <template #left>
         <view class="nav-back" @click="goBack">
-          <wd-icon name="left" size="24px" color="var(--text-secondary)" />
+          <wd-icon name="left" size="36rpx" color="var(--text-primary)" />
         </view>
       </template>
       <template #center>
@@ -20,73 +20,84 @@
       </template>
     </NavBar>
 
-    <wd-tabs v-model="currentTab" custom-class="tab-custom">
-      <wd-tab title="支出" />
-      <wd-tab title="收入" />
-    </wd-tabs>
+    <view class="segmented-bar">
+      <wd-tabs v-model="currentTab" custom-class="tab-custom">
+        <wd-tab title="支出" />
+        <wd-tab title="收入" />
+      </wd-tabs>
+    </view>
 
-    <view class="category-list" id="category-sort-list">
+    <view class="category-list-wrap">
       <view v-if="categoryList.length === 0" class="empty-state">
         <text class="empty-text">暂无分类</text>
       </view>
 
-      <view
-        v-for="cat in categoryList"
-        :key="cat.id"
-        class="category-item"
-        :class="{ dimmed: !sortMode && cat.visible === 0 }"
-        :data-id="cat.id"
-      >
-        <view class="cat-left">
-          <view v-if="sortMode" class="sort-handle">
-            <wd-icon name="menu" size="32rpx" color="var(--text-muted)" />
-          </view>
-          <view class="cat-icon" :style="{ background: cat.color }">
-            <text>{{ cat.icon }}</text>
-          </view>
-          <view class="cat-info">
-            <text class="cat-name">{{ cat.name }}</text>
-            <text v-if="!sortMode && cat.visible === 0" class="cat-hidden-tag"
-              >已隐藏</text
-            >
-          </view>
-        </view>
-        <view class="cat-right">
-          <template v-if="!sortMode">
-            <view class="cat-action visibility" @click="onToggleVisible(cat)">
-              <wd-icon
-                :name="cat.visible === 0 ? 'eye-invisible' : 'eye'"
-                size="28rpx"
-                color="var(--text-muted)"
-              />
+      <view v-else class="category-list" id="category-sort-list">
+        <view
+          v-for="cat in categoryList"
+          :key="cat.id"
+          class="category-item"
+          :class="{ dimmed: !sortMode && cat.visible === 0 }"
+          :data-id="cat.id"
+        >
+          <view class="cat-left">
+            <view v-if="sortMode" class="sort-handle">
+              <wd-icon name="menu" size="32rpx" color="var(--text-tertiary)" />
             </view>
-            <view v-if="isSystem(cat)" class="cat-lock">
-              <wd-icon name="lock" size="24rpx" color="var(--text-muted)" />
+            <view class="cat-icon" :style="{ background: cat.color }">
+              <text>{{ cat.icon }}</text>
             </view>
-            <template v-else>
-              <view class="cat-action edit" @click="onEdit(cat)">
+            <view class="cat-info">
+              <view class="cat-title-row">
+                <text class="cat-name">{{ cat.name }}</text>
+                <text v-if="!sortMode && cat.visible === 0" class="cat-hidden-tag"
+                  >已隐藏</text
+                >
+              </view>
+              <text class="cat-desc">{{ getCategoryDesc(cat) }}</text>
+            </view>
+          </view>
+          <view class="cat-right">
+            <template v-if="!sortMode">
+              <view class="cat-action visibility" @click="onToggleVisible(cat)">
                 <wd-icon
-                  name="edit"
-                  size="28rpx"
-                  color="var(--text-secondary)"
+                  :name="cat.visible === 0 ? 'eye-invisible' : 'eye'"
+                  size="34rpx"
+                  :color="
+                    cat.visible === 0
+                      ? 'var(--text-tertiary)'
+                      : 'var(--color-primary)'
+                  "
                 />
               </view>
-              <view class="cat-action delete" @click="onDelete(cat)">
-                <wd-icon
-                  name="delete"
-                  size="28rpx"
-                  color="var(--color-expense)"
-                />
+              <view v-if="isSystem(cat)" class="cat-lock">
+                <wd-icon name="menu" size="28rpx" color="var(--text-dim)" />
               </view>
+              <template v-else>
+                <view class="cat-action edit" @click="onEdit(cat)">
+                  <wd-icon
+                    name="edit"
+                    size="30rpx"
+                    color="var(--text-secondary)"
+                  />
+                </view>
+                <view class="cat-action delete" @click="onDelete(cat)">
+                  <wd-icon
+                    name="delete"
+                    size="30rpx"
+                    color="var(--color-expense)"
+                  />
+                </view>
+              </template>
             </template>
-          </template>
+          </view>
         </view>
       </view>
     </view>
 
     <view v-if="!sortMode" class="add-bar">
       <view class="add-btn" @click="onAdd">
-        <wd-icon name="plus" size="32rpx" color="var(--color-primary)" />
+        <wd-icon name="plus" size="32rpx" color="#ffffff" />
         <text class="add-label">添加分类</text>
       </view>
     </view>
@@ -94,6 +105,8 @@
     <wd-popup
       :model-value="editorVisible"
       position="bottom"
+      custom-class="editor-popup"
+      custom-style="background: transparent;"
       @update:model-value="onEditorClose"
     >
       <view class="editor">
@@ -189,6 +202,28 @@ const categoryList = computed(() => {
   return categories.value[currentTab.value] || [];
 });
 
+const categoryDescMap: Record<string, string> = {
+  餐饮: "早餐、午餐、聚餐、外卖",
+  交通: "公交、地铁、打车、加油",
+  购物: "日用品、服饰、数码产品",
+  娱乐: "电影、游戏、休闲消遣",
+  居家: "房租、水电煤气、物业",
+  通讯: "话费、宽带、云服务",
+  医疗: "药品、门诊、健康体检",
+  教育: "书籍、课程、学费培训",
+  人情: "礼金、请客送礼、节日红包",
+  其他: "备用款项、其他杂支",
+  工资: "月度薪资、绩效奖金",
+  兼职: "副业收入、稿费劳务",
+  理财: "基金股票、利息分红",
+  红包: "节日红包、转账收款",
+  退款: "退货退款、报销款项",
+};
+
+function getCategoryDesc(cat: Category): string {
+  return categoryDescMap[cat.name] || (isSystem(cat) ? "系统预设分类" : "自定义分类");
+}
+
 function isSystem(cat: Category): boolean {
   return cat.is_system === 1;
 }
@@ -223,6 +258,7 @@ const isEdit = ref(false);
 const editingId = ref<string>("");
 const form = ref({ name: "", icon: "", color: "" });
 const dialog = useDialog("category-delete");
+
 watch(sortMode, async (val) => {
   if (val) {
     await nextTick();
@@ -369,6 +405,7 @@ onShow(() => {
   flex-direction: column;
   background: var(--bg-primary);
   overflow: hidden;
+  transition: background-color 0.2s var(--spring-default);
 }
 
 .nav-back {
@@ -378,67 +415,99 @@ onShow(() => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default);
+  cursor: pointer;
+  transition:
+    transform 0.15s var(--spring-default),
+    background-color 0.15s;
 
   &:active {
+    background: var(--bg-hover);
     transform: scale(0.92);
   }
 }
 
 .nav-title {
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: 700;
   color: var(--text-primary);
   text-align: center;
+  letter-spacing: -0.5rpx;
 }
 
 .nav-sort {
-  padding: 12rpx 28rpx;
+  padding: 10rpx 26rpx;
   border-radius: var(--radius-full);
-  font-size: 26rpx;
+  font-size: 28rpx;
   color: var(--color-primary);
   font-weight: 500;
-  background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
   flex-shrink: 0;
-  transition: transform 0.15s var(--spring-default);
+  cursor: pointer;
+  transition:
+    transform 0.15s var(--spring-default),
+    background-color 0.15s;
 
   &:active {
     transform: scale(0.94);
+    background: var(--bg-active);
   }
 
   &.active {
     background: var(--color-primary);
-    color: var(--text-inverse);
-    border-color: var(--color-primary);
+    color: #ffffff;
+    font-weight: 600;
   }
+}
+
+.segmented-bar {
+  padding: 16rpx 32rpx 8rpx;
+  background: var(--bg-primary);
 }
 
 :deep(.tab-custom.wd-tabs) {
-  --wot-tabs-nav-bg: var(--bg-secondary);
-  --wot-tabs-nav-color: var(--text-muted);
-  --wot-tabs-nav-color-active: var(--color-primary);
+  background: transparent !important;
+  --wot-tabs-nav-bg: transparent;
+  --wot-tabs-nav-color: var(--text-tertiary);
+  --wot-tabs-nav-color-active: var(--text-primary);
   --wot-tabs-nav-font-weight-active: 600;
-  --wot-tabs-nav-item-font-size: 28rpx;
-  --wot-tabs-nav-line-bg: var(--color-primary);
-  --wot-tabs-nav-item-padding: 18rpx 24rpx;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  --wot-tabs-nav-item-font-size: 26rpx;
+  --wot-tabs-nav-line-bg: transparent;
+
+  .wd-tabs__nav {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    background: var(--bg-seg-track) !important;
+    border-radius: 18rpx !important;
+    padding: 4rpx !important;
+  }
 
   .wd-tabs__nav-item {
+    box-sizing: border-box !important;
     flex: 1;
+    height: 56rpx !important;
+    line-height: 56rpx !important;
+    padding: 0 16rpx !important;
+    border-radius: 14rpx !important;
+    transition: all 0.2s var(--spring-default);
+
+    &.is-active {
+      background: var(--bg-seg-thumb);
+      color: var(--text-primary) !important;
+      font-weight: 600;
+      box-shadow: var(--shadow-seg);
+    }
+  }
+
+  .wd-tabs__line {
+    display: none !important;
   }
 }
 
-.category-list {
+.category-list-wrap {
   flex: 1;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: 24rpx 32rpx 24rpx;
+  padding: 24rpx 32rpx;
 }
 
 .empty-state {
@@ -448,21 +517,36 @@ onShow(() => {
 
   .empty-text {
     font-size: 28rpx;
-    color: var(--text-muted);
+    color: var(--text-tertiary);
   }
+}
+
+.category-list {
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .category-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 28rpx;
+  padding: 24rpx 32rpx;
   background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  margin-bottom: 12rpx;
-  box-shadow: var(--shadow-sm);
-  transition: opacity 0.2s;
+  border-bottom: 1rpx solid var(--border-subtle);
+  transition:
+    opacity 0.2s,
+    background-color 0.15s;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:active {
+    background: var(--bg-overlay);
+  }
 
   &.dimmed {
     opacity: 0.45;
@@ -472,7 +556,7 @@ onShow(() => {
 .cat-left {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: 24rpx;
   flex: 1;
   overflow: hidden;
 }
@@ -484,21 +568,23 @@ onShow(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  cursor: grab;
 }
 
 .cat-icon {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 18rpx;
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 
   text {
-    font-size: 32rpx;
-    color: var(--text-inverse);
-    font-weight: 600;
+    font-size: 36rpx;
+    color: #ffffff;
+    line-height: 1;
   }
 }
 
@@ -508,8 +594,14 @@ onShow(() => {
   gap: 4rpx;
   overflow: hidden;
 
+  .cat-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+  }
+
   .cat-name {
-    font-size: 30rpx;
+    font-size: 32rpx;
     font-weight: 500;
     color: var(--text-primary);
     overflow: hidden;
@@ -519,7 +611,18 @@ onShow(() => {
 
   .cat-hidden-tag {
     font-size: 20rpx;
-    color: var(--text-muted);
+    padding: 2rpx 10rpx;
+    border-radius: 8rpx;
+    background: var(--bg-input-filled);
+    color: var(--text-tertiary);
+  }
+
+  .cat-desc {
+    font-size: 24rpx;
+    color: var(--text-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -539,13 +642,14 @@ onShow(() => {
 }
 
 .cat-action {
-  width: 56rpx;
-  height: 56rpx;
+  width: 60rpx;
+  height: 60rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-input-filled);
+  cursor: pointer;
   transition: transform 0.15s;
 
   &:active {
@@ -553,7 +657,7 @@ onShow(() => {
   }
 
   &.delete {
-    background: rgba(255, 59, 48, 0.1);
+    background: var(--color-expense-bg);
   }
 
   &.visibility {
@@ -568,6 +672,11 @@ onShow(() => {
 
 .add-bar {
   padding: 20rpx 32rpx calc(var(--safe-area-bottom, 0px) + 28rpx);
+  background: linear-gradient(
+    to top,
+    var(--bg-primary) 75%,
+    transparent
+  );
 }
 
 .add-btn {
@@ -575,22 +684,25 @@ onShow(() => {
   align-items: center;
   justify-content: center;
   gap: 12rpx;
-  padding: 26rpx 0;
-  background: var(--bg-secondary);
-  border: 1rpx solid var(--border-subtle);
+  height: 100rpx;
+  background: var(--color-primary);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.15s var(--spring-default), background 0.15s;
+  box-shadow: var(--shadow-primary-md);
+  cursor: pointer;
+  transition:
+    transform 0.15s var(--spring-default),
+    opacity 0.15s;
 
   &:active {
     transform: scale(0.98);
-    background: var(--bg-overlay);
+    opacity: 0.9;
   }
 
   .add-label {
     font-size: 30rpx;
-    color: var(--color-primary);
-    font-weight: 500;
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 0.5rpx;
   }
 }
 
@@ -610,7 +722,8 @@ onShow(() => {
 
 .editor-cancel {
   font-size: 30rpx;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
+  cursor: pointer;
 }
 
 .editor-title {
@@ -623,6 +736,7 @@ onShow(() => {
   font-size: 30rpx;
   color: var(--color-primary);
   font-weight: 600;
+  cursor: pointer;
 }
 
 .editor-form {
@@ -646,7 +760,7 @@ onShow(() => {
 .form-input {
   height: 88rpx;
   border-radius: var(--radius-md);
-  background: var(--bg-primary);
+  background: var(--bg-input-filled);
   padding: 0 24rpx;
   font-size: 30rpx;
   color: var(--text-primary);
@@ -679,7 +793,7 @@ onShow(() => {
 
 .preset-label {
   font-size: 24rpx;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
 }
 
 .preset-grid {
@@ -694,6 +808,7 @@ onShow(() => {
   border-radius: 50%;
   transition: transform 0.15s var(--spring-bounce);
   border: 4rpx solid transparent;
+  cursor: pointer;
 
   &.selected {
     border-color: var(--text-primary);

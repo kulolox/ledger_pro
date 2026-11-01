@@ -1,7 +1,7 @@
 /**
- * 苹果风设计体系 (Apple Design System Tokens)
+ * 苹果风设计体系 (Apple Design System Tokens — Stitch × HIG)
  * 纯色分层架构，支持浅色 (Light) 与深色 (Dark) 两套精致主题
- * 拒绝毛玻璃模糊，追求极简、纯净、细腻的高端质感
+ * 追求极简、纯净、细腻的高端 iOS 原生质感
  */
 
 :root,
@@ -17,31 +17,39 @@
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-overlay: rgba(0, 0, 0, 0.03);
 
+  /* 分段控制器与表单专用背景 */
+  --bg-seg-track: rgba(229, 229, 234, 0.85);
+  --bg-seg-thumb: #ffffff;
+  --bg-input: #ffffff;
+  --bg-input-filled: #f2f2f7;
+
   /* 键盘与操作区专用纯色 */
   --bg-key: #ffffff;
   --bg-key-hover: #e5e5ea;
-  --bg-operator: #f2f2f7;
-  --bg-operator-hover: #e5e5ea;
+  --bg-operator: #ececee;
+  --bg-operator-hover: #dcdce0;
 
   /* 边框体系 (细微、克制) */
   --border-primary: rgba(60, 60, 67, 0.12);
   --border-subtle: rgba(60, 60, 67, 0.06);
   --border-focus: #007aff;
   --border-active: #007aff;
+  --ring-focus: rgba(0, 122, 255, 0.14);
 
   /* 字体与排版颜色 (Apple System Labels) */
   --text-primary: #1c1c1e;        /* 主文字，极高对比度 */
   --text-secondary: #3c3c43;      /* 次级文字 */
   --text-tertiary: #8e8e93;       /* 辅助提示、时间戳 */
   --text-label: #8e8e93;          /* 表单与分组标签 */
-  --text-muted: #aeaeb2;          /* 占位与静默文字 */
+  --text-muted: #8e8e93;          /* 占位与静默文字 */
   --text-dim: #c7c7cc;
-  --text-placeholder: #c7c7cc;
+  --text-placeholder: #aeaeb2;
   --text-inverse: #ffffff;        /* 反色纯白 */
 
   /* 苹果核心色彩规范 (Apple Human Interface Guidelines) */
   --color-primary: #007aff;       /* iOS 经典蓝 */
   --color-primary-hover: #0062cc;
+  --color-primary-subtle: rgba(0, 122, 255, 0.1);
   --color-expense: #ff3b30;       /* 支出 - Apple Red */
   --color-expense-bg: rgba(255, 59, 48, 0.08);
   --color-income: #34c759;        /* 收入 - Apple Green */
@@ -53,16 +61,26 @@
   --color-handle: #d1d1d6;
 
   /* 极简阴影 (轻微自然弥散，无噪点) */
-  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 6rpx 20rpx rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2rpx 10rpx rgba(0, 0, 0, 0.03), 0 0 2rpx rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8rpx 28rpx -4rpx rgba(0, 0, 0, 0.05), 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 16rpx 48rpx rgba(0, 0, 0, 0.08);
-  --shadow-fab: 0 8rpx 28rpx rgba(0, 122, 255, 0.28);
-  --shadow-key: 0 2rpx 4rpx rgba(0, 0, 0, 0.04);
+  --shadow-primary-md: 0 12rpx 32rpx -6rpx rgba(0, 122, 255, 0.36), 0 4rpx 12rpx rgba(0, 122, 255, 0.18);
+  --shadow-logo: 0 20rpx 44rpx -8rpx rgba(0, 122, 255, 0.34);
+  --shadow-fab: 0 16rpx 40rpx -6rpx rgba(0, 122, 255, 0.42), 0 6rpx 16rpx rgba(0, 122, 255, 0.22);
+  --shadow-key: 0 2rpx 4rpx rgba(0, 0, 0, 0.06);
+  --shadow-seg: 0 2rpx 8rpx rgba(0, 0, 0, 0.08), 0 1rpx 2rpx rgba(0, 0, 0, 0.04);
   --shadow-save: 0 6rpx 20rpx rgba(52, 199, 89, 0.35);
 
   /* Wot UI 组件主题覆盖映射 */
   --wot-color-theme: #007aff;
   --wot-bg-color: #ffffff;
+  --wot-popup-bg: var(--bg-secondary);
+  --wot-dialog-bg: var(--bg-secondary);
+  --wot-dialog-title-color: var(--text-primary);
+  --wot-dialog-content-color: var(--text-secondary);
+  --wot-button-info-color: var(--text-primary);
+  --wot-button-info-plain-bg: var(--bg-input-filled);
+  --wot-button-info-plain-border: transparent;
   --wot-input-text-color: var(--text-primary);
   --wot-input-bg-color: var(--bg-secondary);
   --wot-input-placeholder-color: var(--text-placeholder);
@@ -86,9 +104,15 @@
   --bg-tertiary: #2c2c2e;         /* iOS Gray 5 Dark 次级背景 */
   --bg-card: #1c1c1e;             /* 卡片纯色 */
   --bg-card-subtle: #242426;      /* 细分卡片 */
-  --bg-active: #0a2540;           /* 深色高亮 */
+  --bg-active: rgba(10, 132, 255, 0.18); /* 深色蓝高亮 */
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-overlay: rgba(255, 255, 255, 0.05);
+
+  /* 分段控制器与表单专用背景 */
+  --bg-seg-track: #2c2c2e;
+  --bg-seg-thumb: #3a3a3c;
+  --bg-input: #1c1c1e;
+  --bg-input-filled: #2c2c2e;
 
   /* 键盘与操作区专用纯色 */
   --bg-key: #2c2c2e;
@@ -97,28 +121,30 @@
   --bg-operator-hover: #2c2c2e;
 
   /* 边框体系 (微光边缘) */
-  --border-primary: rgba(255, 255, 255, 0.12);
-  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-primary: rgba(255, 255, 255, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.08);
   --border-focus: #0a84ff;
   --border-active: #0a84ff;
+  --ring-focus: rgba(10, 132, 255, 0.24);
 
   /* 字体与排版颜色 */
   --text-primary: #ffffff;        /* 纯白主字 */
   --text-secondary: #ebebf5;      /* 次级白 (80%) */
   --text-tertiary: #8e8e93;       /* 灰色标签 */
   --text-label: #8e8e93;
-  --text-muted: #636366;
+  --text-muted: #8e8e93;
   --text-dim: #48484a;
   --text-placeholder: #636366;
-  --text-inverse: #000000;        /* 反色纯黑 */
+  --text-inverse: #ffffff;        /* 按钮文字保持纯白高对比 */
 
   /* 苹果深色调校核心色彩 (Apple Dark Mode Accents) */
   --color-primary: #0a84ff;       /* Apple Dark Blue */
   --color-primary-hover: #409cff;
+  --color-primary-subtle: rgba(10, 132, 255, 0.18);
   --color-expense: #ff453a;       /* Apple Dark Red */
-  --color-expense-bg: rgba(255, 69, 58, 0.15);
+  --color-expense-bg: rgba(255, 69, 58, 0.16);
   --color-income: #30d158;        /* Apple Dark Green */
-  --color-income-bg: rgba(48, 209, 88, 0.15);
+  --color-income-bg: rgba(48, 209, 88, 0.16);
   --color-save: #30d158;
   --color-save-hover: #28b84c;
   --color-transfer: #0a84ff;
@@ -126,16 +152,26 @@
   --color-handle: #48484a;
 
   /* 深色阴影 */
-  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6rpx 20rpx rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 16rpx 48rpx rgba(0, 0, 0, 0.8);
-  --shadow-fab: 0 8rpx 28rpx rgba(10, 132, 255, 0.4);
-  --shadow-key: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2rpx 10rpx rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 8rpx 28rpx rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 16rpx 48rpx rgba(0, 0, 0, 0.85);
+  --shadow-primary-md: 0 12rpx 32rpx -6rpx rgba(10, 132, 255, 0.42);
+  --shadow-logo: 0 20rpx 44rpx -8rpx rgba(10, 132, 255, 0.45);
+  --shadow-fab: 0 16rpx 40rpx -6rpx rgba(10, 132, 255, 0.48);
+  --shadow-key: 0 2rpx 4rpx rgba(0, 0, 0, 0.35);
+  --shadow-seg: 0 2rpx 8rpx rgba(0, 0, 0, 0.45);
   --shadow-save: 0 6rpx 20rpx rgba(48, 209, 88, 0.4);
 
   /* Wot UI 组件深色覆盖映射 */
   --wot-color-theme: #0a84ff;
   --wot-bg-color: #1c1c1e;
+  --wot-popup-bg: var(--bg-secondary);
+  --wot-dialog-bg: var(--bg-secondary);
+  --wot-dialog-title-color: var(--text-primary);
+  --wot-dialog-content-color: var(--text-secondary);
+  --wot-button-info-color: var(--text-primary);
+  --wot-button-info-plain-bg: var(--bg-tertiary);
+  --wot-button-info-plain-border: var(--border-primary);
   --wot-input-text-color: var(--text-primary);
   --wot-input-bg-color: var(--bg-secondary);
   --wot-input-placeholder-color: var(--text-placeholder);
@@ -146,21 +182,193 @@
 /* 统一几何与排版尺度 (Geometry & Typography Scale) */
 :root,
 page {
-  --radius-xs: 8rpx;
-  --radius-sm: 14rpx;
-  --radius-md: 20rpx;
-  --radius-lg: 28rpx;
-  --radius-xl: 36rpx;
+  --radius-xs: 10rpx;
+  --radius-sm: 16rpx;
+  --radius-md: 24rpx;
+  --radius-lg: 32rpx;
+  --radius-xl: 44rpx;
   --radius-full: 9999rpx;
 
-  --input-height: 92rpx;
+  --input-height: 100rpx;
 
-  --font-family-base: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+  --font-family-base: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", sans-serif;
 
   /* Apple 物理弹簧动效规范 */
   --spring-default: cubic-bezier(0.25, 1, 0.5, 1);
   --spring-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 全局 scroll-view 下拉刷新主题色适配 (浅色 + 深色) */
+.uni-scroll-view-refresher {
+  background-color: var(--bg-primary) !important;
+  transition: background-color 0.2s var(--spring-default);
+}
+
+.uni-scroll-view-refresh-inner {
+  background-color: var(--bg-secondary) !important;
+  box-shadow: var(--shadow-md) !important;
+  border: 1rpx solid var(--border-subtle);
+}
+
+.uni-scroll-view-refresh__icon {
+  fill: var(--color-primary) !important;
+}
+
+.uni-scroll-view-refresh__spinner circle {
+  color: var(--color-primary) !important;
+  stroke: var(--color-primary) !important;
+}
+
+/* 全局 Wot UI 弹窗与对话框圆角/背景/主题色适配 (浅色 + 深色) */
+.wd-popup--bottom:not(.wd-picker__popup),
+.wd-popup--center,
+.wd-popup.wd-dialog,
+.wd-popup.editor-popup {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.wd-picker__popup {
+  background-color: var(--bg-secondary) !important;
+  border-radius: 48rpx 48rpx 0 0 !important;
+  overflow: hidden;
+}
+
+.wd-dialog__container {
+  background: var(--bg-secondary) !important;
+  border: 1rpx solid var(--border-subtle);
+  border-radius: 36rpx !important;
+  box-shadow: var(--shadow-lg);
+}
+
+.wd-dialog__title {
+  color: var(--text-primary) !important;
+  font-size: 34rpx !important;
+  font-weight: 700 !important;
+}
+
+.wd-dialog__content-text {
+  color: var(--text-secondary) !important;
+  font-size: 28rpx !important;
+}
+
+.wd-dialog__actions-btn.wd-button.is-info.is-plain {
+  background: var(--bg-input-filled) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下 Wot UI 选择器与原生弹窗全局适配 */
+[data-theme="dark"],
+.theme-dark {
+  .wd-popup--left,
+  .wd-popup--right {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .wd-picker,
+  .wd-datetime-picker,
+  .wd-picker__popup,
+  .wd-picker-view,
+  .wd-picker-view__columns {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .wd-picker__toolbar {
+    background-color: var(--bg-secondary) !important;
+    border-bottom: 1rpx solid var(--border-subtle) !important;
+  }
+
+  .wd-picker__title {
+    color: var(--text-primary) !important;
+  }
+
+  .wd-picker__action--cancel {
+    color: var(--text-tertiary) !important;
+  }
+
+  .wd-picker-view-column__item {
+    color: var(--text-primary) !important;
+  }
+
+  .wd-picker-view__mask {
+    background-image: linear-gradient(
+        180deg,
+        rgba(28, 28, 30, 0.92),
+        rgba(28, 28, 30, 0.25)
+      ),
+      linear-gradient(
+        0deg,
+        rgba(28, 28, 30, 0.92),
+        rgba(28, 28, 30, 0.25)
+      ) !important;
+  }
+
+  .wd-dialog__container,
+  .wd-message-box,
+  .wd-message-box__container {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-primary) !important;
+  }
+
+  .wd-dialog__title,
+  .wd-message-box__title {
+    color: var(--text-primary) !important;
+  }
+
+  .wd-dialog__content-text,
+  .wd-message-box__content {
+    color: var(--text-secondary) !important;
+  }
+
+  .wd-dialog__actions-btn.wd-button.is-info.is-plain {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-primary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .uni-modal {
+    background-color: var(--bg-secondary) !important;
+    border-radius: 32rpx !important;
+    overflow: hidden;
+
+    .uni-modal__hd,
+    .uni-modal__title {
+      color: var(--text-primary) !important;
+    }
+
+    .uni-modal__bd {
+      color: var(--text-secondary) !important;
+    }
+
+    .uni-modal__ft::after {
+      border-color: var(--border-primary) !important;
+    }
+
+    .uni-modal__btn_default {
+      color: var(--text-secondary) !important;
+    }
+  }
+
+  .uni-actionsheet__menu,
+  .uni-actionsheet__action {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .uni-actionsheet__cell {
+    color: var(--text-primary) !important;
+    border-color: var(--border-subtle) !important;
+
+    &::before {
+      border-color: var(--border-subtle) !important;
+    }
+  }
 }
 
 /* 苹果通用卡片类 (纯色、微边框、大圆角) */
@@ -170,7 +378,7 @@ page {
   border: 1rpx solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: transform 0.18s var(--spring-default), background 0.18s var(--spring-default);
+  transition: transform 0.18s var(--spring-default), background-color 0.2s var(--spring-default), border-color 0.2s var(--spring-default);
 }
 
 /* 苹果通用按钮类 (触觉微缩放反馈) */
@@ -182,7 +390,7 @@ page {
   font-weight: 600;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.16s var(--spring-default), opacity 0.16s var(--spring-default);
+  transition: transform 0.16s var(--spring-default), opacity 0.16s var(--spring-default), background-color 0.2s var(--spring-default);
 
   &:active {
     transform: scale(0.96);

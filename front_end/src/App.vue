@@ -2,25 +2,20 @@
 import { watch } from "vue";
 import { onLaunch } from "@dcloudio/uni-app";
 import { isLoggedIn } from "@/utils/storage";
-import { useTheme } from "@/stores/themeStore";
+import { useTheme, applyThemeToDom } from "@/stores/themeStore";
 
 const { themeMode } = useTheme();
 
 watch(
   themeMode,
   (mode) => {
-    if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("data-theme", mode);
-      document.body.setAttribute("data-theme", mode);
-      document.body.classList.remove("theme-light", "theme-dark");
-      document.body.classList.add(`theme-${mode}`);
-    }
+    applyThemeToDom(mode);
   },
   { immediate: true },
 );
 
 onLaunch(() => {
-  console.log("App Launch, themeMode:", themeMode.value);
+  applyThemeToDom(themeMode.value);
   const pages = getCurrentPages();
   if (pages.length === 0) {
     const hash = window.location.hash;
@@ -46,7 +41,9 @@ page {
   padding-top: var(--status-bar-height);
   background: var(--bg-primary);
   min-height: 100vh;
-  transition: background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1), color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+    color 0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 ::-webkit-scrollbar {

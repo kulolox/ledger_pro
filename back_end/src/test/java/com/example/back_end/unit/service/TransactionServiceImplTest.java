@@ -241,4 +241,26 @@ class TransactionServiceImplTest {
         assertEquals(1, deleted);
         verify(cache, atLeastOnce()).evict(any());
     }
+
+    @Test
+    @DisplayName("create: 支持非补零日期格式 (如 2026-11-1 12:30:00)")
+    void create_singleDigitMonthOrDay_success() {
+        when(cacheManager.getCache("transactions")).thenReturn(cache);
+        AccountBook book = new AccountBook();
+        book.setId(100L);
+        book.setOwnerId(1L);
+        when(accountBookMapper.selectById(100L)).thenReturn(book);
+        when(transactionMapper.insert(any(Transaction.class))).thenAnswer(inv -> {
+            Transaction tx = inv.getArgument(0);
+            tx.setId(601L);
+            return 1;
+        });
+
+        TransactionRequest req = new TransactionRequest(100L, 0, 2550, 1L, null, 2L, "午餐", "2026-11-1 12:30:00");
+        TransactionResponse res = service.create(req);
+
+        assertNotNull(res);
+        assertEquals(601L, res.id());
+        assertTrue(res.trans_time().startsWith("2026-11-01T12:30"));
+    }
 }

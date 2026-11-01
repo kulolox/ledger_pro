@@ -7,141 +7,138 @@
     @close="$emit('close')"
   >
     <view class="sidebar">
-      <view class="sidebar-user" @click="$emit('userClick')">
-        <view class="user-avatar">
-          <text class="avatar-text">{{ avatarText }}</text>
-        </view>
-        <view class="user-info">
-          <text class="user-name">{{ userInfo?.nickname || "未登录" }}</text>
-          <text class="user-email">{{ userInfo?.email || "" }}</text>
-        </view>
-      </view>
-
-      <view class="sidebar-divider" />
-
-      <view class="sidebar-section">
-        <view class="section-header">
-          <text class="section-title">我的账本</text>
-          <view
-            v-if="books.length < 4"
-            class="section-add-btn"
-            @click="showAddInput = true"
-          >
-            <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
+      <view class="sidebar-scroll">
+        <view class="sidebar-user" @click="$emit('userClick')">
+          <view class="user-avatar">
+            <text class="avatar-text">{{ avatarText }}</text>
+          </view>
+          <view class="user-info">
+            <text class="user-name">{{ userInfo?.nickname || "未登录" }}</text>
+            <text class="user-email">{{ userInfo?.email || "" }}</text>
           </view>
         </view>
 
-        <wd-popup
-          :model-value="showAddInput"
-          position="center"
-          custom-class="add-book-dialog"
-          :close-on-click-modal="true"
-          @update:model-value="onAddCancel"
-        >
-          <view class="add-book-dialog-content">
-            <text class="dialog-title">新增账本</text>
-            <input
-              class="dialog-input"
-              v-model="newBookName"
-              placeholder="输入账本名称"
-              :focus="showAddInput"
-              @confirm="onAddBook"
-            />
-            <view class="dialog-actions">
-              <view class="dialog-btn cancel" @click="onAddCancel">
-                <text>取消</text>
-              </view>
-              <view class="dialog-btn confirm" @click="onAddBook">
-                <text>确定</text>
-              </view>
-            </view>
-          </view>
-        </wd-popup>
-
-        <view class="book-list" v-if="books.length > 0">
-          <view
-            v-for="book in books"
-            :key="book.id"
-            class="book-item"
-            :class="{ active: book.id === currentBookId }"
-            @click="$emit('switchBook', book.id)"
-          >
+        <view class="sidebar-section">
+          <view class="section-header">
+            <text class="section-title">我的账本</text>
             <view
-              class="book-icon"
-              :style="{
-                background: book.coverIcon
-                  ? 'transparent'
-                  : getBookColor(book.id),
-              }"
+              v-if="books.length < 4"
+              class="section-add-btn"
+              @click="showAddInput = true"
             >
-              <text>{{ book.coverIcon || getBookLetter(book.name) }}</text>
+              <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
             </view>
-            <text class="book-name">{{ book.name }}</text>
+          </view>
+
+          <wd-popup
+            :model-value="showAddInput"
+            position="center"
+            custom-class="add-book-dialog"
+            custom-style="background: transparent;"
+            :close-on-click-modal="true"
+            @update:model-value="onAddCancel"
+          >
+            <view class="add-book-dialog-content">
+              <text class="dialog-title">新增账本</text>
+              <input
+                class="dialog-input"
+                v-model="newBookName"
+                placeholder="输入账本名称"
+                :focus="showAddInput"
+                @confirm="onAddBook"
+              />
+              <view class="dialog-actions">
+                <view class="dialog-btn cancel" @click="onAddCancel">
+                  <text>取消</text>
+                </view>
+                <view class="dialog-btn confirm" @click="onAddBook">
+                  <text>确定</text>
+                </view>
+              </view>
+            </view>
+          </wd-popup>
+
+          <view class="book-list" v-if="books.length > 0">
+            <view
+              v-for="book in books"
+              :key="book.id"
+              class="book-item"
+              :class="{ active: book.id === currentBookId }"
+              @click="$emit('switchBook', book.id)"
+            >
+              <view
+                class="book-icon"
+                :style="{
+                  background: book.coverIcon
+                    ? 'transparent'
+                    : getBookColor(book.id),
+                }"
+              >
+                <text>{{ book.coverIcon || getBookLetter(book.name) }}</text>
+              </view>
+              <text class="book-name">{{ book.name }}</text>
+              <wd-icon
+                v-if="book.id === currentBookId"
+                name="check"
+                size="30rpx"
+                color="var(--color-primary)"
+              />
+            </view>
+          </view>
+          <view v-else class="book-empty">
+            <text class="book-empty-text">暂无账本</text>
+          </view>
+        </view>
+
+        <view class="sidebar-actions">
+          <view class="action-item" @click="onManageCategories">
+            <wd-icon name="tags" size="34rpx" color="var(--text-secondary)" />
+            <text class="action-label">分类管理</text>
+          </view>
+          <view class="action-item" @click="onSearch">
             <wd-icon
-              v-if="book.id === currentBookId"
-              name="check"
-              size="28rpx"
-              color="var(--color-primary)"
+              name="search-line"
+              size="34rpx"
+              color="var(--text-secondary)"
             />
+            <text class="action-label">账单查询</text>
+          </view>
+          <view class="action-item" @click="onImportExport">
+            <wd-icon name="import" size="34rpx" color="var(--text-secondary)" />
+            <text class="action-label">导入导出</text>
+          </view>
+          <view class="action-item" @click="onSync">
+            <wd-icon name="sync" size="34rpx" color="var(--text-secondary)" />
+            <text class="action-label">同步数据</text>
           </view>
         </view>
-        <view v-else class="book-empty">
-          <text class="book-empty-text">暂无账本</text>
-        </view>
-      </view>
 
-      <view class="sidebar-divider" />
+        <view class="sidebar-divider" />
 
-      <view class="sidebar-actions">
-        <view class="action-item" @click="onManageCategories">
-          <wd-icon name="tags" size="28rpx" color="var(--text-secondary)" />
-          <text class="action-label">分类管理</text>
-        </view>
-        <view class="action-item" @click="onSearch">
-          <wd-icon
-            name="search-line"
-            size="28rpx"
-            color="var(--text-secondary)"
-          />
-          <text class="action-label">账单查询</text>
-        </view>
-        <view class="action-item" @click="onImportExport">
-          <wd-icon name="import" size="28rpx" color="var(--text-secondary)" />
-          <text class="action-label">导入导出</text>
-        </view>
-        <view class="action-item" @click="onSync">
-          <wd-icon name="sync" size="28rpx" color="var(--text-secondary)" />
-          <text class="action-label">同步数据</text>
-        </view>
-      </view>
-
-      <view class="sidebar-divider" />
-
-      <view class="theme-section">
-        <view class="section-header">
-          <text class="section-title">界面外观</text>
-        </view>
-        <view class="theme-segmented">
-          <view
-            class="segmented-item"
-            :class="{ active: themeMode === 'light' }"
-            @click="setTheme('light')"
-          >
-            <text class="segmented-icon">☀️</text>
-            <text class="segmented-label">浅色</text>
+        <view class="theme-section">
+          <view class="section-header theme-header">
+            <text class="section-title">界面外观</text>
           </view>
-          <view
-            class="segmented-item"
-            :class="{ active: themeMode === 'dark' }"
-            @click="setTheme('dark')"
-          >
-            <text class="segmented-icon">🌙</text>
-            <text class="segmented-label">深色</text>
+          <view class="theme-segmented">
+            <view
+              class="segmented-item"
+              :class="{ active: themeMode === 'light' }"
+              @click="setTheme('light')"
+            >
+              <text class="segmented-icon">☀️</text>
+              <text class="segmented-label">浅色</text>
+            </view>
+            <view
+              class="segmented-item"
+              :class="{ active: themeMode === 'dark' }"
+              @click="setTheme('dark')"
+            >
+              <text class="segmented-icon">🌙</text>
+              <text class="segmented-label">深色</text>
+            </view>
           </view>
         </view>
       </view>
-
-      <view class="sidebar-divider" />
 
       <view class="logout-section">
         <view class="logout-btn logout-item" @click="onLogout">
@@ -270,7 +267,7 @@ function onLogout() {
   uni.reLaunch({ url: "/pages/login/index" });
 }
 
-const bookColors = ["#007aff", "#34c759", "#ff9500", "#ff3b30", "#af52de"];
+const bookColors = ["#af52de", "#007aff", "#34c759", "#ff9500", "#ff3b30"];
 
 function getBookColor(id: string): string {
   let hash = 0;
@@ -285,19 +282,31 @@ function getBookLetter(name: string): string {
 
 <style lang="scss" scoped>
 .sidebar {
-  width: 560rpx;
+  width: 580rpx;
   height: 100vh;
   background: var(--bg-secondary);
+  border-right: 1rpx solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  padding-top: calc(var(--status-bar-height, 44px) + 20rpx);
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition: background-color 0.2s var(--spring-default);
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: calc(var(--status-bar-height, 44px) + 28rpx) 36rpx 32rpx;
 }
 
 .sidebar-user {
   display: flex;
   align-items: center;
-  gap: 24rpx;
-  padding: 32rpx 36rpx 28rpx;
+  gap: 26rpx;
+  margin-bottom: 52rpx;
+  padding: 8rpx 4rpx;
+  border-radius: var(--radius-lg);
   transition: background 0.15s;
 
   &:active {
@@ -306,10 +315,12 @@ function getBookLetter(name: string): string {
 }
 
 .user-avatar {
-  width: 96rpx;
-  height: 96rpx;
+  width: 108rpx;
+  height: 108rpx;
   border-radius: 50%;
   background: var(--color-primary);
+  box-shadow: 0 8rpx 24rpx rgba(0, 122, 255, 0.28);
+  border: 4rpx solid var(--bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -318,7 +329,7 @@ function getBookLetter(name: string): string {
   .avatar-text {
     font-size: 40rpx;
     font-weight: 700;
-    color: var(--text-inverse);
+    color: #ffffff;
   }
 }
 
@@ -327,16 +338,21 @@ function getBookLetter(name: string): string {
   flex-direction: column;
   gap: 6rpx;
   overflow: hidden;
+  flex: 1;
 
   .user-name {
-    font-size: 34rpx;
-    font-weight: 600;
+    font-size: 36rpx;
+    font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.5rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .user-email {
     font-size: 24rpx;
-    color: var(--text-muted);
+    color: var(--text-tertiary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -346,54 +362,75 @@ function getBookLetter(name: string): string {
 .sidebar-divider {
   height: 1rpx;
   background: var(--border-subtle);
-  margin: 0 36rpx;
+  margin: 40rpx 0;
 }
 
 .sidebar-section {
-  padding: 28rpx 0 0;
+  margin-bottom: 44rpx;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 36rpx 16rpx;
+  padding: 0 8rpx 20rpx;
+
+  &.theme-header {
+    padding-bottom: 16rpx;
+  }
 }
 
 .section-title {
-  font-size: 22rpx;
-  color: var(--text-label);
+  font-size: 24rpx;
+  color: var(--text-tertiary);
   font-weight: 500;
-  letter-spacing: 1rpx;
+  letter-spacing: 0.5rpx;
 }
 
 .section-add-btn {
-  width: 48rpx;
-  height: 48rpx;
+  width: 56rpx;
+  height: 56rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
   background: var(--bg-active);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
 }
 
 .book-item {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  padding: 20rpx 36rpx;
-  transition: background 0.15s;
+  gap: 24rpx;
+  padding: 20rpx 24rpx;
+  border-radius: var(--radius-lg);
+  border: 1rpx solid transparent;
+  cursor: pointer;
+  transition: all 0.18s var(--spring-default);
 
   &:active {
+    transform: scale(0.99);
     background: var(--bg-overlay);
   }
 
   &.active {
     background: var(--bg-active);
+    border-color: rgba(0, 122, 255, 0.18);
 
     .book-name {
-      color: var(--color-primary);
-      font-weight: 600;
+      color: var(--text-primary);
+      font-weight: 700;
     }
   }
 }
@@ -401,21 +438,23 @@ function getBookLetter(name: string): string {
 .book-icon {
   width: 72rpx;
   height: 72rpx;
-  border-radius: 18rpx;
+  border-radius: 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 
   text {
-    font-size: 30rpx;
-    font-weight: 600;
-    color: var(--text-inverse);
+    font-size: 28rpx;
+    font-weight: 700;
+    color: #ffffff;
   }
 }
 
 .book-name {
   font-size: 30rpx;
+  font-weight: 500;
   color: var(--text-primary);
   flex: 1;
   overflow: hidden;
@@ -424,12 +463,12 @@ function getBookLetter(name: string): string {
 }
 
 .book-empty {
-  padding: 40rpx 36rpx;
+  padding: 36rpx 0;
   text-align: center;
 
   .book-empty-text {
     font-size: 26rpx;
-    color: var(--text-muted);
+    color: var(--text-tertiary);
   }
 }
 
@@ -451,9 +490,9 @@ function getBookLetter(name: string): string {
 
 .dialog-input {
   width: 100%;
-  height: 80rpx;
-  border-radius: 12rpx;
-  background: var(--bg-primary);
+  height: 84rpx;
+  border-radius: var(--radius-md);
+  background: var(--bg-input-filled);
   padding: 0 24rpx;
   font-size: 28rpx;
   color: var(--text-primary);
@@ -468,36 +507,63 @@ function getBookLetter(name: string): string {
 
 .dialog-btn {
   flex: 1;
-  height: 80rpx;
+  height: 84rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   font-size: 30rpx;
   font-weight: 600;
+  cursor: pointer;
 
   &.cancel {
-    background: var(--bg-primary);
+    background: var(--bg-input-filled);
     color: var(--text-secondary);
   }
 
   &.confirm {
     background: var(--color-primary);
-    color: var(--text-inverse);
+    color: #ffffff;
+  }
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 26rpx;
+  padding: 24rpx 20rpx;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:active {
+    background: var(--bg-hover);
+  }
+
+  .action-label {
+    font-size: 30rpx;
+    color: var(--text-primary);
+    font-weight: 500;
+    letter-spacing: -0.3rpx;
   }
 }
 
 .theme-section {
-  padding: 24rpx 36rpx;
+  padding: 0;
 }
 
 .theme-segmented {
   display: flex;
-  background: var(--bg-primary);
-  padding: 6rpx;
-  border-radius: var(--radius-md);
-  border: 1rpx solid var(--border-subtle);
-  margin-top: 10rpx;
+  background: var(--bg-seg-track);
+  padding: 4rpx;
+  border-radius: 18rpx;
+  box-sizing: border-box;
 }
 
 .segmented-item {
@@ -505,9 +571,9 @@ function getBookLetter(name: string): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10rpx;
-  height: 64rpx;
-  border-radius: calc(var(--radius-md) - 4rpx);
+  gap: 8rpx;
+  height: 56rpx;
+  border-radius: 14rpx;
   font-size: 26rpx;
   font-weight: 500;
   color: var(--text-tertiary);
@@ -515,10 +581,10 @@ function getBookLetter(name: string): string {
   cursor: pointer;
 
   &.active {
-    background: var(--bg-secondary);
+    background: var(--bg-seg-thumb);
     color: var(--text-primary);
     font-weight: 600;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-seg);
   }
 
   &:active {
@@ -530,30 +596,10 @@ function getBookLetter(name: string): string {
   }
 }
 
-.sidebar-actions {
-  padding: 12rpx 0;
-}
-
-.action-item {
-  display: flex;
-  align-items: center;
-  gap: 20rpx;
-  padding: 24rpx 36rpx;
-  transition: background 0.15s;
-
-  &:active {
-    background: var(--bg-overlay);
-  }
-
-  .action-label {
-    font-size: 30rpx;
-    color: var(--text-primary);
-    font-weight: 500;
-  }
-}
-
 .logout-section {
-  padding: 20rpx 28rpx calc(var(--safe-area-bottom, 0px) + 24rpx);
+  padding: 28rpx 36rpx calc(var(--safe-area-bottom, 0px) + 28rpx);
+  border-top: 1rpx solid var(--border-subtle);
+  background: var(--bg-secondary);
 }
 
 .logout-btn {
@@ -561,16 +607,18 @@ function getBookLetter(name: string): string {
   align-items: center;
   justify-content: center;
   gap: 14rpx;
-  height: 84rpx;
+  height: 92rpx;
   background: var(--color-expense-bg);
-  border: 1rpx solid rgba(255, 59, 48, 0.2);
+  border: 1rpx solid rgba(255, 59, 48, 0.22);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: transform 0.15s var(--spring-default), opacity 0.15s;
+  transition:
+    transform 0.15s var(--spring-default),
+    opacity 0.15s;
 
   &:active {
-    transform: scale(0.97);
-    opacity: 0.8;
+    transform: scale(0.98);
+    opacity: 0.85;
   }
 
   .logout-label {

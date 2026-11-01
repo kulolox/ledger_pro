@@ -18,13 +18,21 @@ function getInitialTheme(): ThemeMode {
 
 const themeMode = ref<ThemeMode>(getInitialTheme());
 
-function applyThemeToDom(mode: ThemeMode) {
+const PAGE_SELECTORS =
+  "uni-page-body, page, .home-page, .login-page, .auth-page, .stats-page, .category-page, .search-page, .page";
+
+export function applyThemeToDom(mode: ThemeMode = themeMode.value) {
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-theme", mode);
+    document.documentElement.classList.remove("theme-light", "theme-dark");
+    document.documentElement.classList.add(`theme-${mode}`);
     document.documentElement.style.colorScheme = mode;
-    document.body.classList.remove("theme-light", "theme-dark");
-    document.body.classList.add(`theme-${mode}`);
-    document.body.setAttribute("data-theme", mode);
+
+    if (document.body) {
+      document.body.classList.remove("theme-light", "theme-dark");
+      document.body.classList.add(`theme-${mode}`);
+      document.body.setAttribute("data-theme", mode);
+    }
 
     const appEl = document.querySelector("uni-app");
     if (appEl) {
@@ -33,17 +41,31 @@ function applyThemeToDom(mode: ThemeMode) {
       appEl.classList.add(`theme-${mode}`);
     }
 
-    const pages = document.querySelectorAll("uni-page-body, page, .home-page");
+    const pages = document.querySelectorAll(PAGE_SELECTORS);
     pages.forEach((p) => {
-      p.setAttribute("data-theme", mode);
-      p.classList.remove("theme-light", "theme-dark");
-      p.classList.add(`theme-${mode}`);
+      if (p.getAttribute("data-theme") !== mode) {
+        p.setAttribute("data-theme", mode);
+      }
+      if (!p.classList.contains(`theme-${mode}`)) {
+        p.classList.remove("theme-light", "theme-dark");
+        p.classList.add(`theme-${mode}`);
+      }
     });
   }
 }
 
 // Initial application
 applyThemeToDom(themeMode.value);
+
+// Automatically sync theme when new pages or popups are mounted in DOM
+if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") {
+  const observer = new MutationObserver(() => {
+    applyThemeToDom(themeMode.value);
+  });
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+}
 
 export function setTheme(mode: ThemeMode) {
   themeMode.value = mode;
