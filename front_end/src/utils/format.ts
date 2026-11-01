@@ -45,9 +45,9 @@ export function getTodayStr(): string {
 
 export function formatDayHeader(dateStr: string): string {
   const parts = dateStr.split("-");
-  const month = parseInt(parts[1]);
-  const day = parseInt(parts[2]);
-  return `${month}月${day}日`;
+  const month = String(parseInt(parts[1])).padStart(2, "0");
+  const day = String(parseInt(parts[2])).padStart(2, "0");
+  return `${month}.${day}`;
 }
 
 export function formatWeekday(dateStr: string): string {

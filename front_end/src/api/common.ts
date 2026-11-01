@@ -73,7 +73,24 @@ export const createAccountBook = (data: {
   coverIcon?: string;
   type?: number;
 }) => {
-  return request.post<AccountBook>("/api/v1/account-books", data);
+  return request.post<AccountBook>("/api/v1/account-books", {
+    ...data,
+    type: data.type ?? 0,
+  });
+};
+
+export const updateAccountBook = (
+  id: string,
+  data: {
+    name: string;
+    coverIcon?: string;
+    type?: number;
+  },
+) => {
+  return request.put<AccountBook>(`/api/v1/account-books/${id}`, {
+    ...data,
+    type: data.type ?? 0,
+  });
 };
 
 export interface AccountBook {
@@ -91,6 +108,22 @@ export const getUserInfo = () => {
 
 export const updateUserInfo = (data: Partial<UserInfo>) => {
   return request.put<UserInfo>("/api/v1/user/info", data);
+};
+
+export const changePassword = async (data: {
+  old_password: string;
+  new_password: string;
+}) => {
+  const encryptedOldPassword = await encryptPassword(data.old_password);
+  const encryptedNewPassword = await encryptPassword(data.new_password);
+  return request.put("/api/v1/user/password", {
+    old_password: encryptedOldPassword,
+    new_password: encryptedNewPassword,
+  });
+};
+
+export const deleteAccount = () => {
+  return request.delete("/api/v1/user/account");
 };
 
 // ========== 记账相关 ==========
@@ -187,6 +220,7 @@ export interface UserInfo {
   avatar: string;
   email: string;
   phone: string;
+  createdAt?: string;
 }
 
 export interface Transaction {

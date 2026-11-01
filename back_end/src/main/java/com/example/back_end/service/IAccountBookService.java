@@ -10,4 +10,6 @@ public interface IAccountBookService extends IService<AccountBook> {
     List<AccountBookResponse> listByOwner();
 
     AccountBookResponse create(CreateAccountBookRequest req);
+
+    AccountBookResponse update(Long id, CreateAccountBookRequest req);
 }

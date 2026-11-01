@@ -200,14 +200,14 @@
               class="date-range-btn date-btn-start"
               @click="showDateStartPicker = true"
             >
-              <text>{{ dateFrom || "开始" }}</text>
+              <text>{{ dateFrom ? formatDayHeader(dateFrom) : "开始" }}</text>
             </view>
             <text class="date-sep">至</text>
             <view
               class="date-range-btn date-btn-end"
               @click="showDateEndPicker = true"
             >
-              <text>{{ dateTo || "结束" }}</text>
+              <text>{{ dateTo ? formatDayHeader(dateTo) : "结束" }}</text>
             </view>
           </view>
           <view class="date-quick-actions">
@@ -323,10 +323,11 @@ const bookLabel = computed(() => {
 
 const dateLabel = computed(() => {
   if (!dateFrom.value && !dateTo.value) return "全部时间";
-  if (dateFrom.value && dateTo.value)
-    return `${dateFrom.value} 至 ${dateTo.value}`;
-  if (dateFrom.value) return `${dateFrom.value} 起`;
-  return `至 ${dateTo.value}`;
+  const fromStr = dateFrom.value ? formatDayHeader(dateFrom.value) : "";
+  const toStr = dateTo.value ? formatDayHeader(dateTo.value) : "";
+  if (fromStr && toStr) return `${fromStr} 至 ${toStr}`;
+  if (fromStr) return `${fromStr} 起`;
+  return `至 ${toStr}`;
 });
 
 function resetFilters() {
@@ -531,7 +532,7 @@ const dayGroups = computed(() => {
 });
 
 function formatDayHeader(dateStr: string): string {
-  return dateStr;
+  return dateStr.replace(/-/g, ".");
 }
 
 function goBack() {

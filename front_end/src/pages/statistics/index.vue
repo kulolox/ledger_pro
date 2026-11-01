@@ -8,17 +8,10 @@
       </template>
       <template #center>
         <view class="nav-center">
-          <view class="month-capsule month-nav">
-            <view class="capsule-arrow nav-arrow" @click="prevMonth">
-              <wd-icon name="left" size="28rpx" color="var(--text-tertiary)" />
-            </view>
-            <view class="capsule-label-wrap">
-              <text class="capsule-label month-label">{{ monthLabel }}</text>
-            </view>
-            <view class="capsule-arrow nav-arrow" @click="nextMonth">
-              <wd-icon name="right" size="28rpx" color="var(--text-tertiary)" />
-            </view>
-          </view>
+          <MonthSelector
+            v-model:year="currentYear"
+            v-model:month="currentMonth"
+          />
         </view>
       </template>
     </NavBar>
@@ -59,23 +52,36 @@
             </wd-tabs>
           </view>
 
-          <!-- 有数据时展示：Apple 甜甜圈图表 + 分类列表 + 洞察摘要 -->
+          <!-- 有数据时展示：Apple 甜甜圈图表 + 顶部洞察摘要 + 分类聚合列表 -->
           <template v-if="currentCategories.length > 0">
             <view class="chart-section">
               <EChart :options="pieOption" :height="270" />
             </view>
 
             <view class="category-list">
+              <view class="insights-header">
+                <view class="insight-metric">
+                  <text class="insight-label"
+                    >日均{{ activeTab === 0 ? "支出" : "收入" }}</text
+                  >
+                  <text class="insight-value">¥{{ dailyAverage }}</text>
+                </view>
+                <view class="insight-divider" />
+                <view class="insight-metric">
+                  <text class="insight-label">本月累计</text>
+                  <text class="insight-value">{{ totalTxCount }} 笔</text>
+                </view>
+              </view>
+
               <view
                 v-for="cat in currentCategories"
                 :key="cat.category_id"
                 class="category-item"
               >
                 <view class="cat-left">
-                  <view class="cat-dot" :style="{ background: cat.color }" />
                   <view
                     class="cat-icon-badge"
-                    :style="{ background: cat.color + '20' }"
+                    :style="{ background: cat.color }"
                   >
                     <text>{{ cat.icon }}</text>
                   </view>
@@ -93,19 +99,6 @@
                     }}{{ formatCents(cat.amount) }}
                   </text>
                   <text class="cat-percent">{{ cat.percent }}%</text>
-                </view>
-              </view>
-
-              <view class="insights-footer">
-                <view class="insight-row">
-                  <text class="insight-label"
-                    >日均{{ activeTab === 0 ? "支出" : "收入" }}</text
-                  >
-                  <text class="insight-value">¥{{ dailyAverage }} / 天</text>
-                </view>
-                <view class="insight-row">
-                  <text class="insight-label">本月累计笔数</text>
-                  <text class="insight-value">共 {{ totalTxCount }} 笔</text>
                 </view>
               </view>
             </view>
@@ -140,14 +133,16 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onLoad, onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
+import MonthSelector from "@/components/MonthSelector.vue";
 import EChart from "@/components/EChart.vue";
 import PageLoader from "@/components/PageLoader.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
 import { useTheme } from "@/stores/themeStore";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
+import { pullFromServer } from "@/utils/sync";
 import { formatCents } from "@/utils/format";
 import { getMonthlyStatistics, type MonthlyStats } from "@/api/common";
 
@@ -156,15 +151,44 @@ const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
   useCategories();
 const { themeMode } = useTheme();
 
-const currentYear = ref(new Date().getFullYear());
-const currentMonth = ref(new Date().getMonth() + 1);
+function getInitialYearMonth(): { year: number; month: number } {
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth() + 1;
+  if (typeof window !== "undefined" && window.location?.hash) {
+    const qIdx = window.location.hash.indexOf("?");
+    if (qIdx !== -1) {
+      const params = new URLSearchParams(window.location.hash.slice(qIdx + 1));
+      const y = Number(params.get("year"));
+      const m = Number(params.get("month"));
+      if (!Number.isNaN(y) && y >= 1970 && y <= 2100) year = y;
+      if (!Number.isNaN(m) && m >= 1 && m <= 12) month = m;
+    }
+  }
+  return { year, month };
+}
+
+const initialYM = getInitialYearMonth();
+const currentYear = ref(initialYM.year);
+const currentMonth = ref(initialYM.month);
 const statsData = ref<MonthlyStats | null>(null);
 const activeTab = ref(0);
 const pageLoading = ref(true);
 
-const monthLabel = computed(
-  () => `${currentYear.value}年 ${currentMonth.value}月`,
-);
+onLoad((options) => {
+  if (options?.year) {
+    const y = Number(options.year);
+    if (!Number.isNaN(y) && y >= 1970 && y <= 2100) {
+      currentYear.value = y;
+    }
+  }
+  if (options?.month) {
+    const m = Number(options.month);
+    if (!Number.isNaN(m) && m >= 1 && m <= 12) {
+      currentMonth.value = m;
+    }
+  }
+});
 
 const totalExpense = computed(() => statsData.value?.total_expense ?? 0);
 const totalIncome = computed(() => statsData.value?.total_income ?? 0);
@@ -316,24 +340,6 @@ const pieOption = computed(() => {
   };
 });
 
-function prevMonth() {
-  if (currentMonth.value === 1) {
-    currentMonth.value = 12;
-    currentYear.value--;
-  } else {
-    currentMonth.value--;
-  }
-}
-
-function nextMonth() {
-  if (currentMonth.value === 12) {
-    currentMonth.value = 1;
-    currentYear.value++;
-  } else {
-    currentMonth.value++;
-  }
-}
-
 function goBack() {
   uni.navigateBack();
 }
@@ -348,10 +354,24 @@ function getMonthStr(): string {
 
 async function fetchStats() {
   const bookId = getCurrentBookId();
+  const monthStr = getMonthStr();
+  await pullFromServer(bookId, monthStr);
+
+  const hasLocalForMonth = transactions.value.some(
+    (tx) =>
+      !tx.deleted &&
+      String(tx.book_id) === String(bookId) &&
+      tx.trans_time.startsWith(monthStr),
+  );
+  if (hasLocalForMonth) {
+    calcLocalStats(bookId);
+    return;
+  }
+
   try {
     const res = await getMonthlyStatistics({
       book_id: bookId,
-      month: getMonthStr(),
+      month: monthStr,
     });
     if (
       res &&
@@ -451,15 +471,10 @@ onShow(async () => {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
   }
-  const startTime = Date.now();
   load();
   loadCategories();
   await fetchStats();
   await nextTick();
-  const elapsed = Date.now() - startTime;
-  if (elapsed < 500) {
-    await new Promise((r) => setTimeout(r, 500 - elapsed));
-  }
   pageLoading.value = false;
 });
 </script>
@@ -497,59 +512,6 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.month-nav {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
-}
-
-.month-capsule {
-  display: inline-flex;
-  align-items: center;
-  padding: 4rpx 8rpx;
-  border-radius: var(--radius-md);
-  transition: all 0.2s var(--spring-default);
-}
-
-.capsule-arrow,
-.nav-arrow {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition:
-    transform 0.15s var(--spring-default),
-    background-color 0.15s;
-
-  &:active {
-    background: var(--bg-hover);
-    transform: scale(0.9);
-  }
-}
-
-.capsule-label-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 12rpx;
-  border-radius: var(--radius-sm);
-}
-
-.capsule-label,
-.month-label {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.5rpx;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .nav-right {
@@ -677,45 +639,81 @@ onShow(async () => {
 
 .category-list {
   border-top: 1rpx solid var(--border-subtle);
-  padding: 12rpx 36rpx 28rpx;
+  padding: 24rpx 32rpx 28rpx;
+}
+
+.insights-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-input-filled);
+  border-radius: 24rpx;
+  padding: 22rpx 32rpx;
+  margin-bottom: 12rpx;
+}
+
+.insight-metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  min-width: 0;
+
+  .insight-label {
+    font-size: 24rpx;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  .insight-value {
+    font-size: 30rpx;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.3rpx;
+  }
+}
+
+.insight-divider {
+  width: 1rpx;
+  height: 52rpx;
+  background: var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .category-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 0;
+  padding: 24rpx 4rpx;
   border-top: 1rpx solid var(--border-subtle);
+}
 
-  &:first-child {
-    border-top: none;
-  }
+.insights-header + .category-item {
+  border-top: none;
 }
 
 .cat-left {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-}
-
-.cat-dot {
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: 50%;
-  flex-shrink: 0;
+  gap: 22rpx;
+  min-width: 0;
+  flex: 1;
 }
 
 .cat-icon-badge {
-  width: 68rpx;
-  height: 68rpx;
-  border-radius: 50%;
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 
   text {
-    font-size: 32rpx;
+    font-size: 34rpx;
     line-height: 1;
   }
 }
@@ -723,7 +721,9 @@ onShow(async () => {
 .cat-meta {
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
+  gap: 6rpx;
+  min-width: 0;
+  flex: 1;
 }
 
 .cat-name {
@@ -734,14 +734,21 @@ onShow(async () => {
 }
 
 .cat-count {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cat-right {
   display: flex;
-  align-items: baseline;
-  gap: 16rpx;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
+  flex-shrink: 0;
+  margin-left: 20rpx;
 }
 
 .cat-amount {
@@ -756,38 +763,11 @@ onShow(async () => {
 }
 
 .cat-percent {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: var(--text-tertiary);
   font-weight: 500;
-  min-width: 84rpx;
   text-align: right;
   font-variant-numeric: tabular-nums;
-}
-
-.insights-footer {
-  margin-top: 12rpx;
-  padding-top: 20rpx;
-  border-top: 2rpx dashed var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-
-  .insight-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 24rpx;
-
-    .insight-label {
-      color: var(--text-tertiary);
-    }
-
-    .insight-value {
-      color: var(--text-secondary);
-      font-weight: 500;
-      font-variant-numeric: tabular-nums;
-    }
-  }
 }
 
 .empty-chart-section {

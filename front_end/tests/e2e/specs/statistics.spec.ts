@@ -68,9 +68,10 @@ test.describe("Statistics - Apple Style & Charts & Empty State", () => {
     const chartSection = authenticatedPage.locator(".chart-section");
     await expect(chartSection).toBeVisible();
 
-    // Category list should display
+    // Category list should display top insights header and category items
     const categoryList = authenticatedPage.locator(".category-list");
     await expect(categoryList).toBeVisible();
+    await expect(categoryList.locator(".insights-header")).toBeVisible();
     const firstItem = categoryList.locator(".category-item").first();
     await expect(firstItem).toBeVisible();
     await expect(firstItem.locator(".cat-amount")).toContainText("68.50");
@@ -80,7 +81,7 @@ test.describe("Statistics - Apple Style & Charts & Empty State", () => {
     await expect(authenticatedPage.locator(".empty-chart-section")).toBeHidden();
   });
 
-  test("month capsule allows navigating between months", async ({ authenticatedPage }) => {
+  test("month capsule allows selecting year and month via popup", async ({ authenticatedPage }) => {
     const homePage = new HomePage(authenticatedPage);
     await homePage.clickStats();
 
@@ -90,17 +91,23 @@ test.describe("Statistics - Apple Style & Charts & Empty State", () => {
     const monthDisplay = capsule.locator(".capsule-label");
     const initialText = await monthDisplay.textContent();
 
-    // Click prev arrow
-    const prevArrow = capsule.locator(".capsule-arrow").first();
-    await prevArrow.click();
+    // Click capsule to open Year-Month popup and select a different month
+    await capsule.click();
     await authenticatedPage.waitForTimeout(300);
+    const stepPrevYear = authenticatedPage.locator(".year-step-btn").first();
+    await stepPrevYear.click();
+    await authenticatedPage.locator(".month-cell").first().click();
+    await authenticatedPage.waitForTimeout(300);
+
     const prevText = await monthDisplay.textContent();
     expect(prevText).not.toBe(initialText);
 
-    // Click next arrow
-    const nextArrow = capsule.locator(".capsule-arrow").last();
-    await nextArrow.click();
+    // Click capsule and use "回到本月" button to return
+    await capsule.click();
     await authenticatedPage.waitForTimeout(300);
+    await authenticatedPage.locator(".today-btn").click();
+    await authenticatedPage.waitForTimeout(300);
+
     const backText = await monthDisplay.textContent();
     expect(backText).toBe(initialText);
   });

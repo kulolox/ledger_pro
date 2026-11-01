@@ -8,7 +8,7 @@
   >
     <view class="sidebar">
       <view class="sidebar-scroll">
-        <view class="sidebar-user" @click="$emit('userClick')">
+        <view class="sidebar-user" @click="onUserClick">
           <view class="user-avatar">
             <text class="avatar-text">{{ avatarText }}</text>
           </view>
@@ -16,42 +16,64 @@
             <text class="user-name">{{ userInfo?.nickname || "未登录" }}</text>
             <text class="user-email">{{ userInfo?.email || "" }}</text>
           </view>
+          <wd-icon name="right" size="28rpx" color="var(--text-dim)" />
         </view>
 
         <view class="sidebar-section">
           <view class="section-header">
             <text class="section-title">我的账本</text>
-            <view
-              v-if="books.length < 4"
-              class="section-add-btn"
-              @click="showAddInput = true"
-            >
-              <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
+            <view class="section-header-actions">
+              <view
+                v-if="books.length > 0"
+                class="section-edit-btn"
+                :class="{ active: isEditingBooks }"
+                @click="isEditingBooks = !isEditingBooks"
+              >
+                <wd-icon
+                  :name="isEditingBooks ? 'check' : 'edit'"
+                  size="28rpx"
+                  :color="
+                    isEditingBooks
+                      ? 'var(--color-primary)'
+                      : 'var(--text-secondary)'
+                  "
+                />
+              </view>
+              <view
+                v-if="!isEditingBooks && books.length < 4"
+                class="section-add-btn"
+                @click="onOpenAddBook"
+              >
+                <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
+              </view>
             </view>
           </view>
 
           <wd-popup
-            :model-value="showAddInput"
+            :model-value="showBookDialog"
             position="center"
             custom-class="add-book-dialog"
             custom-style="background: transparent;"
             :close-on-click-modal="true"
-            @update:model-value="onAddCancel"
+            @update:model-value="onDialogCancel"
           >
             <view class="add-book-dialog-content">
-              <text class="dialog-title">新增账本</text>
+              <text class="dialog-title">{{
+                editingBook ? "重命名账本" : "新增账本"
+              }}</text>
               <input
                 class="dialog-input"
-                v-model="newBookName"
-                placeholder="输入账本名称"
-                :focus="showAddInput"
-                @confirm="onAddBook"
+                v-model="bookDialogName"
+                :placeholder="editingBook ? '输入新的账本名称' : '输入账本名称'"
+                maxlength="20"
+                :focus="showBookDialog"
+                @confirm="onConfirmBookDialog"
               />
               <view class="dialog-actions">
-                <view class="dialog-btn cancel" @click="onAddCancel">
+                <view class="dialog-btn cancel" @click="onDialogCancel">
                   <text>取消</text>
                 </view>
-                <view class="dialog-btn confirm" @click="onAddBook">
+                <view class="dialog-btn confirm" @click="onConfirmBookDialog">
                   <text>确定</text>
                 </view>
               </view>
@@ -63,8 +85,11 @@
               v-for="book in books"
               :key="book.id"
               class="book-item"
-              :class="{ active: book.id === currentBookId }"
-              @click="$emit('switchBook', book.id)"
+              :class="{
+                active: book.id === currentBookId && !isEditingBooks,
+                editing: isEditingBooks,
+              }"
+              @click="onBookItemClick(book)"
             >
               <view
                 class="book-icon"
@@ -77,8 +102,15 @@
                 <text>{{ book.coverIcon || getBookLetter(book.name) }}</text>
               </view>
               <text class="book-name">{{ book.name }}</text>
+              <view v-if="isEditingBooks" class="book-edit-action">
+                <wd-icon
+                  name="edit"
+                  size="28rpx"
+                  color="var(--color-primary)"
+                />
+              </view>
               <wd-icon
-                v-if="book.id === currentBookId"
+                v-else-if="book.id === currentBookId"
                 name="check"
                 size="30rpx"
                 color="var(--color-primary)"
@@ -90,26 +122,57 @@
           </view>
         </view>
 
-        <view class="sidebar-actions">
-          <view class="action-item" @click="onManageCategories">
-            <wd-icon name="tags" size="34rpx" color="var(--text-secondary)" />
-            <text class="action-label">分类管理</text>
+        <view class="sidebar-divider" />
+
+        <view class="menu-section">
+          <view class="section-header menu-header">
+            <text class="section-title">功能菜单</text>
           </view>
-          <view class="action-item" @click="onSearch">
-            <wd-icon
-              name="search-line"
-              size="34rpx"
-              color="var(--text-secondary)"
-            />
-            <text class="action-label">账单查询</text>
-          </view>
-          <view class="action-item" @click="onImportExport">
-            <wd-icon name="import" size="34rpx" color="var(--text-secondary)" />
-            <text class="action-label">导入导出</text>
-          </view>
-          <view class="action-item" @click="onSync">
-            <wd-icon name="sync" size="34rpx" color="var(--text-secondary)" />
-            <text class="action-label">同步数据</text>
+          <view class="sidebar-actions">
+            <view class="action-item" @click="onManageCategories">
+              <view class="action-icon-wrap">
+                <wd-icon
+                  name="tags"
+                  size="32rpx"
+                  color="var(--color-primary)"
+                />
+              </view>
+              <text class="action-label">分类管理</text>
+              <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
+            </view>
+            <view class="action-item" @click="onSearch">
+              <view class="action-icon-wrap">
+                <wd-icon
+                  name="search-line"
+                  size="32rpx"
+                  color="var(--color-primary)"
+                />
+              </view>
+              <text class="action-label">账单查询</text>
+              <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
+            </view>
+            <view class="action-item" @click="onImportExport">
+              <view class="action-icon-wrap">
+                <wd-icon
+                  name="import"
+                  size="32rpx"
+                  color="var(--color-primary)"
+                />
+              </view>
+              <text class="action-label">导入导出</text>
+              <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
+            </view>
+            <view class="action-item" @click="onSync">
+              <view class="action-icon-wrap">
+                <wd-icon
+                  name="sync"
+                  size="32rpx"
+                  color="var(--color-primary)"
+                />
+              </view>
+              <text class="action-label">同步数据</text>
+              <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
+            </view>
           </view>
         </view>
 
@@ -151,8 +214,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { createAccountBook, logoutApi, type UserInfo } from "@/api/common";
+import { ref, computed, watch } from "vue";
+import {
+  createAccountBook,
+  updateAccountBook,
+  logoutApi,
+  type UserInfo,
+} from "@/api/common";
 import { getRefreshToken, logout } from "@/utils/storage";
 import { fullSync, stopSync } from "@/utils/sync";
 import { useTransactions } from "@/stores/transactionStore";
@@ -187,37 +255,99 @@ const avatarText = computed(() => {
   return props.userInfo.nickname.charAt(0).toUpperCase();
 });
 
-const showAddInput = ref(false);
-const newBookName = ref("");
+const isEditingBooks = ref(false);
+const showBookDialog = ref(false);
+const bookDialogName = ref("");
+const editingBook = ref<AccountBook | null>(null);
 
-async function onAddBook() {
-  if (props.books.length >= 4) {
-    uni.showToast({ title: "最多4个账本", icon: "none" });
-    newBookName.value = "";
-    showAddInput.value = false;
-    return;
-  }
-  const name = newBookName.value.trim();
-  if (name) {
-    try {
-      const book = await createAccountBook({ name });
-      emit("update:books", [...props.books, book]);
-      uni.showToast({ title: "创建成功", icon: "success" });
-    } catch {
-      uni.showToast({ title: "创建失败", icon: "error" });
+watch(
+  () => props.visible,
+  (val) => {
+    if (!val) {
+      isEditingBooks.value = false;
     }
-  }
-  newBookName.value = "";
-  showAddInput.value = false;
+  },
+);
+
+function onOpenAddBook() {
+  editingBook.value = null;
+  bookDialogName.value = "";
+  showBookDialog.value = true;
 }
 
-function onAddCancel() {
-  newBookName.value = "";
-  showAddInput.value = false;
+function onOpenEditBook(book: AccountBook) {
+  editingBook.value = book;
+  bookDialogName.value = book.name;
+  showBookDialog.value = true;
+}
+
+function onBookItemClick(book: AccountBook) {
+  if (isEditingBooks.value) {
+    onOpenEditBook(book);
+    return;
+  }
+  emit("switchBook", book.id);
+}
+
+async function onConfirmBookDialog() {
+  const name = bookDialogName.value.trim();
+  if (!name) {
+    uni.showToast({ title: "请输入账本名称", icon: "none" });
+    return;
+  }
+
+  if (editingBook.value) {
+    const targetBook = editingBook.value;
+    if (name === targetBook.name) {
+      onDialogCancel();
+      return;
+    }
+    try {
+      const updated = await updateAccountBook(targetBook.id, { name });
+      emit(
+        "update:books",
+        props.books.map((b) =>
+          b.id === targetBook.id ? { ...b, name: updated.name || name } : b,
+        ),
+      );
+      uni.showToast({ title: "修改成功", icon: "success" });
+      isEditingBooks.value = false;
+    } catch {
+      uni.showToast({ title: "修改失败", icon: "error" });
+    }
+    onDialogCancel();
+    return;
+  }
+
+  if (props.books.length >= 4) {
+    uni.showToast({ title: "最多4个账本", icon: "none" });
+    onDialogCancel();
+    return;
+  }
+  try {
+    const book = await createAccountBook({ name, type: 0 });
+    emit("update:books", [...props.books, book]);
+    uni.showToast({ title: "创建成功", icon: "success" });
+  } catch {
+    uni.showToast({ title: "创建失败", icon: "error" });
+  }
+  onDialogCancel();
+}
+
+function onDialogCancel() {
+  bookDialogName.value = "";
+  editingBook.value = null;
+  showBookDialog.value = false;
 }
 
 const { load: loadTransactions, clear: clearTransactions } = useTransactions();
 const { clear: clearCategories } = useCategories();
+
+function onUserClick() {
+  emit("userClick");
+  emit("update:visible", false);
+  uni.navigateTo({ url: "/pages/profile/index" });
+}
 
 function onManageCategories() {
   emit("update:visible", false);
@@ -361,20 +491,25 @@ function getBookLetter(name: string): string {
 
 .sidebar-divider {
   height: 1rpx;
-  background: var(--border-subtle);
-  margin: 40rpx 0;
+  background: var(--border-primary);
+  margin: 32rpx 0;
 }
 
 .sidebar-section {
-  margin-bottom: 44rpx;
+  margin-bottom: 8rpx;
+}
+
+.menu-section {
+  margin-bottom: 8rpx;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8rpx 20rpx;
+  padding: 0 8rpx 16rpx;
 
+  &.menu-header,
   &.theme-header {
     padding-bottom: 16rpx;
   }
@@ -387,13 +522,39 @@ function getBookLetter(name: string): string {
   letter-spacing: 0.5rpx;
 }
 
-.section-add-btn {
-  width: 56rpx;
-  height: 56rpx;
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.section-edit-btn {
+  width: 52rpx;
+  height: 52rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16rpx;
+  border-radius: 14rpx;
+  background: var(--bg-input-filled);
+  cursor: pointer;
+  transition: all 0.15s var(--spring-default);
+
+  &.active {
+    background: var(--color-primary-subtle);
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.section-add-btn {
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
   background: var(--bg-active);
   cursor: pointer;
   transition: transform 0.15s var(--spring-default);
@@ -415,24 +576,40 @@ function getBookLetter(name: string): string {
   gap: 24rpx;
   padding: 20rpx 24rpx;
   border-radius: var(--radius-lg);
-  border: 1rpx solid transparent;
+  background: var(--bg-card-subtle);
+  border: 1rpx solid var(--border-subtle);
   cursor: pointer;
   transition: all 0.18s var(--spring-default);
 
   &:active {
     transform: scale(0.99);
-    background: var(--bg-overlay);
+    background: var(--bg-hover);
   }
 
   &.active {
     background: var(--bg-active);
-    border-color: rgba(0, 122, 255, 0.18);
+    border-color: rgba(0, 122, 255, 0.26);
 
     .book-name {
       color: var(--text-primary);
       font-weight: 700;
     }
   }
+
+  &.editing {
+    border-color: var(--border-primary);
+  }
+}
+
+.book-edit-action {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 16rpx;
+  background: var(--color-primary-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .book-icon {
@@ -530,15 +707,18 @@ function getBookLetter(name: string): string {
 .sidebar-actions {
   display: flex;
   flex-direction: column;
-  gap: 6rpx;
+  background: var(--bg-card-subtle);
+  border: 1rpx solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .action-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 26rpx;
-  padding: 24rpx 20rpx;
-  border-radius: var(--radius-md);
+  gap: 22rpx;
+  padding: 24rpx 24rpx;
   cursor: pointer;
   transition: background-color 0.15s;
 
@@ -546,7 +726,29 @@ function getBookLetter(name: string): string {
     background: var(--bg-hover);
   }
 
+  &:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 102rpx;
+    right: 24rpx;
+    bottom: 0;
+    height: 1rpx;
+    background: var(--border-primary);
+  }
+
+  .action-icon-wrap {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 16rpx;
+    background: var(--color-primary-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
   .action-label {
+    flex: 1;
     font-size: 30rpx;
     color: var(--text-primary);
     font-weight: 500;

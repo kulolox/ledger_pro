@@ -61,6 +61,20 @@
         "navigationBarTitleText": "搜索",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "个人中心",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/change-password/index",
+      "style": {
+        "navigationBarTitleText": "修改密码",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

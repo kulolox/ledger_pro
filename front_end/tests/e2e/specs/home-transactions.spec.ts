@@ -151,8 +151,13 @@ test.describe("Home - Transactions", () => {
     await pressKey(authenticatedPage, "保存");
     await authenticatedPage.waitForTimeout(500);
 
-    // click to edit
+    // click to open detail popup, then click edit
     await authenticatedPage.locator(".tx-item").first().click();
+    await authenticatedPage.waitForTimeout(300);
+
+    const detailSheet = authenticatedPage.locator(".tx-detail-sheet");
+    await expect(detailSheet).toBeVisible();
+    await detailSheet.locator(".detail-edit-btn").click();
     await authenticatedPage.waitForTimeout(300);
 
     const editor = authenticatedPage.locator(".editor");

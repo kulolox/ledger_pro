@@ -17,7 +17,7 @@ let syncTimer: number | null = null;
 let networkChangeHandler: ((res: any) => void) | null = null;
 // 防止并发同步
 let syncing = false;
-let pullPromise: Promise<number> | null = null;
+const pullPromises = new Map<string, Promise<number>>();
 
 // 直接从 storage 读取，避免与 store 的响应式引用混淆
 function getLocalTransactions(): LocalTransaction[] {
@@ -196,67 +196,74 @@ export async function pushDeletes(): Promise<number> {
   }
 }
 
-export async function pullFromServer(bookId: string): Promise<number> {
-  if (pullPromise) return pullPromise;
+export async function pullFromServer(
+  bookId: string,
+  month?: string,
+): Promise<number> {
+  const targetMonth = month || currentMonth();
+  const key = `${bookId}_${targetMonth}`;
+  const existing = pullPromises.get(key);
+  if (existing) return existing;
 
-  pullPromise = (async () => {
+  const promise = (async () => {
     try {
       const result = (await silentRequest({
         url: "/api/v1/transactions",
         method: "GET",
         data: {
           book_id: bookId,
-          month: currentMonth(),
+          month: targetMonth,
           page: 1,
           size: 999,
         },
       })) as any;
 
-    const serverList = (result?.list || result) as any[];
-    if (!Array.isArray(serverList) || serverList.length === 0) return 0;
+      const serverList = (result?.list || result) as any[];
+      if (!Array.isArray(serverList) || serverList.length === 0) return 0;
 
-    const localList = getLocalTransactions();
-    const existingIds = new Set<string>();
-    const existingServerIds = new Set<string>();
-    for (const t of localList) {
-      existingIds.add(String(t.id));
-      if (t.server_id) existingServerIds.add(String(t.server_id));
-    }
+      const localList = getLocalTransactions();
+      const existingIds = new Set<string>();
+      const existingServerIds = new Set<string>();
+      for (const t of localList) {
+        existingIds.add(String(t.id));
+        if (t.server_id) existingServerIds.add(String(t.server_id));
+      }
 
-    for (const item of serverList) {
-      if (existingIds.has(String(item.id)) || existingServerIds.has(String(item.id))) continue;
-      localList.unshift({
-        id: String(item.id),
-        server_id: String(item.id),
-        book_id: item.book_id,
-        type: item.type,
-        amount: item.amount,
-        account_id: item.account_id,
-        to_account_id: item.to_account_id,
-        category_id: item.category_id,
-        remark: item.remark || "",
-        trans_time: item.trans_time,
-        sync_status: "synced",
-        deleted: 0,
-        created_at: item.created_at || item.trans_time,
-        updated_at: item.updated_at || item.trans_time,
-      });
-    }
+      for (const item of serverList) {
+        if (existingIds.has(String(item.id)) || existingServerIds.has(String(item.id))) continue;
+        localList.unshift({
+          id: String(item.id),
+          server_id: String(item.id),
+          book_id: String(item.book_id),
+          type: item.type,
+          amount: item.amount,
+          account_id: String(item.account_id),
+          to_account_id: item.to_account_id ? String(item.to_account_id) : undefined,
+          category_id: item.category_id != null ? String(item.category_id) : undefined,
+          remark: item.remark || "",
+          trans_time: item.trans_time,
+          sync_status: "synced",
+          deleted: 0,
+          created_at: item.created_at || item.trans_time,
+          updated_at: item.updated_at || item.trans_time,
+        });
+      }
 
-    setLocalTransactions(localList);
-    loadTransactions();
-    setLastSyncTime();
+      setLocalTransactions(localList);
+      loadTransactions();
+      setLastSyncTime();
 
       return serverList.length;
     } catch (e) {
       console.error("[sync] pullFromServer failed:", e);
       return 0;
     } finally {
-      pullPromise = null;
+      pullPromises.delete(key);
     }
   })();
 
-  return pullPromise;
+  pullPromises.set(key, promise);
+  return promise;
 }
 
 // 单次同步周期：先推后拉，syncing 锁防止并发

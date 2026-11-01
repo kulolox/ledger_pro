@@ -36,9 +36,37 @@ public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, Accou
         book.setName(SanitizeUtils.escapeHtml(trimmed));
         book.setOwnerId(AuthUtils.getCurrentUserId());
         if (req.coverIcon() != null) book.setCoverIcon(SanitizeUtils.escapeHtml(req.coverIcon()));
-        if (req.type() != null) book.setType(req.type());
+        book.setType(req.type() != null ? req.type() : 0);
         save(book);
         log.info("新增账本 userId={} bookId={} name={}", AuthUtils.getCurrentUserId(), book.getId(), book.getName());
+        return AccountBookResponse.from(book);
+    }
+
+    public AccountBookResponse update(Long id, CreateAccountBookRequest req) {
+        if (req.name() == null || req.name().isBlank()) {
+            throw new BizException("账本名称不能为空");
+        }
+        String trimmed = req.name().trim();
+        if (trimmed.length() > 50) {
+            throw new BizException("账本名称长度不能超过50个字符");
+        }
+        Long userId = AuthUtils.getCurrentUserId();
+        AccountBook book = lambdaQuery()
+                .eq(AccountBook::getId, id)
+                .eq(AccountBook::getOwnerId, userId)
+                .one();
+        if (book == null) {
+            throw new BizException(404, "账本不存在或无权限");
+        }
+        book.setName(SanitizeUtils.escapeHtml(trimmed));
+        if (req.coverIcon() != null) {
+            book.setCoverIcon(SanitizeUtils.escapeHtml(req.coverIcon()));
+        }
+        if (req.type() != null) {
+            book.setType(req.type());
+        }
+        updateById(book);
+        log.info("修改账本 userId={} bookId={} name={}", userId, book.getId(), book.getName());
         return AccountBookResponse.from(book);
     }
 }

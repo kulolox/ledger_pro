@@ -96,12 +96,13 @@ describe("getTodayStr", () => {
 });
 
 describe("formatDayHeader", () => {
-  it("formats 2026-06-17 to 6月17日", () => {
-    expect(formatDayHeader("2026-06-17")).toBe("6月17日");
+  it("formats 2026-06-17 to 06.17", () => {
+    expect(formatDayHeader("2026-06-17")).toBe("06.17");
   });
 
-  it("strips leading zeros from month and day", () => {
-    expect(formatDayHeader("2026-01-05")).toBe("1月5日");
+  it("pads single-digit month and day as MM.DD (e.g. 11.01)", () => {
+    expect(formatDayHeader("2026-11-01")).toBe("11.01");
+    expect(formatDayHeader("2026-01-05")).toBe("01.05");
   });
 });
 

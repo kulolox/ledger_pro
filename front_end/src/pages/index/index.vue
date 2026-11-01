@@ -7,17 +7,11 @@
         </view>
       </template>
       <template #center>
-        <view class="month-capsule month-nav">
-          <view class="capsule-arrow nav-arrow" @click="prevMonth">
-            <wd-icon name="left" size="28rpx" color="var(--text-tertiary)" />
-          </view>
-          <view class="capsule-label-wrap">
-            <text class="capsule-label month-label">{{ monthLabel }}</text>
-          </view>
-          <view class="capsule-arrow nav-arrow" @click="nextMonth">
-            <wd-icon name="right" size="28rpx" color="var(--text-tertiary)" />
-          </view>
-        </view>
+        <MonthSelector
+          v-model:year="currentYear"
+          v-model:month="currentMonth"
+          @change="onMonthChange"
+        />
       </template>
       <template #right>
         <view class="stats-btn" @click="goStats">
@@ -98,8 +92,7 @@
               'tx-item-pending': tx.sync_status === 'pending',
               'tx-item-failed': tx.sync_status === 'failed',
             }"
-            @click="onEditTx(tx)"
-            @longpress="onLongPressDelete(tx)"
+            @click="onSelectTx(tx)"
           >
             <view class="tx-left">
               <view
@@ -149,6 +142,69 @@
 
       <wd-dialog selector="delete-confirm" />
 
+      <!-- 账单详情底部弹窗 -->
+      <wd-popup
+        v-model="detailVisible"
+        position="bottom"
+        :z-index="90"
+        custom-class="tx-detail-popup"
+        custom-style="background: transparent;"
+        @close="detailVisible = false"
+      >
+        <view v-if="selectedTx" class="tx-detail-sheet">
+          <view class="sheet-grabber" />
+
+          <view class="detail-header">
+            <text class="detail-title">账单详情</text>
+            <view class="detail-actions">
+              <view
+                class="detail-btn detail-delete-btn"
+                @click="onDeleteFromDetail"
+              >
+                <text>删除</text>
+              </view>
+              <view
+                class="detail-btn detail-edit-btn"
+                @click="onEditFromDetail"
+              >
+                <text>修改</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- Apple HIG Inset Grouped 账单文字信息主卡片 -->
+          <view class="detail-info-card">
+            <view class="detail-row">
+              <text class="detail-label">金额</text>
+              <text
+                class="detail-value tabular amount-val"
+                :class="amountClass(selectedTx.type)"
+              >
+                {{ formatTxAmount(selectedTx) }}
+              </text>
+            </view>
+            <view class="detail-row">
+              <text class="detail-label">分类</text>
+              <text class="detail-value">{{
+                getCategoryName(selectedTx.type, selectedTx.category_id)
+              }}</text>
+            </view>
+            <view class="detail-row">
+              <text class="detail-label">时间</text>
+              <text class="detail-value tabular">{{
+                formatDetailTime(selectedTx.trans_time)
+              }}</text>
+            </view>
+            <view class="detail-row">
+              <text class="detail-label">备注</text>
+              <text class="detail-value remark-val">{{
+                selectedTx.remark || "无"
+              }}</text>
+            </view>
+          </view>
+        </view>
+      </wd-popup>
+
       <!-- 记账器组件 -->
       <TransactionEditor
         :visible="editorVisible"
@@ -172,11 +228,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import { useDialog } from "@wot-ui/ui";
 import TransactionEditor from "@/components/TransactionEditor.vue";
 import NavBar from "@/components/NavBar.vue";
+import MonthSelector from "@/components/MonthSelector.vue";
 import Sidebar from "@/components/Sidebar.vue";
 import PageLoader from "@/components/PageLoader.vue";
 import {
@@ -205,6 +262,8 @@ const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const editorVisible = ref(false);
 const editingTx = ref<LocalTransaction | null>(null);
+const detailVisible = ref(false);
+const selectedTx = ref<LocalTransaction | null>(null);
 const refreshing = ref(false);
 const pageLoading = ref(true);
 
@@ -212,10 +271,6 @@ const showSidebar = ref(false);
 const userInfo = ref<UserInfo | null>(null);
 const books = ref<AccountBook[]>([]);
 const currentBookId = ref(getCurrentBookId());
-
-const monthLabel = computed(
-  () => `${currentYear.value}年 ${currentMonth.value}月`,
-);
 
 // 按日期分组，过滤当前账本和月份，计算每日收入/支出，按日期倒序
 const dayGroups = computed(() => {
@@ -232,7 +287,7 @@ const dayGroups = computed(() => {
   for (const [date, group] of map) {
     if (date.startsWith(prefix)) {
       const filtered = group.items.filter(
-        (t) => t.book_id === currentBookId.value,
+        (t) => String(t.book_id) === String(currentBookId.value),
       );
       if (filtered.length === 0) continue;
       const income = filtered
@@ -260,25 +315,20 @@ const monthExpense = computed(() =>
 // 结余
 const monthBalance = computed(() => monthIncome.value - monthExpense.value);
 
-// 切换到上月
-function prevMonth() {
-  if (currentMonth.value === 1) {
-    currentMonth.value = 12;
-    currentYear.value--;
-  } else {
-    currentMonth.value--;
+// 切换月份时拉取对应月份账单
+function onMonthChange({ year, month }: { year: number; month: number }) {
+  if (currentBookId.value) {
+    const mStr = `${year}-${String(month).padStart(2, "0")}`;
+    pullFromServer(currentBookId.value, mStr);
   }
 }
 
-// 切换到下月
-function nextMonth() {
-  if (currentMonth.value === 12) {
-    currentMonth.value = 1;
-    currentYear.value++;
-  } else {
-    currentMonth.value++;
+watch([currentYear, currentMonth, currentBookId], ([y, m, b]) => {
+  if (b) {
+    const mStr = `${y}-${String(m).padStart(2, "0")}`;
+    pullFromServer(b, mStr);
   }
-}
+});
 
 // 格式化交易金额显示
 function formatTxAmount(tx: LocalTransaction): string {
@@ -299,22 +349,44 @@ function onAdd() {
   editorVisible.value = true;
 }
 
-// 打开编辑交易编辑器
-function onEditTx(tx: LocalTransaction) {
-  editingTx.value = { ...tx };
+// 点击账单弹出详情弹窗
+function onSelectTx(tx: LocalTransaction) {
+  selectedTx.value = { ...tx };
+  detailVisible.value = true;
+}
+
+// 格式化详情弹窗中的交易时间（YYYY.MM.dd HH:mm）
+function formatDetailTime(transTime?: string): string {
+  if (!transTime) return "-";
+  const normalized = transTime.replace("T", " ").trim();
+  const [datePart, timePart] = normalized.split(" ");
+  const formattedDate = (datePart || "").replace(/-/g, ".");
+  if (!timePart) return formattedDate;
+  return `${formattedDate} ${timePart.slice(0, 5)}`;
+}
+
+// 从详情弹窗打开记一笔修改
+function onEditFromDetail() {
+  if (!selectedTx.value) return;
+  editingTx.value = { ...selectedTx.value };
+  detailVisible.value = false;
   editorVisible.value = true;
 }
 
 const dialog = useDialog("delete-confirm");
 
-// 长按弹出删除确认框
-async function onLongPressDelete(tx: LocalTransaction) {
+// 从详情弹窗删除账单
+async function onDeleteFromDetail() {
+  if (!selectedTx.value) return;
+  const targetId = selectedTx.value.id;
   const result = await dialog.confirm({
     title: "确认删除",
     msg: `确定要删除这笔账单吗？`,
   });
   if (result.action === "confirm") {
-    removeTx(tx.id);
+    detailVisible.value = false;
+    selectedTx.value = null;
+    removeTx(targetId);
     uni.showToast({ title: "已删除", icon: "success" });
   }
 }
@@ -341,9 +413,11 @@ function onSwitchBook(bookId: string) {
   pullFromServer(bookId);
 }
 
-// 跳转到统计页面
+// 跳转到统计页面（携带当前选中的年月）
 function goStats() {
-  uni.navigateTo({ url: "/pages/statistics/index" });
+  uni.navigateTo({
+    url: `/pages/statistics/index?year=${currentYear.value}&month=${currentMonth.value}`,
+  });
 }
 
 // 下拉刷新触发同步
@@ -358,7 +432,6 @@ async function onRefresh() {
 function loadMore() {}
 
 let pageReady = false;
-const MIN_SKELETON_MS = 500;
 
 // 页面显示时初始化数据、加载交易列表
 onShow(async () => {
@@ -367,11 +440,10 @@ onShow(async () => {
     return;
   }
 
-  const startTime = Date.now();
+  userInfo.value = getUserInfo();
 
   if (!pageReady) {
     pageReady = true;
-    userInfo.value = getUserInfo();
     loadCategories();
     try {
       books.value = await getAccountBooks();
@@ -379,23 +451,20 @@ onShow(async () => {
       books.value = [];
     }
     if (
-      !books.value.find((b) => b.id === currentBookId.value) &&
+      !books.value.find((b) => String(b.id) === String(currentBookId.value)) &&
       books.value.length > 0
     ) {
-      currentBookId.value = books.value[0].id;
+      currentBookId.value = String(books.value[0].id);
       setCurrentBookId(currentBookId.value);
     }
     scheduleSync(currentBookId.value);
   }
 
   load();
-  pullFromServer(currentBookId.value);
+  const mStr = `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
+  pullFromServer(currentBookId.value, mStr);
 
   await nextTick();
-  const elapsed = Date.now() - startTime;
-  if (elapsed < MIN_SKELETON_MS) {
-    await new Promise((r) => setTimeout(r, MIN_SKELETON_MS - elapsed));
-  }
   pageLoading.value = false;
 });
 </script>
@@ -409,64 +478,6 @@ onShow(async () => {
   background: var(--bg-primary);
   overflow: hidden;
   transition: background-color 0.2s var(--spring-default);
-}
-
-.month-nav {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
-}
-
-.month-capsule {
-  display: inline-flex;
-  align-items: center;
-  padding: 4rpx 8rpx;
-  border-radius: var(--radius-md);
-  transition: all 0.2s var(--spring-default);
-}
-
-.capsule-arrow,
-.nav-arrow {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition:
-    transform 0.15s var(--spring-default),
-    background-color 0.15s;
-
-  &:active {
-    background: var(--bg-hover);
-    transform: scale(0.9);
-  }
-}
-
-.capsule-label-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 12rpx;
-  border-radius: var(--radius-sm);
-  transition: background-color 0.15s;
-
-  &:active {
-    background: var(--bg-hover);
-  }
-}
-
-.capsule-label,
-.month-label {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.5rpx;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .menu-btn,
@@ -804,6 +815,131 @@ onShow(async () => {
   &:active {
     transform: scale(0.92);
     background: var(--color-primary-hover);
+  }
+}
+
+.tx-detail-sheet {
+  background: var(--bg-primary);
+  border-top: 1rpx solid var(--border-subtle);
+  border-radius: 44rpx 44rpx 0 0;
+  padding: 0 32rpx calc(36rpx + var(--safe-area-bottom, 0px));
+  box-shadow: 0 -16rpx 60rpx rgba(0, 0, 0, 0.12);
+}
+
+.sheet-grabber {
+  width: 68rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: var(--color-handle);
+  margin: 18rpx auto 6rpx;
+  opacity: 0.85;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 4rpx 24rpx;
+
+  .detail-title {
+    font-size: 30rpx;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.3rpx;
+  }
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+
+  .detail-btn {
+    height: 54rpx;
+    padding: 0 26rpx;
+    border-radius: 999rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24rpx;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      transform 0.15s var(--spring-default),
+      opacity 0.15s;
+
+    &:active {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+  }
+
+  .detail-delete-btn {
+    background: var(--color-expense-bg);
+    color: var(--color-expense);
+  }
+
+  .detail-edit-btn {
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
+  }
+}
+
+.detail-info-card {
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: 24rpx;
+  padding: 4rpx 32rpx;
+  box-shadow: var(--shadow-sm);
+}
+
+.detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 32rpx;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid var(--border-subtle);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .detail-label {
+    font-size: 28rpx;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .detail-value {
+    font-size: 30rpx;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+    word-break: break-all;
+    line-height: 1.4;
+
+    &.tabular {
+      font-variant-numeric: tabular-nums;
+    }
+
+    &.amount-val {
+      font-weight: 600;
+
+      &.expense {
+        color: var(--color-expense);
+      }
+      &.income {
+        color: var(--color-income);
+      }
+      &.transfer {
+        color: var(--color-primary);
+      }
+    }
+
+    &.remark-val {
+      color: var(--text-primary);
+    }
   }
 }
 </style>

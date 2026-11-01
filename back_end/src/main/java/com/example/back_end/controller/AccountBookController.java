@@ -26,4 +26,9 @@ public class AccountBookController {
     public Result<AccountBookResponse> create(@Valid @RequestBody CreateAccountBookRequest req) {
         return Result.ok("创建成功", accountBookService.create(req));
     }
+
+    @PutMapping("/{id}")
+    public Result<AccountBookResponse> update(@PathVariable Long id, @Valid @RequestBody CreateAccountBookRequest req) {
+        return Result.ok("修改成功", accountBookService.update(id, req));
+    }
 }

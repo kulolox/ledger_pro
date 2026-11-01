@@ -44,7 +44,7 @@ export class HomePage {
 
   async clickStats() {
     await this.statsBtn.click();
-    await this.page.waitForURL("**/pages/statistics/index", { timeout: 10000 });
+    await this.page.waitForURL("**/pages/statistics/index*", { timeout: 10000 });
   }
 
   async clickTransaction(index: number) {
