@@ -83,12 +83,10 @@
 
         <view class="section">
           <text class="section-label">导出账本</text>
-          <picker :range="bookNames" :value="bookIndex" @change="onBookChange">
-            <view class="picker-row">
-              <text>{{ books[bookIndex]?.name || "日常账本" }}</text>
-              <wd-icon name="right" size="28rpx" color="var(--text-tertiary)" />
-            </view>
-          </picker>
+          <view class="picker-row" @click="showBookPicker = true">
+            <text>{{ currentBookName }}</text>
+            <wd-icon name="right" size="28rpx" color="var(--text-tertiary)" />
+          </view>
         </view>
 
         <view class="export-btn" @click="onExport">
@@ -122,12 +120,10 @@
 
         <view class="section">
           <text class="section-label">导入账本</text>
-          <picker :range="bookNames" :value="bookIndex" @change="onBookChange">
-            <view class="picker-row">
-              <text>{{ books[bookIndex]?.name || "日常账本" }}</text>
-              <wd-icon name="right" size="28rpx" color="var(--text-tertiary)" />
-            </view>
-          </picker>
+          <view class="picker-row" @click="showBookPicker = true">
+            <text>{{ currentBookName }}</text>
+            <wd-icon name="right" size="28rpx" color="var(--text-tertiary)" />
+          </view>
         </view>
 
         <view class="section">
@@ -177,9 +173,16 @@
               >
                 {{ item.type === 1 ? "收入" : "支出" }}
               </text>
-              <text class="preview-amount"
-                >¥{{ (item.amount / 100).toFixed(2) }}</text
+              <text
+                class="preview-amount"
+                :class="{
+                  expense: item.type === 0,
+                  income: item.type === 1,
+                  'amount-overflow': item.amount > MAX_AMOUNT_CENTS || item.amount <= 0,
+                }"
               >
+                {{ item.amount > MAX_AMOUNT_CENTS ? "超限(>2000万)" : `¥${(item.amount / 100).toFixed(2)}` }}
+              </text>
               <text class="preview-remark">{{ item.remark || "-" }}</text>
             </view>
           </scroll-view>
@@ -215,11 +218,19 @@
         </text>
       </view>
     </view>
+
+    <wd-picker
+      v-model="bookPickerValue"
+      v-model:visible="showBookPicker"
+      :columns="bookColumns"
+      title="选择账本"
+      @confirm="onBookConfirm"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
@@ -232,7 +243,7 @@ import {
   downloadTemplate,
   type AccountBook,
 } from "@/api/common";
-import { yuanToCents } from "@/utils/format";
+import { yuanToCents, MAX_AMOUNT_CENTS } from "@/utils/format";
 
 const activeTab = ref<"export" | "import">("export");
 const { themeMode } = useTheme();
@@ -256,13 +267,38 @@ const exportMonthLabel = computed(
 
 const books = ref<AccountBook[]>([]);
 const currentBookId = ref(getCurrentBookId());
+const showBookPicker = ref(false);
+const bookPickerValue = ref<string[]>([]);
 
-const bookIndex = computed(() => {
-  const idx = books.value.findIndex((b) => b.id === currentBookId.value);
-  return idx >= 0 ? idx : 0;
+const bookColumns = computed(() =>
+  books.value.map((b) => ({
+    label: b.name,
+    value: String(b.id),
+  }))
+);
+
+const currentBookName = computed(() => {
+  const target = books.value.find(
+    (b) => String(b.id) === String(currentBookId.value),
+  );
+  return target?.name || books.value[0]?.name || "日常账本";
 });
 
-const bookNames = computed(() => books.value.map((b) => b.name));
+watch(
+  currentBookId,
+  (val) => {
+    if (val) {
+      bookPickerValue.value = [String(val)];
+    }
+  },
+  { immediate: true },
+);
+
+function onBookConfirm({ value }: { value: (string | number)[] }) {
+  if (value && value[0]) {
+    currentBookId.value = String(value[0]);
+  }
+}
 
 const exporting = ref(false);
 const importing = ref(false);
@@ -275,10 +311,6 @@ const importResult = ref<{
   errors: string[];
   total: number;
 } | null>(null);
-
-function onBookChange(e: { detail: { value: number } }) {
-  currentBookId.value = books.value[e.detail.value]?.id || currentBookId.value;
-}
 
 function prevExportMonth() {
   if (exportMonth.value === 1) {
@@ -416,6 +448,17 @@ async function previewFile(filePath: string) {
 
 async function onImport() {
   if (!selectedFile.value || importing.value) return;
+  const hasOverflow = previewData.value.some(
+    (item) => item.amount > MAX_AMOUNT_CENTS || item.amount <= 0,
+  );
+  if (hasOverflow) {
+    uni.showToast({
+      title: "数据含超限(>2000万)或无效金额，请检查后重新导入",
+      icon: "none",
+      duration: 3000,
+    });
+    return;
+  }
   importing.value = true;
   importResult.value = null;
   try {
@@ -835,6 +878,10 @@ onShow(async () => {
   font-weight: 600;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+
+  &.amount-overflow {
+    color: var(--color-danger, #ff4d4f) !important;
+  }
 }
 
 .preview-remark {

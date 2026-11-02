@@ -1,5 +1,9 @@
 <template>
-  <view class="search-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
+  <view
+    class="search-page"
+    :class="['theme-' + themeMode]"
+    :data-theme="themeMode"
+  >
     <NavBar>
       <template #left>
         <view class="nav-left" @click="goBack">
@@ -115,7 +119,6 @@
           <view class="day-header">
             <view class="day-info">
               <text class="day-date">{{ formatDayHeader(day.date) }}</text>
-              <text class="day-weekday">{{ formatWeekday(day.date) }}</text>
             </view>
             <view class="day-totals">
               <text v-if="day.expense > 0" class="day-expense"

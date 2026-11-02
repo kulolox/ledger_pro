@@ -11,6 +11,7 @@ Thumbs.db
 # front-end
 front_end/node_modules/
 front_end/dist/
+front_end/unpackage/
 front_end/test-result/
 
 # back-end

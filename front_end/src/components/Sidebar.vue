@@ -6,7 +6,11 @@
     @update:model-value="$emit('update:visible', $event)"
     @close="$emit('close')"
   >
-    <view class="sidebar" :class="['theme-' + themeMode]" :data-theme="themeMode">
+    <view
+      class="sidebar"
+      :class="['theme-' + themeMode]"
+      :data-theme="themeMode"
+    >
       <view class="sidebar-scroll">
         <view class="sidebar-user" @click="onUserClick">
           <view class="user-avatar">
@@ -44,7 +48,11 @@
                 class="section-add-btn"
                 @click="onOpenAddBook"
               >
-                <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
+                <wd-icon
+                  name="plus"
+                  size="28rpx"
+                  color="var(--color-primary)"
+                />
               </view>
             </view>
           </view>
@@ -77,7 +85,10 @@
                   <text
                     class="preview-text"
                     :class="{ 'emoji-char': !!bookDialogIcon }"
-                  >{{ bookDialogIcon || getBookLetter(bookDialogName || "账") }}</text>
+                    >{{
+                      bookDialogIcon || getBookLetter(bookDialogName || "账")
+                    }}</text
+                  >
                   <view v-if="bookDialogIcon" class="clear-icon-badge">
                     <wd-icon name="close" size="18rpx" color="#ffffff" />
                   </view>
@@ -85,7 +96,9 @@
                 <input
                   class="dialog-input"
                   v-model="bookDialogName"
-                  :placeholder="editingBook ? '输入新的账本名称' : '输入账本名称'"
+                  :placeholder="
+                    editingBook ? '输入新的账本名称' : '输入账本名称'
+                  "
                   maxlength="20"
                   :focus="showBookDialog"
                   @confirm="onConfirmBookDialog"
@@ -95,12 +108,15 @@
               <!-- 自定义 Emoji 图标选择 (非必填) -->
               <view class="dialog-emoji-section">
                 <view class="emoji-header">
-                  <text class="emoji-label">账本图标 (选填，默认使用名称首字)</text>
+                  <text class="emoji-label"
+                    >账本图标 (选填，默认使用名称首字)</text
+                  >
                   <text
                     v-if="bookDialogIcon"
                     class="emoji-reset-btn"
                     @click="clearCustomIcon"
-                  >使用默认</text>
+                    >使用默认</text
+                  >
                 </view>
 
                 <view class="emoji-grid">
@@ -116,11 +132,11 @@
                 </view>
 
                 <view class="custom-emoji-row">
-                  <text class="custom-emoji-tip">其他表情：</text>
+                  <text class="custom-emoji-tip">emoji：</text>
                   <input
                     class="custom-emoji-input"
                     v-model="bookDialogIcon"
-                    placeholder="或输入任意 emoji"
+                    placeholder="输入任意 emoji"
                     maxlength="4"
                   />
                 </view>
@@ -160,7 +176,8 @@
                 <text
                   class="book-icon-text"
                   :class="{ 'emoji-char': !!book.coverIcon }"
-                >{{ book.coverIcon || getBookLetter(book.name) }}</text>
+                  >{{ book.coverIcon || getBookLetter(book.name) }}</text
+                >
               </view>
               <text class="book-name">{{ book.name }}</text>
               <view v-if="isEditingBooks" class="book-edit-action">
@@ -324,8 +341,18 @@ const editingBook = ref<AccountBook | null>(null);
 
 // 经典账本 Emoji 推荐
 const presetEmojis = [
-  "📘", "🏠", "💼", "🚗", "✈️", "💰",
-  "🛒", "🎮", "🍔", "🎓", "👶", "🐾",
+  "📘",
+  "🏠",
+  "💼",
+  "🚗",
+  "✈️",
+  "💰",
+  "🛒",
+  "🎮",
+  "🍔",
+  "🎓",
+  "👶",
+  "🐾",
 ];
 
 function togglePresetEmoji(emoji: string) {
@@ -468,17 +495,25 @@ async function onSync() {
   try {
     const result = await fullSync(props.currentBookId);
     uni.hideLoading();
-    uni.showToast({
-      title: `已同步：推送 ${result.pushed} 条，拉取 ${result.pulled} 条`,
-      icon: "none",
-      duration: 2000,
-    });
+    if (result.failed > 0) {
+      uni.showToast({
+        title: result.error || `有 ${result.failed} 条记录同步失败`,
+        icon: "none",
+        duration: 3500,
+      });
+    } else {
+      uni.showToast({
+        title: `已同步：推送 ${result.pushed} 条，拉取 ${result.pulled} 条`,
+        icon: "none",
+        duration: 2000,
+      });
+    }
     if (result.pulled > 0 || result.pushed > 0) {
       loadTransactions();
     }
-  } catch {
+  } catch (e: any) {
     uni.hideLoading();
-    uni.showToast({ title: "同步失败", icon: "error" });
+    uni.showToast({ title: e?.message || "同步失败", icon: "error" });
   }
 }
 

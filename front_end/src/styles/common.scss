@@ -100,6 +100,16 @@
   --wot-picker-view-mask-end-color: rgba(255, 255, 255, 0.2);
   --wot-datetime-picker-title-color: var(--text-primary);
   --wot-datetime-picker-action-color: var(--color-primary);
+
+  /* Wot UI 动作面板 (ActionSheet) 浅色变量体系 */
+  --wot-action-sheet-bg: var(--bg-secondary);
+  --wot-action-sheet-action-bg: var(--bg-secondary);
+  --wot-action-sheet-action-color: var(--text-primary);
+  --wot-action-sheet-cancel-bg: var(--bg-secondary);
+  --wot-action-sheet-cancel-color: var(--text-secondary);
+  --wot-action-sheet-gap-bg: var(--bg-primary);
+  --wot-action-sheet-active-bg: var(--bg-active);
+  --wot-action-sheet-radius: 32rpx;
 }
 
 /* 苹果风设计体系 - 深色模式 (Apple Dark Mode - OLED True Black) */
@@ -130,8 +140,8 @@
   /* 键盘与操作区专用纯色 */
   --bg-key: #2c2c2e;
   --bg-key-hover: #3a3a3c;
-  --bg-operator: #1c1c1e;
-  --bg-operator-hover: #2c2c2e;
+  --bg-operator: #323236;
+  --bg-operator-hover: #424246;
 
   /* 边框体系 (微光边缘) */
   --border-primary: rgba(255, 255, 255, 0.14);
@@ -203,6 +213,16 @@
   --wot-picker-view-mask-end-color: rgba(28, 28, 30, 0.25);
   --wot-datetime-picker-title-color: var(--text-primary);
   --wot-datetime-picker-action-color: var(--color-primary);
+
+  /* Wot UI 动作面板 (ActionSheet) 深色变量体系 */
+  --wot-action-sheet-bg: var(--bg-secondary);
+  --wot-action-sheet-action-bg: var(--bg-secondary);
+  --wot-action-sheet-action-color: var(--text-primary);
+  --wot-action-sheet-cancel-bg: var(--bg-secondary);
+  --wot-action-sheet-cancel-color: var(--text-secondary);
+  --wot-action-sheet-gap-bg: var(--bg-primary);
+  --wot-action-sheet-active-bg: var(--bg-active);
+  --wot-action-sheet-radius: 32rpx;
 }
 
 /* 统一几何与排版尺度 (Geometry & Typography Scale) */

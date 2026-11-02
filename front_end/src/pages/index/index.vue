@@ -139,14 +139,14 @@
         <wd-icon name="plus" size="52rpx" color="#ffffff" />
       </view>
 
-      <wd-dialog selector="delete-confirm" />
+      <wd-dialog selector="delete-confirm" :z-index="1000" />
 
       <!-- 账单详情底部弹窗 -->
       <wd-popup
         v-model="detailVisible"
         position="bottom"
-        :z-index="90"
-        custom-class="tx-detail-popup"
+        :z-index="100"
+        custom-class="editor-popup"
         custom-style="background: transparent;"
         @close="detailVisible = false"
       >
@@ -381,6 +381,7 @@ async function onDeleteFromDetail() {
   const result = await dialog.confirm({
     title: "确认删除",
     msg: `确定要删除这笔账单吗？`,
+    zIndex: 1000,
   });
   if (result.action === "confirm") {
     detailVisible.value = false;
@@ -423,8 +424,15 @@ function goStats() {
 async function onRefresh() {
   refreshing.value = true;
   const { runSyncCycle } = await import("@/utils/sync");
-  await runSyncCycle(currentBookId.value, false);
+  const result = await runSyncCycle(currentBookId.value, false);
   refreshing.value = false;
+  if (result.failed > 0) {
+    uni.showToast({
+      title: result.error || `有 ${result.failed} 条记录同步失败`,
+      icon: "none",
+      duration: 3500,
+    });
+  }
 }
 
 // 滚动到底部加载更多（暂未实现分页）
@@ -819,11 +827,12 @@ onShow(async () => {
 }
 
 .tx-detail-sheet {
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   border-top: 1rpx solid var(--border-subtle);
   border-radius: 44rpx 44rpx 0 0;
   padding: 0 32rpx calc(36rpx + var(--safe-area-bottom, 0px));
   box-shadow: 0 -16rpx 60rpx rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s var(--spring-default);
 }
 
 .sheet-grabber {
@@ -886,11 +895,10 @@ onShow(async () => {
 }
 
 .detail-info-card {
-  background: var(--bg-secondary);
+  background: var(--bg-input-filled);
   border: 1rpx solid var(--border-subtle);
   border-radius: 24rpx;
   padding: 4rpx 32rpx;
-  box-shadow: var(--shadow-sm);
 }
 
 .detail-row {

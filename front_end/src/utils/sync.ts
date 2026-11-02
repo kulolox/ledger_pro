@@ -3,6 +3,7 @@ import {
   type LocalTransaction,
 } from "@/stores/transactionStore";
 import { getToken } from "@/utils/storage";
+import { MAX_AMOUNT_CENTS } from "./format";
 
 const STORAGE_KEY = "local_transactions";
 // 自动同步间隔：30分钟
@@ -79,16 +80,34 @@ function silentRequest<T = any>(options: {
 }
 
 // 将本地 pending 状态的记录批量推送到服务端，成功则清除本地记录
-export async function pushPending(): Promise<{ success: number; fail: number }> {
+export async function pushPending(): Promise<{ success: number; fail: number; error?: string }> {
   const localList = getLocalTransactions();
   const pending = localList.filter((t) => t.sync_status === "pending");
   if (pending.length === 0) return { success: 0, fail: 0 };
 
-  const newItems = pending.filter((t) => !t.server_id);
-  const updateItems = pending.filter((t) => t.server_id);
-
   let success = 0;
   let fail = 0;
+  let lastError = "";
+
+  // 1. 过滤本地非法/超限记录（如金额超过 2000 万元或 <=0）
+  const invalidItems = pending.filter(
+    (t) => !t.amount || t.amount <= 0 || t.amount > MAX_AMOUNT_CENTS,
+  );
+  if (invalidItems.length > 0) {
+    const invalidIds = new Set(invalidItems.map((t) => t.id));
+    const updated = getLocalTransactions().map((t) =>
+      invalidIds.has(t.id) ? { ...t, sync_status: "failed" as const } : t,
+    );
+    setLocalTransactions(updated);
+    fail += invalidItems.length;
+    lastError = "存在单笔金额超过 2000 万元或无效的记录，无法同步";
+  }
+
+  const validPending = pending.filter(
+    (t) => t.amount && t.amount > 0 && t.amount <= MAX_AMOUNT_CENTS,
+  );
+  const newItems = validPending.filter((t) => !t.server_id);
+  const updateItems = validPending.filter((t) => t.server_id);
 
   // 新增：批量 POST
   if (newItems.length > 0) {
@@ -127,9 +146,16 @@ export async function pushPending(): Promise<{ success: number; fail: number }> 
       });
       setLocalTransactions(updated);
       success += result?.count || items.length;
-    } catch (e) {
+    } catch (e: any) {
       console.error("[sync] pushPending batch failed:", e);
       fail += newItems.length;
+      lastError = e?.message || "批量同步失败";
+      // 将本批失败的记录标记为 failed，避免死循环阻塞后续正常账单的同步
+      const batchIds = new Set(newItems.map((t) => t.id));
+      const updated = getLocalTransactions().map((t) =>
+        batchIds.has(t.id) ? { ...t, sync_status: "failed" as const } : t,
+      );
+      setLocalTransactions(updated);
     }
   }
 
@@ -155,15 +181,20 @@ export async function pushPending(): Promise<{ success: number; fail: number }> 
       );
       setLocalTransactions(updated);
       success++;
-    } catch (e) {
+    } catch (e: any) {
       console.error(`[sync] pushPending update ${item.id} failed:`, e);
       fail++;
+      lastError = e?.message || "更新同步失败";
+      const updated = getLocalTransactions().map((t) =>
+        t.id === item.id ? { ...t, sync_status: "failed" as const } : t,
+      );
+      setLocalTransactions(updated);
     }
   }
 
   loadTransactions();
   setLastSyncTime();
-  return { success, fail };
+  return { success, fail, ...(lastError ? { error: lastError } : {}) };
 }
 
 // 拉取当月全量数据，合并到本地，跳过已存在的记录
@@ -270,21 +301,33 @@ export async function pullFromServer(
 export async function runSyncCycle(bookId: string, silent = true): Promise<{
   pushed: number;
   pulled: number;
+  failed: number;
+  error?: string;
 }> {
-  if (syncing) return { pushed: 0, pulled: 0 };
+  if (syncing) return { pushed: 0, pulled: 0, failed: 0 };
 
   syncing = true;
   try {
     const deleted = await pushDeletes();
     const pushResult = await pushPending();
     const pulled = await pullFromServer(bookId);
-    return { pushed: pushResult.success + deleted, pulled };
+    return {
+      pushed: pushResult.success + deleted,
+      pulled,
+      failed: pushResult.fail,
+      error: pushResult.error,
+    };
   } finally {
     syncing = false;
   }
 }
 
-export async function fullSync(bookId: string): Promise<{ pushed: number; pulled: number }> {
+export async function fullSync(bookId: string): Promise<{
+  pushed: number;
+  pulled: number;
+  failed: number;
+  error?: string;
+}> {
   return runSyncCycle(bookId, false);
 }
 

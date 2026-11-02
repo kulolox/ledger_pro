@@ -8,7 +8,16 @@ import {
   formatDayHeader,
   formatWeekday,
   timestampToDateStr,
+  MAX_AMOUNT_CENTS,
+  MAX_AMOUNT_YUAN,
 } from "../format";
+
+describe("constants", () => {
+  it("defines correct MAX_AMOUNT limits for INT32 cents", () => {
+    expect(MAX_AMOUNT_CENTS).toBe(2000000000);
+    expect(MAX_AMOUNT_YUAN).toBe(20000000);
+  });
+});
 
 describe("formatCents", () => {
   it("converts cents to yuan with 2 decimals", () => {

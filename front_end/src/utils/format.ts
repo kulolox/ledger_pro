@@ -24,6 +24,10 @@ export function formatNumber(val: number): string {
   return `${sign}${addCommas(abs.toFixed(2))}`;
 }
 
+// 单笔交易最大支持金额（2000 万元 = 20 亿分，适配 MySQL 32位 INT 存储）
+export const MAX_AMOUNT_CENTS = 2000000000;
+export const MAX_AMOUNT_YUAN = 20000000;
+
 export function yuanToCents(yuan: number | string): number {
   const num = typeof yuan === "string" ? parseFloat(yuan) : yuan;
   if (isNaN(num)) return 0;

@@ -65,6 +65,29 @@ describe("sync.ts unit tests", () => {
     expect(saved[0].server_id).toBe("501");
   });
 
+  it("pushPending: marks overflow records as failed and prevents invalid push", async () => {
+    const invalidTx: LocalTransaction = {
+      id: "-99",
+      book_id: "100",
+      type: 0,
+      amount: 10000000000, // 100亿分（1亿元）
+      account_id: "1",
+      trans_time: "2026-07-23 12:00:00",
+      sync_status: "pending",
+      deleted: 0,
+      created_at: "2026-07-23T12:00:00Z",
+      updated_at: "2026-07-23T12:00:00Z",
+    };
+    storageData[STORAGE_KEY] = JSON.stringify([invalidTx]);
+
+    const res = await pushPending();
+    expect(res.fail).toBe(1);
+    expect(res.error).toBeDefined();
+
+    const saved = JSON.parse(storageData[STORAGE_KEY]) as LocalTransaction[];
+    expect(saved[0].sync_status).toBe("failed");
+  });
+
   it("pushDeletes: pushes pending deletes to batch-delete and purges from local storage", async () => {
     const deletedTx: LocalTransaction = {
       id: "-2",

@@ -338,9 +338,14 @@ function jumpToCurrentMonth() {
 }
 
 .today-btn {
-  padding: 10rpx 24rpx;
+  height: 56rpx;
+  padding: 0 24rpx;
   border-radius: var(--radius-full);
   background: var(--color-primary-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   cursor: pointer;
   transition:
     transform 0.15s var(--spring-default),
@@ -356,6 +361,7 @@ function jumpToCurrentMonth() {
   font-size: 24rpx;
   font-weight: 600;
   color: var(--color-primary);
+  line-height: 1;
 }
 
 .picker-close-btn {
@@ -471,26 +477,25 @@ function jumpToCurrentMonth() {
   font-variant-numeric: tabular-nums;
 }
 
-/* 12月份矩阵 */
+/* 12月份矩阵 - 黄金比例与轻盈排版 */
 .month-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18rpx;
+  gap: 12rpx;
 }
 
 .month-cell {
-  height: 104rpx;
-  border-radius: var(--radius-md);
+  height: 70rpx;
+  border-radius: 16rpx;
   background: var(--bg-input-filled);
-  border: 2rpx solid transparent;
+  border: 1.5rpx solid transparent;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4rpx;
+  gap: 6rpx;
   cursor: pointer;
   transition:
-    transform 0.16s var(--spring-default),
+    transform 0.15s var(--spring-default),
     background-color 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
@@ -505,14 +510,19 @@ function jumpToCurrentMonth() {
 
     .month-num {
       color: var(--color-primary);
-      font-weight: 700;
+      font-weight: 600;
+    }
+
+    .month-badge {
+      color: var(--color-primary);
+      background: rgba(0, 122, 255, 0.16);
     }
   }
 
   &.is-selected {
     background: var(--color-primary);
     border-color: var(--color-primary);
-    box-shadow: var(--shadow-primary-md);
+    box-shadow: 0 4rpx 14rpx rgba(0, 122, 255, 0.32);
 
     .month-num {
       color: #ffffff;
@@ -520,22 +530,27 @@ function jumpToCurrentMonth() {
     }
 
     .month-badge {
-      color: rgba(255, 255, 255, 0.88);
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.28);
     }
   }
 }
 
 .month-num {
-  font-size: 30rpx;
-  font-weight: 600;
+  font-size: 26rpx;
+  font-weight: 500;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .month-badge {
-  font-size: 20rpx;
+  font-size: 16rpx;
   font-weight: 600;
   color: var(--color-primary);
-  line-height: 1;
+  background: var(--color-primary-subtle);
+  padding: 2rpx 6rpx;
+  border-radius: 999rpx;
+  line-height: 1.2;
 }
 </style>

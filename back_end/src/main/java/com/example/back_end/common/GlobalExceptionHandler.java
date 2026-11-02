@@ -2,6 +2,7 @@ package com.example.back_end.common;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -23,6 +24,16 @@ public class GlobalExceptionHandler {
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
                 .reduce((a, b) -> a + "; " + b)
                 .orElse("参数校验失败");
+        return Result.fail(400, msg);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public Result<Void> handleHttpMessageNotReadable(HttpMessageNotReadableException e) {
+        log.warn("HttpMessageNotReadableException: {}", e.getMessage());
+        String msg = "请求参数格式错误";
+        if (e.getMessage() != null && e.getMessage().contains("out of range of int")) {
+            msg = "金额超出系统支持的最大范围（单笔最大 2000 万元）";
+        }
         return Result.fail(400, msg);
     }
 

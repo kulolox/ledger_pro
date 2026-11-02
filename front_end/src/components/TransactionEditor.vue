@@ -68,6 +68,16 @@
       title="选择日期"
       :z-index="600"
     />
+
+    <wd-action-sheet
+      v-model="showSaveSheet"
+      :actions="saveActions"
+      cancel-text="取消"
+      :z-index="1200"
+      custom-class="save-action-sheet"
+      @select="onSelectSaveAction"
+      @cancel="showSaveSheet = false"
+    />
   </view>
 </template>
 
@@ -77,7 +87,7 @@ import NumberKeyboard from "@/components/NumberKeyboard.vue";
 import CategorySlider from "@/components/CategorySlider.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
-import { timestampToDateStr, yuanToCents } from "@/utils/format";
+import { timestampToDateStr, yuanToCents, MAX_AMOUNT_YUAN } from "@/utils/format";
 
 const { add, update } = useTransactions();
 const { categories } = useCategories();
@@ -192,24 +202,55 @@ const onKeyPress = (key: string) => {
     }
     return;
   }
+  // 小数位最多限制 2 位
+  if (inputBuffer.value.includes(".")) {
+    const dec = inputBuffer.value.split(".")[1];
+    if (dec && dec.length >= 2) return;
+  } else {
+    // 整数位限制不超过 8 位（最大支持 2000 万元）
+    if (inputBuffer.value.length >= 8) return;
+  }
   inputBuffer.value += key;
 };
 
+const showSaveSheet = ref(false);
+
+const saveActions = computed(() => [
+  {
+    name: "保存并关闭",
+    color: "var(--text-primary)",
+  },
+  {
+    name: "保存并再记一笔",
+    color: "var(--color-primary)",
+  },
+]);
+
 // 长按保存键：弹出 ActionSheet
-const onKeyLongPress = async (key: string) => {
+const onKeyLongPress = (key: string) => {
   if (key !== "save") return;
   const amount = evalExpression();
   if (amount <= 0) {
     uni.showToast({ title: "请输入金额", icon: "none" });
     return;
   }
-  uni.showActionSheet({
-    itemList: ["保存并关闭", "保存并再记一笔"],
-    success: (res) => {
-      if (res.tapIndex === 0) handleSave(false);
-      else if (res.tapIndex === 1) handleSave(true);
-    },
-  });
+  if (amount > MAX_AMOUNT_YUAN) {
+    uni.showToast({
+      title: "单笔金额不能超过 2000 万元",
+      icon: "none",
+    });
+    return;
+  }
+  showSaveSheet.value = true;
+};
+
+const onSelectSaveAction = ({ index }: { index: number }) => {
+  showSaveSheet.value = false;
+  if (index === 0) {
+    handleSave(false);
+  } else if (index === 1) {
+    handleSave(true);
+  }
 };
 
 const onTypeChange = (type: number) => {
@@ -230,6 +271,13 @@ const handleSave = (keepOpen: boolean) => {
   const amount = evalExpression();
   if (amount <= 0) {
     uni.showToast({ title: "请输入金额", icon: "none" });
+    return;
+  }
+  if (amount > MAX_AMOUNT_YUAN) {
+    uni.showToast({
+      title: "单笔金额不能超过 2000 万元",
+      icon: "none",
+    });
     return;
   }
 
@@ -482,6 +530,54 @@ watch(
         height: 76rpx !important;
         padding: 0 !important;
       }
+    }
+  }
+}
+
+:deep(.save-action-sheet) {
+  border-radius: 36rpx 36rpx 0 0;
+  overflow: hidden;
+  background: var(--bg-secondary);
+
+  .wd-action-sheet__actions {
+    background: var(--bg-secondary);
+  }
+
+  .wd-action-sheet__action {
+    padding: 32rpx 24rpx;
+    background: var(--bg-secondary);
+
+    // 彻底移除按钮间生硬死白的分割线
+    &::after {
+      display: none !important;
+    }
+
+    &:active {
+      background: var(--bg-active) !important;
+    }
+  }
+
+  .wd-action-sheet__name {
+    font-size: 32rpx;
+    font-weight: 600;
+  }
+
+  // 移除生硬的分割间隔块
+  .wd-action-sheet__gap {
+    height: 0 !important;
+    display: none !important;
+  }
+
+  .wd-action-sheet__cancel {
+    font-size: 30rpx;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 30rpx 0;
+    border-top: 1rpx solid var(--border-subtle);
+
+    &:active {
+      background: var(--bg-active) !important;
     }
   }
 }

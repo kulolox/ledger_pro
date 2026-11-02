@@ -466,15 +466,16 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                     .filter(c -> "其他".equals(c.name()))
                     .collect(Collectors.toMap(c -> c.type(), c -> c.id(), (a, b) -> a));
 
+            List<String> errors = new ArrayList<>();
             List<TransactionRequest> items =
                     switch (format) {
-                        case "csv" -> parseCsv(file, nameToId, otherCategoryByType);
-                        case "excel" -> parseExcel(file, nameToId, otherCategoryByType);
-                        case "json" -> parseJson(file, nameToId, otherCategoryByType);
+                        case "csv" -> parseCsv(file, nameToId, otherCategoryByType, errors);
+                        case "excel" -> parseExcel(file, nameToId, otherCategoryByType, errors);
+                        case "json" -> parseJson(file, nameToId, otherCategoryByType, errors);
                         default -> throw new BizException("不支持的导入格式: " + format);
                     };
 
-            if (items.isEmpty()) {
+            if (items.isEmpty() && errors.isEmpty()) {
                 throw new BizException("文件中没有有效数据");
             }
 
@@ -483,7 +484,6 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             }
 
             List<Transaction> txs = new ArrayList<>();
-            List<String> errors = new ArrayList<>();
             // 逐行转换：坏行收集错误信息，好行入库，不整体失败
             for (int i = 0; i < items.size(); i++) {
                 TransactionRequest req = items.get(i);
@@ -570,15 +570,21 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     }
 
     private Integer parseAmount(String s) {
-        if (s == null || s.isBlank()) return 0;
+        if (s == null || s.isBlank()) {
+            throw new BizException("金额不能为空");
+        }
         try {
             double yuan = Double.parseDouble(s.trim());
-            if (yuan < 0) return 0;
-            double cents = yuan * 100;
-            if (cents > Integer.MAX_VALUE) return Integer.MAX_VALUE;
+            if (yuan <= 0) {
+                throw new BizException("金额必须大于0");
+            }
+            double cents = yuan * 100.0;
+            if (cents > 2000000000L) {
+                throw new BizException("交易金额超出上限(单笔最大 2000 万元)");
+            }
             return (int) Math.round(cents);
         } catch (NumberFormatException e) {
-            return 0;
+            throw new BizException("金额格式不正确: " + s);
         }
     }
 
@@ -681,7 +687,8 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
     }
 
     private List<TransactionRequest> parseCsv(
-            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
+            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType, List<String> errors)
+            throws Exception {
         List<TransactionRequest> items = new ArrayList<>();
         try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
                 CSVReader csvReader = new CSVReader(reader)) {
@@ -701,24 +708,31 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             int idxTransTime = findIndex(headers, "trans_time");
 
             String[] row;
+            int lineNum = 1;
             while ((row = csvReader.readNext()) != null) {
-                int type = parseType(parseString(row, idxType));
-                items.add(new TransactionRequest(
-                        null,
-                        type,
-                        parseAmount(parseString(row, idxAmount)),
-                        parseLong(row, idxAccountId),
-                        parseLong(row, idxToAccountId),
-                        parseCategory(parseString(row, idxCategory), type, nameToId, otherCategoryByType),
-                        parseString(row, idxRemark),
-                        parseString(row, idxTransTime)));
+                lineNum++;
+                try {
+                    int type = parseType(parseString(row, idxType));
+                    items.add(new TransactionRequest(
+                            null,
+                            type,
+                            parseAmount(parseString(row, idxAmount)),
+                            parseLong(row, idxAccountId),
+                            parseLong(row, idxToAccountId),
+                            parseCategory(parseString(row, idxCategory), type, nameToId, otherCategoryByType),
+                            parseString(row, idxRemark),
+                            parseString(row, idxTransTime)));
+                } catch (Exception e) {
+                    errors.add("第" + lineNum + "行: " + e.getMessage());
+                }
             }
         }
         return items;
     }
 
     private List<TransactionRequest> parseExcel(
-            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
+            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType, List<String> errors)
+            throws Exception {
         List<TransactionRequest> items = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -739,43 +753,54 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
-                int type = parseType(getCellString(row, idxType));
-                items.add(new TransactionRequest(
-                        null,
-                        type,
-                        parseAmount(getCellString(row, idxAmount)),
-                        getCellLong(row, idxAccountId),
-                        getCellLong(row, idxToAccountId),
-                        parseCategory(getCellString(row, idxCategory), type, nameToId, otherCategoryByType),
-                        getCellString(row, idxRemark),
-                        getCellString(row, idxTransTime)));
+                try {
+                    int type = parseType(getCellString(row, idxType));
+                    items.add(new TransactionRequest(
+                            null,
+                            type,
+                            parseAmount(getCellString(row, idxAmount)),
+                            getCellLong(row, idxAccountId),
+                            getCellLong(row, idxToAccountId),
+                            parseCategory(getCellString(row, idxCategory), type, nameToId, otherCategoryByType),
+                            getCellString(row, idxRemark),
+                            getCellString(row, idxTransTime)));
+                } catch (Exception e) {
+                    errors.add("第" + (i + 1) + "行: " + e.getMessage());
+                }
             }
         }
         return items;
     }
 
     private List<TransactionRequest> parseJson(
-            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType) throws Exception {
+            MultipartFile file, Map<String, Long> nameToId, Map<Integer, Long> otherCategoryByType, List<String> errors)
+            throws Exception {
         List<Map<String, Object>> rawList = objectMapper.readValue(
                 file.getInputStream(), objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
 
         List<TransactionRequest> items = new ArrayList<>();
+        int itemNum = 0;
         for (Map<String, Object> map : rawList) {
-            Object typeVal = map.get("type");
-            Object amountVal = map.get("amount");
-            Object categoryVal = map.getOrDefault("category", map.get("category_id"));
-            int type = parseType(typeVal != null ? typeVal.toString() : "");
+            itemNum++;
+            try {
+                Object typeVal = map.get("type");
+                Object amountVal = map.get("amount");
+                Object categoryVal = map.getOrDefault("category", map.get("category_id"));
+                int type = parseType(typeVal != null ? typeVal.toString() : "");
 
-            items.add(new TransactionRequest(
-                    null,
-                    type,
-                    parseAmount(amountVal != null ? amountVal.toString() : ""),
-                    toLong(map.get("account_id")),
-                    toLong(map.get("to_account_id")),
-                    parseCategory(
-                            categoryVal != null ? categoryVal.toString() : "", type, nameToId, otherCategoryByType),
-                    map.get("remark") != null ? map.get("remark").toString() : "",
-                    map.get("trans_time") != null ? map.get("trans_time").toString() : ""));
+                items.add(new TransactionRequest(
+                        null,
+                        type,
+                        parseAmount(amountVal != null ? amountVal.toString() : ""),
+                        toLong(map.get("account_id")),
+                        toLong(map.get("to_account_id")),
+                        parseCategory(
+                                categoryVal != null ? categoryVal.toString() : "", type, nameToId, otherCategoryByType),
+                        map.get("remark") != null ? map.get("remark").toString() : "",
+                        map.get("trans_time") != null ? map.get("trans_time").toString() : ""));
+            } catch (Exception e) {
+                errors.add("第" + itemNum + "条: " + e.getMessage());
+            }
         }
         return items;
     }
@@ -917,6 +942,9 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
 
     // 请求 DTO → 实体：amount 全链路以"分"为单位存储，避免浮点精度问题
     private Transaction toEntity(TransactionRequest req) {
+        if (req.amount() == null || req.amount() <= 0) {
+            throw new BizException("交易金额必须大于0");
+        }
         Transaction tx = new Transaction();
         tx.setBookId(req.book_id());
         tx.setType(req.type());
