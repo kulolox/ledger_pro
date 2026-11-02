@@ -15,9 +15,13 @@ watch(
 );
 
 onLaunch(() => {
+  // #ifdef APP-PLUS
+  plus.screen.lockOrientation("portrait-primary");
+  // #endif
   applyThemeToDom(themeMode.value);
   const pages = getCurrentPages();
   if (pages.length === 0) {
+    // #ifdef H5
     const hash = window.location.hash;
     if (!hash || hash === "#/" || hash === "#") {
       if (isLoggedIn()) {
@@ -26,6 +30,7 @@ onLaunch(() => {
         uni.reLaunch({ url: "/pages/login/index" });
       }
     }
+    // #endif
   }
 });
 

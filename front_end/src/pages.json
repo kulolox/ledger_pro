@@ -78,6 +78,7 @@
     }
   ],
   "globalStyle": {
+    "pageOrientation": "portrait",
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "LedgerPro",
     "navigationBarBackgroundColor": "#F2F2F7",
