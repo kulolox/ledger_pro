@@ -68,12 +68,18 @@ importers:
       sortablejs:
         specifier: ^1.15.7
         version: 1.15.7
+      tslib:
+        specifier: ^2.9.1
+        version: 2.9.1
       vue:
         specifier: ^3.4.21
         version: 3.5.38(typescript@4.9.5)
       vue-i18n:
         specifier: ^9.1.9
         version: 9.14.5(vue@3.5.38(typescript@4.9.5))
+      zrender:
+        specifier: 6.1.0
+        version: 6.1.0
     devDependencies:
       '@dcloudio/types':
         specifier: ^3.4.8
@@ -3958,6 +3964,9 @@ packages:
 
   tslib@2.3.0:
     resolution: {integrity: sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==}
+
+  tslib@2.9.1:
+    resolution: {integrity: sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA==}
 
   type-detect@4.0.8:
     resolution: {integrity: sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==}
@@ -9190,6 +9199,8 @@ snapshots:
       punycode: 2.3.1
 
   tslib@2.3.0: {}
+
+  tslib@2.9.1: {}
 
   type-detect@4.0.8: {}
 

@@ -262,6 +262,7 @@ const pieOption = computed(() => {
   const data = cats.map((c) => ({
     name: c.name,
     value: c.amount,
+    percent: c.percent,
     itemStyle: { color: c.color },
   }));
 
@@ -287,7 +288,7 @@ const pieOption = computed(() => {
       text: centerText,
       subtext: activeTab.value === 0 ? "总支出" : "总收入",
       left: "center",
-      top: "40%",
+      top: "center",
       itemGap: 4,
       textStyle: {
         fontSize: centerFontSize,
@@ -306,11 +307,12 @@ const pieOption = computed(() => {
         radius: ["46%", "65%"],
         center: ["50%", "50%"],
         data,
-        padAngle: 3,
+        // 单分类时取消间隙与圆角，避免整环出现缺口
+        padAngle: data.length > 1 ? 3 : 0,
         itemStyle: {
-          borderRadius: 8,
+          borderRadius: data.length > 1 ? 8 : 0,
           borderColor: isDark ? "#1c1c1e" : "#ffffff",
-          borderWidth: 2,
+          borderWidth: data.length > 1 ? 2 : 0,
         },
         label: {
           show: true,

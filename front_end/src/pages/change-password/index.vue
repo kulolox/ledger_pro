@@ -1,5 +1,5 @@
 <template>
-  <view class="change-pwd-page">
+  <view class="change-pwd-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <NavBar>
       <template #left>
         <view class="nav-back" @click="goBack">
@@ -154,6 +154,9 @@ import {
   type UserInfo,
 } from "@/api/common";
 import { getUserInfo } from "@/utils/storage";
+import { useTheme } from "@/stores/themeStore";
+
+const { themeMode, syncThemeFromStorage } = useTheme();
 
 const mode = ref<"password" | "email">("password");
 
@@ -176,6 +179,7 @@ const countdown = ref(0);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 onShow(() => {
+  syncThemeFromStorage();
   const info = getUserInfo<UserInfo>();
   if (info?.email) {
     emailForm.email = info.email;

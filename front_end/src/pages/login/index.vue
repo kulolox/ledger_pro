@@ -1,10 +1,10 @@
 <template>
-  <view class="login-page">
+  <view class="login-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <view class="auth-topbar">
       <view class="topbar-spacer" />
       <view class="theme-pill" @click="toggleTheme">
-        <text class="theme-pill-icon">{{ themeMode === "dark" ? "🌙" : "☀️" }}</text>
-        <text class="theme-pill-text">{{ themeMode === "dark" ? "深色" : "浅色" }}</text>
+        <text class="theme-pill-icon">{{ themeMode === "dark" ? "☀️" : "🌙" }}</text>
+        <text class="theme-pill-text">{{ themeMode === "dark" ? "浅色" : "深色" }}</text>
       </view>
     </view>
 
@@ -69,12 +69,18 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import AppLogo from "@/components/AppLogo.vue";
 import { login } from "@/api/common";
 import { setToken, setRefreshToken, setUserInfo } from "@/utils/storage";
 import { useTheme } from "@/stores/themeStore";
 
-const { themeMode, toggleTheme } = useTheme();
+const { themeMode, toggleTheme, syncThemeFromStorage } = useTheme();
+
+// App 端各页面独立 WebView，需在页面根节点绑定主题类并在显示时同步
+onShow(() => {
+  syncThemeFromStorage();
+});
 
 const formData = reactive({
   email: "",

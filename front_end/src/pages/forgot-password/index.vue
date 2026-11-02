@@ -1,13 +1,13 @@
 <template>
-  <view class="auth-page">
+  <view class="auth-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <view class="auth-topbar">
       <view class="nav-back-link" @click="goLogin">
         <wd-icon name="left" size="34rpx" color="var(--color-primary)" />
         <text class="nav-back-text">返回</text>
       </view>
       <view class="theme-pill" @click="toggleTheme">
-        <text class="theme-pill-icon">{{ themeMode === "dark" ? "🌙" : "☀️" }}</text>
-        <text class="theme-pill-text">{{ themeMode === "dark" ? "深色" : "浅色" }}</text>
+        <text class="theme-pill-icon">{{ themeMode === "dark" ? "☀️" : "🌙" }}</text>
+        <text class="theme-pill-text">{{ themeMode === "dark" ? "浅色" : "深色" }}</text>
       </view>
     </view>
 
@@ -85,11 +85,16 @@
 
 <script setup lang="ts">
 import { reactive, ref, onUnmounted } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import AppLogo from "@/components/AppLogo.vue";
 import { sendResetCode, resetPassword } from "@/api/common";
 import { useTheme } from "@/stores/themeStore";
 
-const { themeMode, toggleTheme } = useTheme();
+const { themeMode, toggleTheme, syncThemeFromStorage } = useTheme();
+
+onShow(() => {
+  syncThemeFromStorage();
+});
 
 const formData = reactive({
   email: "",

@@ -4,45 +4,16 @@
     :style="{ width: size + 'rpx', height: size + 'rpx' }"
     :class="{ animated }"
   >
-    <svg viewBox="0 0 120 120" class="logo-svg" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="appleLogoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#2E8CFF" />
-          <stop offset="50%" stop-color="#007AFF" />
-          <stop offset="100%" stop-color="#0062E3" />
-        </linearGradient>
-        <linearGradient id="appleLogoGloss" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.24" />
-          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
-        </linearGradient>
-      </defs>
-      <!-- iOS Squircle Base -->
-      <rect x="8" y="8" width="104" height="104" rx="28" fill="url(#appleLogoGrad)" />
-      <!-- Subtle Gloss Inner Rim -->
-      <rect
-        x="9"
-        y="9"
-        width="102"
-        height="102"
-        rx="27"
-        fill="url(#appleLogoGloss)"
-        stroke="rgba(255,255,255,0.28)"
-        stroke-width="2"
-      />
-      <!-- Minimalist Ledger Bars -->
-      <rect class="logo-line" x="30" y="40" width="44" height="9" rx="4.5" fill="#FFFFFF" />
-      <rect class="logo-line" x="30" y="57" width="60" height="9" rx="4.5" fill="#FFFFFF" opacity="0.92" />
-      <rect class="logo-line" x="30" y="74" width="34" height="9" rx="4.5" fill="#FFFFFF" opacity="0.72" />
-      <!-- Active Status Accent Dot -->
-      <circle
-        cx="86"
-        cy="44.5"
-        r="8"
-        fill="#34C759"
-        stroke="#007AFF"
-        stroke-width="3.5"
-      />
-    </svg>
+    <view class="logo-box">
+      <!-- 柔光内边框遮罩 -->
+      <view class="logo-gloss" />
+      <!-- 三条账本数据横杠 -->
+      <view class="logo-line line-1" />
+      <view class="logo-line line-2" />
+      <view class="logo-line line-3" />
+      <!-- 右上角状态绿点 -->
+      <view class="logo-dot" />
+    </view>
   </view>
 </template>
 
@@ -56,18 +27,77 @@ withDefaults(defineProps<{ size?: number; animated?: boolean }>(), {
 <style lang="scss" scoped>
 .app-logo {
   flex-shrink: 0;
-  filter: drop-shadow(0 14rpx 28rpx rgba(0, 122, 255, 0.28));
-  transition: transform 0.2s var(--spring-default);
+  display: inline-block;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   &:active {
     transform: scale(0.96);
   }
+}
 
-  .logo-svg {
-    width: 100%;
-    height: 100%;
-    display: block;
+.logo-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 26%;
+  background: linear-gradient(180deg, #2e8cff 0%, #007aff 50%, #0062e3 100%);
+  box-shadow:
+    inset 0 2rpx 4rpx rgba(255, 255, 255, 0.4),
+    0 16rpx 36rpx rgba(0, 122, 255, 0.32);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-left: 25%;
+  overflow: hidden;
+}
+
+.logo-gloss {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
+  border-top-left-radius: 26%;
+  border-top-right-radius: 26%;
+  pointer-events: none;
+}
+
+.logo-line {
+  height: 8.5%;
+  border-radius: 999rpx;
+  background: #ffffff;
+  margin-bottom: 7%;
+  transform-origin: left center;
+
+  &.line-1 {
+    width: 44%;
   }
+
+  &.line-2 {
+    width: 60%;
+    opacity: 0.92;
+  }
+
+  &.line-3 {
+    width: 34%;
+    opacity: 0.75;
+    margin-bottom: 0;
+  }
+}
+
+.logo-dot {
+  position: absolute;
+  top: 24%;
+  right: 18%;
+  width: 15%;
+  height: 15%;
+  border-radius: 50%;
+  background: #34c759;
+  border: 4rpx solid #007aff;
+  box-sizing: border-box;
+  box-shadow: 0 0 10rpx rgba(52, 199, 89, 0.6);
 }
 
 .animated {
@@ -77,13 +107,13 @@ withDefaults(defineProps<{ size?: number; animated?: boolean }>(), {
     animation: logo-draw 2s ease-in-out infinite;
   }
 
-  .logo-line:nth-of-type(3) {
+  .line-1 {
     animation-delay: 0s;
   }
-  .logo-line:nth-of-type(4) {
+  .line-2 {
     animation-delay: 0.15s;
   }
-  .logo-line:nth-of-type(5) {
+  .line-3 {
     animation-delay: 0.3s;
   }
 }
@@ -103,13 +133,11 @@ withDefaults(defineProps<{ size?: number; animated?: boolean }>(), {
   20% {
     opacity: 0.35;
     transform: scaleX(0.65);
-    transform-origin: left center;
   }
   50%,
   100% {
     opacity: 1;
     transform: scaleX(1);
-    transform-origin: left center;
   }
 }
 </style>
