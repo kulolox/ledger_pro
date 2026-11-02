@@ -1,5 +1,5 @@
 <template>
-  <view class="home-page">
+  <view class="home-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <NavBar floating>
       <template #left>
         <view class="menu-btn" @click="showSidebar = true">
@@ -27,23 +27,22 @@
         <view class="summary-item expense-card">
           <text class="summary-label">支出</text>
           <text class="summary-value expense"
-            >-{{ formatCents(monthExpense) }}</text
+            >{{ monthExpense > 0 ? "-" : "" }}{{ formatCents(monthExpense) }}</text
           >
         </view>
         <view class="summary-item income-card">
           <text class="summary-label">收入</text>
           <text class="summary-value income"
-            >+{{ formatCents(monthIncome) }}</text
+            >{{ monthIncome > 0 ? "+" : "" }}{{ formatCents(monthIncome) }}</text
           >
         </view>
         <view class="summary-item balance-card">
           <text class="summary-label">结余</text>
           <text
             class="summary-value"
-            :class="monthBalance >= 0 ? 'income' : 'expense'"
+            :class="monthBalance > 0 ? 'income' : monthBalance < 0 ? 'expense' : ''"
           >
-            {{ monthBalance >= 0 ? "+" : "-"
-            }}{{ formatCents(Math.abs(monthBalance)) }}
+            {{ monthBalance > 0 ? "+" : monthBalance < 0 ? "-" : "" }}{{ formatCents(Math.abs(monthBalance)) }}
           </text>
         </view>
       </view>
@@ -241,7 +240,7 @@ import {
   type LocalTransaction,
 } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
-import { useTheme } from "@/stores/themeStore";
+import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 import {
   isLoggedIn,
   getUserInfo,
@@ -435,6 +434,7 @@ let pageReady = false;
 
 // 页面显示时初始化数据、加载交易列表
 onShow(async () => {
+  syncThemeFromStorage();
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;

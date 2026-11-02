@@ -1,5 +1,5 @@
 <template>
-  <view class="stats-page">
+  <view class="stats-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <NavBar floating>
       <template #left>
         <view class="nav-left" @click="goBack">
@@ -23,22 +23,22 @@
         <view class="summary-item expense-card">
           <text class="summary-label">支出</text>
           <text class="summary-value expense"
-            >-{{ formatCents(totalExpense) }}</text
+            >{{ totalExpense > 0 ? "-" : "" }}{{ formatCents(totalExpense) }}</text
           >
         </view>
         <view class="summary-item income-card">
           <text class="summary-label">收入</text>
           <text class="summary-value income"
-            >+{{ formatCents(totalIncome) }}</text
+            >{{ totalIncome > 0 ? "+" : "" }}{{ formatCents(totalIncome) }}</text
           >
         </view>
         <view class="summary-item balance-card">
           <text class="summary-label">结余</text>
           <text
             class="summary-value"
-            :class="balance >= 0 ? 'income' : 'expense'"
+            :class="balance > 0 ? 'income' : balance < 0 ? 'expense' : ''"
           >
-            {{ balance >= 0 ? "+" : "-" }}{{ formatCents(Math.abs(balance)) }}
+            {{ balance > 0 ? "+" : balance < 0 ? "-" : "" }}{{ formatCents(Math.abs(balance)) }}
           </text>
         </view>
       </view>
@@ -52,7 +52,7 @@
             </wd-tabs>
           </view>
 
-          <!-- 有数据时展示：Apple 甜甜圈图表 + 顶部洞察摘要 + 分类聚合列表 -->
+          <!-- 有数据时展示：ECharts 饼图（与 H5 风格 100% 保持一致） + 顶部洞察摘要 + 分类聚合列表 -->
           <template v-if="currentCategories.length > 0">
             <view class="chart-section">
               <EChart :options="pieOption" :height="270" />
@@ -140,7 +140,7 @@ import EChart from "@/components/EChart.vue";
 import PageLoader from "@/components/PageLoader.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
-import { useTheme } from "@/stores/themeStore";
+import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { pullFromServer } from "@/utils/sync";
 import { formatCents } from "@/utils/format";
@@ -467,6 +467,7 @@ watch([currentYear, currentMonth], () => {
 });
 
 onShow(async () => {
+  syncThemeFromStorage();
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;

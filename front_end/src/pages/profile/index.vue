@@ -1,5 +1,5 @@
 <template>
-  <view class="profile-page">
+  <view class="profile-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <NavBar>
       <template #left>
         <view class="nav-back" @click="goBack">
@@ -195,8 +195,10 @@ import {
 import { stopSync } from "@/utils/sync";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
+import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 
 const userInfo = ref<UserInfo | null>(getStoredUserInfo());
+const { themeMode } = useTheme();
 
 const avatarText = computed(() => {
   if (!userInfo.value?.nickname) return "?";
@@ -222,6 +224,7 @@ const { clear: clearTransactions } = useTransactions();
 const { clear: clearCategories } = useCategories();
 
 onShow(async () => {
+  syncThemeFromStorage();
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;

@@ -1,5 +1,5 @@
 <template>
-  <view class="search-page">
+  <view class="search-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <NavBar>
       <template #left>
         <view class="nav-left" @click="goBack">
@@ -267,6 +267,7 @@ import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import { useCategories } from "@/stores/categoryStore";
 import { useTransactions } from "@/stores/transactionStore";
+import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 import { isLoggedIn } from "@/utils/storage";
 import { formatCents, formatWeekday } from "@/utils/format";
 import {
@@ -284,6 +285,7 @@ const {
   categories,
 } = useCategories();
 const { transactions } = useTransactions();
+const { themeMode } = useTheme();
 
 const keyword = ref("");
 const results = ref<any[]>([]);
@@ -540,6 +542,7 @@ function goBack() {
 }
 
 onShow(async () => {
+  syncThemeFromStorage();
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;

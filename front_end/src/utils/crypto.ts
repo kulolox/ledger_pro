@@ -1,3 +1,5 @@
+import "./polyfill";
+import forge from "node-forge";
 import request from "./request";
 
 let cachedPublicKey: string | null = null;
@@ -11,41 +13,22 @@ async function fetchPublicKey(): Promise<string> {
   return cachedPublicKey;
 }
 
-function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-async function importPublicKey(base64: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    "spki",
-    base64ToBytes(base64),
-    { name: "RSA-OAEP", hash: "SHA-256" },
-    false,
-    ["encrypt"],
-  );
-}
-
-// 获取加密凭证并加密登录密码，登录密码密文传递
+/**
+ * 获取加密凭证并加密登录密码，密文传输
+ * 采用 100% 纯 JavaScript (node-forge) 的 RSA-OAEP + SHA-256 + MGF1(SHA-256) 加密
+ * 无任何 WebCrypto (crypto.subtle) 浏览器专属依赖，在 H5、小程序、Android/iOS App 均可无缝跨端运行
+ */
 export async function encryptPassword(plaintext: string): Promise<string> {
-  const publicKeyBase64 = await fetchPublicKey();
-  const publicKey = await importPublicKey(publicKeyBase64);
-  const encrypted = await crypto.subtle.encrypt(
-    { name: "RSA-OAEP" },
-    publicKey,
-    new TextEncoder().encode(plaintext),
-  );
-  return bytesToBase64(new Uint8Array(encrypted));
+  const rawKey = await fetchPublicKey();
+  const pem = `-----BEGIN PUBLIC KEY-----\n${rawKey}\n-----END PUBLIC KEY-----`;
+  const publicKey = forge.pki.publicKeyFromPem(pem);
+
+  const encryptedBytes = publicKey.encrypt(plaintext, "RSA-OAEP", {
+    md: forge.md.sha256.create(),
+    mgf1: {
+      md: forge.md.sha256.create(),
+    },
+  });
+
+  return forge.util.encode64(encryptedBytes);
 }

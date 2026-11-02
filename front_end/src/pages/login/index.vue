@@ -106,8 +106,13 @@ const handleLogin = async () => {
     setTimeout(() => {
       uni.reLaunch({ url: "/pages/index/index" });
     }, 500);
-  } catch (e) {
+  } catch (e: any) {
     console.error("登录失败:", e);
+    uni.showToast({
+      title: e?.message || e?.errMsg || "登录失败，请检查网络",
+      icon: "none",
+      duration: 3000,
+    });
   } finally {
     loading.value = false;
   }

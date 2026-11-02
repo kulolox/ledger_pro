@@ -1,5 +1,5 @@
 <template>
-  <view class="category-page">
+  <view class="category-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <NavBar rightWidth="108rpx">
       <template #left>
         <view class="nav-back" @click="goBack">
@@ -13,7 +13,7 @@
         <view
           class="nav-sort"
           :class="{ active: sortMode }"
-          @click="sortMode = !sortMode"
+          @click="toggleSortMode"
         >
           <text>{{ sortMode ? "完成" : "排序" }}</text>
         </view>
@@ -34,14 +34,25 @@
 
       <view v-else class="category-list" id="category-sort-list">
         <view
-          v-for="cat in categoryList"
+          v-for="(cat, index) in categoryList"
           :key="cat.id"
           class="category-item"
-          :class="{ dimmed: !sortMode && cat.visible === 0 }"
+          :class="{
+            dimmed: !sortMode && cat.visible === 0,
+            'is-dragging': sortMode && draggingIndex === index,
+          }"
+          :style="sortMode && draggingIndex === index ? { transform: `translateY(${dragOffsetY}px)`, zIndex: 99 } : {}"
           :data-id="cat.id"
         >
           <view class="cat-left">
-            <view v-if="sortMode" class="sort-handle">
+            <view
+              v-if="sortMode"
+              class="sort-handle"
+              @touchstart="onTouchStart($event, index)"
+              @touchmove.stop.prevent="onTouchMove($event, index)"
+              @touchend="onTouchEnd"
+              @touchcancel="onTouchEnd"
+            >
               <wd-icon name="menu" size="32rpx" color="var(--text-tertiary)" />
             </view>
             <view class="cat-icon" :style="{ background: cat.color }">
@@ -90,6 +101,30 @@
                 </view>
               </template>
             </template>
+            <view v-else class="sort-actions">
+              <view
+                class="sort-btn move-up"
+                :class="{ disabled: index === 0 }"
+                @click.stop="moveItem(index, -1)"
+              >
+                <wd-icon
+                  name="arrow-up"
+                  size="26rpx"
+                  :color="index === 0 ? 'var(--text-dim)' : 'var(--text-secondary)'"
+                />
+              </view>
+              <view
+                class="sort-btn move-down"
+                :class="{ disabled: index === categoryList.length - 1 }"
+                @click.stop="moveItem(index, 1)"
+              >
+                <wd-icon
+                  name="arrow-down"
+                  size="26rpx"
+                  :color="index === categoryList.length - 1 ? 'var(--text-dim)' : 'var(--text-secondary)'"
+                />
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -177,13 +212,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onUnmounted } from "vue";
+import { ref, computed, onUnmounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import { useDialog } from "@wot-ui/ui";
 import { useCategories } from "@/stores/categoryStore";
+import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 import type { Category } from "@/constants/categories";
-import Sortable from "sortablejs";
 
 const {
   categories,
@@ -194,6 +229,8 @@ const {
   reorder,
   toggleVisible,
 } = useCategories();
+
+const { themeMode } = useTheme();
 
 const currentTab = ref(0);
 const sortMode = ref(false);
@@ -251,50 +288,106 @@ const presetColors = [
   "#f39c12",
 ];
 
-let sortableInstance: Sortable | null = null;
-
 const editorVisible = ref(false);
 const isEdit = ref(false);
 const editingId = ref<string>("");
 const form = ref({ name: "", icon: "", color: "" });
 const dialog = useDialog("category-delete");
 
-watch(sortMode, async (val) => {
-  if (val) {
-    await nextTick();
-    const el = document.querySelector("#category-sort-list");
-    if (el) {
-      sortableInstance = Sortable.create(el as HTMLElement, {
-        handle: ".sort-handle",
-        animation: 150,
-        ghostClass: "sort-ghost",
-        onEnd: (evt) => {
-          if (
-            evt.oldIndex !== undefined &&
-            evt.newIndex !== undefined &&
-            evt.oldIndex !== evt.newIndex
-          ) {
-            const list = [...categoryList.value];
-            const [moved] = list.splice(evt.oldIndex, 1);
-            list.splice(evt.newIndex, 0, moved);
-            saveOrder(list);
-          }
-        },
-      });
-    }
-  } else {
-    if (sortableInstance) {
-      sortableInstance.destroy();
-      sortableInstance = null;
-    }
+// 拖拽手势状态
+const draggingIndex = ref<number>(-1);
+const dragOffsetY = ref<number>(0);
+let startTouchY = 0;
+const ITEM_HEIGHT = 64; // px
+
+function toggleSortMode() {
+  sortMode.value = !sortMode.value;
+  if (!sortMode.value) {
+    draggingIndex.value = -1;
+    dragOffsetY.value = 0;
   }
-});
+}
+
+function onTouchStart(e: any, index: number) {
+  if (!sortMode.value) return;
+  const touch = e.touches?.[0] || e.changedTouches?.[0];
+  if (!touch) return;
+  draggingIndex.value = index;
+  startTouchY = touch.clientY;
+  dragOffsetY.value = 0;
+  // #ifdef APP-PLUS
+  try {
+    uni.vibrateShort({ success: () => {} });
+  } catch {}
+  // #endif
+}
+
+function onTouchMove(e: any, index: number) {
+  if (!sortMode.value || draggingIndex.value < 0) return;
+  const touch = e.touches?.[0] || e.changedTouches?.[0];
+  if (!touch) return;
+  const currentY = touch.clientY;
+  const delta = currentY - startTouchY;
+  dragOffsetY.value = delta;
+
+  const list = [...categoryList.value];
+  const curIdx = draggingIndex.value;
+
+  // 向下滑动跨过一项
+  if (delta > 32 && curIdx < list.length - 1) {
+    const [moved] = list.splice(curIdx, 1);
+    list.splice(curIdx + 1, 0, moved);
+    categories.value[currentTab.value] = list;
+    draggingIndex.value = curIdx + 1;
+    startTouchY += ITEM_HEIGHT;
+    dragOffsetY.value = currentY - startTouchY;
+    // #ifdef APP-PLUS
+    try {
+      uni.vibrateShort({ success: () => {} });
+    } catch {}
+    // #endif
+  }
+  // 向上滑动跨过一项
+  else if (delta < -32 && curIdx > 0) {
+    const [moved] = list.splice(curIdx, 1);
+    list.splice(curIdx - 1, 0, moved);
+    categories.value[currentTab.value] = list;
+    draggingIndex.value = curIdx - 1;
+    startTouchY -= ITEM_HEIGHT;
+    dragOffsetY.value = currentY - startTouchY;
+    // #ifdef APP-PLUS
+    try {
+      uni.vibrateShort({ success: () => {} });
+    } catch {}
+    // #endif
+  }
+}
+
+function onTouchEnd() {
+  if (!sortMode.value || draggingIndex.value < 0) return;
+  draggingIndex.value = -1;
+  dragOffsetY.value = 0;
+  saveOrder(categoryList.value);
+}
+
+function moveItem(index: number, step: -1 | 1) {
+  const target = index + step;
+  const list = [...categoryList.value];
+  if (target < 0 || target >= list.length) return;
+  const [moved] = list.splice(index, 1);
+  list.splice(target, 0, moved);
+  categories.value[currentTab.value] = list;
+  // #ifdef APP-PLUS
+  try {
+    uni.vibrateShort({ success: () => {} });
+  } catch {}
+  // #endif
+  saveOrder(list);
+}
 
 onUnmounted(() => {
-  if (sortableInstance) {
-    sortableInstance.destroy();
-    sortableInstance = null;
-  }
+  draggingIndex.value = -1;
+  dragOffsetY.value = 0;
 });
 
 function goBack() {
@@ -394,6 +487,7 @@ async function saveOrder(list: Category[]) {
 }
 
 onShow(() => {
+  syncThemeFromStorage();
   loadCategories();
 });
 </script>
@@ -550,6 +644,42 @@ onShow(() => {
 
   &.dimmed {
     opacity: 0.45;
+  }
+
+  &.is-dragging {
+    background: var(--bg-card);
+    box-shadow: 0 16rpx 36rpx rgba(0, 0, 0, 0.16);
+    opacity: 0.96;
+    border-radius: var(--radius-md);
+    position: relative;
+    transition: none !important;
+  }
+}
+
+.sort-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+
+  .sort-btn {
+    width: 52rpx;
+    height: 52rpx;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, background 0.15s ease;
+
+    &:active:not(.disabled) {
+      transform: scale(0.88);
+      background: var(--border-focus);
+    }
+
+    &.disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
   }
 }
 

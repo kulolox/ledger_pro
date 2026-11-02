@@ -4,7 +4,7 @@ export type ThemeMode = "light" | "dark";
 
 const THEME_STORAGE_KEY = "theme_mode";
 
-function getInitialTheme(): ThemeMode {
+export function getInitialTheme(): ThemeMode {
   try {
     const saved = uni.getStorageSync(THEME_STORAGE_KEY);
     if (saved === "light" || saved === "dark") {
@@ -19,9 +19,22 @@ function getInitialTheme(): ThemeMode {
 const themeMode = ref<ThemeMode>(getInitialTheme());
 
 const PAGE_SELECTORS =
-  "uni-page-body, page, .home-page, .login-page, .auth-page, .stats-page, .category-page, .search-page, .page";
+  "uni-page-body, page, .home-page, .login-page, .auth-page, .stats-page, .category-page, .search-page, .profile-page, .import-export-page, .page";
 
 export function applyThemeToDom(mode: ThemeMode = themeMode.value) {
+  // #ifdef APP-PLUS
+  try {
+    // App 端状态栏颜色联动：深色模式文字设为白色(light)，浅色模式文字设为黑色(dark)
+    // @ts-ignore
+    if (typeof plus !== "undefined" && plus.navigator) {
+      // @ts-ignore
+      plus.navigator.setStatusBarStyle(mode === "dark" ? "light" : "dark");
+    }
+  } catch {
+    // Ignore native error
+  }
+  // #endif
+
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-theme", mode);
     document.documentElement.classList.remove("theme-light", "theme-dark");
@@ -67,6 +80,18 @@ if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") 
   }
 }
 
+// Cross-webview / Cross-page event listener
+try {
+  uni.$on("theme-change", (newMode: ThemeMode) => {
+    if (newMode && (newMode === "light" || newMode === "dark") && themeMode.value !== newMode) {
+      themeMode.value = newMode;
+      applyThemeToDom(newMode);
+    }
+  });
+} catch {
+  // Ignore in environments without uni.$on
+}
+
 export function setTheme(mode: ThemeMode) {
   themeMode.value = mode;
   try {
@@ -75,6 +100,11 @@ export function setTheme(mode: ThemeMode) {
     // Ignore storage errors
   }
   applyThemeToDom(mode);
+  try {
+    uni.$emit("theme-change", mode);
+  } catch {
+    // Ignore
+  }
 }
 
 export function toggleTheme(): ThemeMode {
@@ -83,11 +113,21 @@ export function toggleTheme(): ThemeMode {
   return next;
 }
 
+export function syncThemeFromStorage(): ThemeMode {
+  const mode = getInitialTheme();
+  if (themeMode.value !== mode) {
+    themeMode.value = mode;
+  }
+  applyThemeToDom(mode);
+  return mode;
+}
+
 export function useTheme() {
   return {
     themeMode,
     setTheme,
     toggleTheme,
+    syncThemeFromStorage,
     isDark: () => themeMode.value === "dark",
   };
 }

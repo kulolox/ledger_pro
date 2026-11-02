@@ -44,7 +44,7 @@ withDefaults(
   .nav-bar {
     display: grid;
     align-items: center;
-    padding: calc(var(--status-bar-height, 44px) + 12rpx) 28rpx 16rpx;
+    padding: calc(var(--status-bar-height, 0px) + 12rpx) 28rpx 16rpx;
     box-sizing: border-box;
 
     .nav-slot {
@@ -73,7 +73,7 @@ withDefaults(
   &.nav-floating {
     background: var(--bg-primary);
     border-bottom: none;
-    padding: calc(var(--status-bar-height, 44px) + 8rpx) 24rpx 8rpx;
+    padding: calc(var(--status-bar-height, 0px) + 8rpx) 24rpx 8rpx;
 
     .nav-bar {
       background: var(--bg-secondary);

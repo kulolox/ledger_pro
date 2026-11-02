@@ -6,7 +6,7 @@
     @update:model-value="$emit('update:visible', $event)"
     @close="$emit('close')"
   >
-    <view class="sidebar">
+    <view class="sidebar" :class="['theme-' + themeMode]" :data-theme="themeMode">
       <view class="sidebar-scroll">
         <view class="sidebar-user" @click="onUserClick">
           <view class="user-avatar">

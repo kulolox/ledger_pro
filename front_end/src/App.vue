@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { watch } from "vue";
-import { onLaunch } from "@dcloudio/uni-app";
+import { onLaunch, onShow } from "@dcloudio/uni-app";
 import { isLoggedIn } from "@/utils/storage";
-import { useTheme, applyThemeToDom } from "@/stores/themeStore";
+import { useTheme, applyThemeToDom, syncThemeFromStorage } from "@/stores/themeStore";
 
 const { themeMode } = useTheme();
 
@@ -28,6 +28,10 @@ onLaunch(() => {
     }
   }
 });
+
+onShow(() => {
+  syncThemeFromStorage();
+});
 </script>
 
 <style lang="scss">
@@ -38,7 +42,6 @@ page {
   font-family: var(--font-family-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding-top: var(--status-bar-height);
   background: var(--bg-primary);
   min-height: 100vh;
   transition:

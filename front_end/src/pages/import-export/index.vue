@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page" :class="['theme-' + themeMode]" :data-theme="themeMode">
     <NavBar>
       <template #left>
         <view class="back-btn" @click="goBack">
@@ -223,6 +223,7 @@ import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
+import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 import { pullFromServer } from "@/utils/sync";
 import {
   getAccountBooks,
@@ -234,6 +235,7 @@ import {
 import { yuanToCents } from "@/utils/format";
 
 const activeTab = ref<"export" | "import">("export");
+const { themeMode } = useTheme();
 
 const formats = [
   { label: "CSV", value: "csv" },
@@ -454,6 +456,7 @@ function goBack() {
 }
 
 onShow(async () => {
+  syncThemeFromStorage();
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
