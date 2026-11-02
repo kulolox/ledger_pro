@@ -59,16 +59,73 @@
           >
             <view class="add-book-dialog-content">
               <text class="dialog-title">{{
-                editingBook ? "重命名账本" : "新增账本"
+                editingBook ? "编辑账本" : "新增账本"
               }}</text>
-              <input
-                class="dialog-input"
-                v-model="bookDialogName"
-                :placeholder="editingBook ? '输入新的账本名称' : '输入账本名称'"
-                maxlength="20"
-                :focus="showBookDialog"
-                @confirm="onConfirmBookDialog"
-              />
+
+              <!-- 账本预览与名称输入 -->
+              <view class="dialog-row">
+                <view
+                  class="dialog-icon-preview"
+                  :class="{ 'is-emoji': !!bookDialogIcon }"
+                  :style="{
+                    background: bookDialogIcon
+                      ? 'var(--bg-active)'
+                      : getBookColor(editingBook ? editingBook.id : 'temp'),
+                  }"
+                  @click="clearCustomIcon"
+                >
+                  <text
+                    class="preview-text"
+                    :class="{ 'emoji-char': !!bookDialogIcon }"
+                  >{{ bookDialogIcon || getBookLetter(bookDialogName || "账") }}</text>
+                  <view v-if="bookDialogIcon" class="clear-icon-badge">
+                    <wd-icon name="close" size="18rpx" color="#ffffff" />
+                  </view>
+                </view>
+                <input
+                  class="dialog-input"
+                  v-model="bookDialogName"
+                  :placeholder="editingBook ? '输入新的账本名称' : '输入账本名称'"
+                  maxlength="20"
+                  :focus="showBookDialog"
+                  @confirm="onConfirmBookDialog"
+                />
+              </view>
+
+              <!-- 自定义 Emoji 图标选择 (非必填) -->
+              <view class="dialog-emoji-section">
+                <view class="emoji-header">
+                  <text class="emoji-label">账本图标 (选填，默认使用名称首字)</text>
+                  <text
+                    v-if="bookDialogIcon"
+                    class="emoji-reset-btn"
+                    @click="clearCustomIcon"
+                  >使用默认</text>
+                </view>
+
+                <view class="emoji-grid">
+                  <view
+                    v-for="emoji in presetEmojis"
+                    :key="emoji"
+                    class="emoji-item"
+                    :class="{ active: bookDialogIcon === emoji }"
+                    @click="togglePresetEmoji(emoji)"
+                  >
+                    <text class="emoji-symbol">{{ emoji }}</text>
+                  </view>
+                </view>
+
+                <view class="custom-emoji-row">
+                  <text class="custom-emoji-tip">其他表情：</text>
+                  <input
+                    class="custom-emoji-input"
+                    v-model="bookDialogIcon"
+                    placeholder="或输入任意 emoji"
+                    maxlength="4"
+                  />
+                </view>
+              </view>
+
               <view class="dialog-actions">
                 <view class="dialog-btn cancel" @click="onDialogCancel">
                   <text>取消</text>
@@ -93,13 +150,17 @@
             >
               <view
                 class="book-icon"
+                :class="{ 'is-emoji': !!book.coverIcon }"
                 :style="{
                   background: book.coverIcon
-                    ? 'transparent'
+                    ? 'var(--bg-card)'
                     : getBookColor(book.id),
                 }"
               >
-                <text>{{ book.coverIcon || getBookLetter(book.name) }}</text>
+                <text
+                  class="book-icon-text"
+                  :class="{ 'emoji-char': !!book.coverIcon }"
+                >{{ book.coverIcon || getBookLetter(book.name) }}</text>
               </view>
               <text class="book-name">{{ book.name }}</text>
               <view v-if="isEditingBooks" class="book-edit-action">
@@ -258,7 +319,26 @@ const avatarText = computed(() => {
 const isEditingBooks = ref(false);
 const showBookDialog = ref(false);
 const bookDialogName = ref("");
+const bookDialogIcon = ref("");
 const editingBook = ref<AccountBook | null>(null);
+
+// 经典账本 Emoji 推荐
+const presetEmojis = [
+  "📘", "🏠", "💼", "🚗", "✈️", "💰",
+  "🛒", "🎮", "🍔", "🎓", "👶", "🐾",
+];
+
+function togglePresetEmoji(emoji: string) {
+  if (bookDialogIcon.value === emoji) {
+    bookDialogIcon.value = ""; // 反选清空，恢复默认兜底
+  } else {
+    bookDialogIcon.value = emoji;
+  }
+}
+
+function clearCustomIcon() {
+  bookDialogIcon.value = "";
+}
 
 watch(
   () => props.visible,
@@ -272,12 +352,14 @@ watch(
 function onOpenAddBook() {
   editingBook.value = null;
   bookDialogName.value = "";
+  bookDialogIcon.value = "";
   showBookDialog.value = true;
 }
 
 function onOpenEditBook(book: AccountBook) {
   editingBook.value = book;
   bookDialogName.value = book.name;
+  bookDialogIcon.value = book.coverIcon || "";
   showBookDialog.value = true;
 }
 
@@ -295,19 +377,30 @@ async function onConfirmBookDialog() {
     uni.showToast({ title: "请输入账本名称", icon: "none" });
     return;
   }
+  const coverIcon = bookDialogIcon.value.trim();
 
   if (editingBook.value) {
     const targetBook = editingBook.value;
-    if (name === targetBook.name) {
+    const oldCoverIcon = targetBook.coverIcon || "";
+    if (name === targetBook.name && coverIcon === oldCoverIcon) {
       onDialogCancel();
       return;
     }
     try {
-      const updated = await updateAccountBook(targetBook.id, { name });
+      const updated = await updateAccountBook(targetBook.id, {
+        name,
+        coverIcon, // 支持更新自定义 emoji 或传空恢复兜底
+      });
       emit(
         "update:books",
         props.books.map((b) =>
-          b.id === targetBook.id ? { ...b, name: updated.name || name } : b,
+          b.id === targetBook.id
+            ? {
+                ...b,
+                name: updated.name || name,
+                coverIcon: updated.coverIcon ?? coverIcon,
+              }
+            : b,
         ),
       );
       uni.showToast({ title: "修改成功", icon: "success" });
@@ -325,7 +418,11 @@ async function onConfirmBookDialog() {
     return;
   }
   try {
-    const book = await createAccountBook({ name, type: 0 });
+    const book = await createAccountBook({
+      name,
+      coverIcon: coverIcon || undefined,
+      type: 0,
+    });
     emit("update:books", [...props.books, book]);
     uni.showToast({ title: "创建成功", icon: "success" });
   } catch {
@@ -336,6 +433,7 @@ async function onConfirmBookDialog() {
 
 function onDialogCancel() {
   bookDialogName.value = "";
+  bookDialogIcon.value = "";
   editingBook.value = null;
   showBookDialog.value = false;
 }
@@ -622,10 +720,19 @@ function getBookLetter(name: string): string {
   flex-shrink: 0;
   box-shadow: var(--shadow-sm);
 
-  text {
+  .book-icon-text {
     font-size: 28rpx;
     font-weight: 700;
     color: #ffffff;
+
+    &.emoji-char {
+      font-size: 34rpx;
+      font-weight: normal;
+    }
+  }
+
+  &.is-emoji {
+    border: 1rpx solid var(--border-subtle);
   }
 }
 
@@ -650,10 +757,11 @@ function getBookLetter(name: string): string {
 }
 
 .add-book-dialog-content {
-  width: 560rpx;
-  padding: 48rpx 40rpx 32rpx;
+  width: 600rpx;
+  padding: 44rpx 36rpx 32rpx;
   background: var(--bg-secondary);
   border-radius: var(--radius-xl);
+  box-sizing: border-box;
 }
 
 .dialog-title {
@@ -662,16 +770,154 @@ function getBookLetter(name: string): string {
   font-weight: 700;
   color: var(--text-primary);
   text-align: center;
-  margin-bottom: 36rpx;
+  margin-bottom: 32rpx;
+}
+
+.dialog-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 28rpx;
+}
+
+.dialog-icon-preview {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  .preview-text {
+    font-size: 32rpx;
+    font-weight: 700;
+    color: #ffffff;
+
+    &.emoji-char {
+      font-size: 40rpx;
+      font-weight: normal;
+    }
+  }
+
+  .clear-icon-badge {
+    position: absolute;
+    top: -6rpx;
+    right: -6rpx;
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+    border: 2rpx solid var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &.is-emoji {
+    border: 1rpx solid var(--border-subtle);
+  }
 }
 
 .dialog-input {
-  width: 100%;
+  flex: 1;
   height: 84rpx;
   border-radius: var(--radius-md);
   background: var(--bg-input-filled);
   padding: 0 24rpx;
   font-size: 28rpx;
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.dialog-emoji-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.emoji-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.emoji-label {
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.emoji-reset-btn {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 4rpx 8rpx;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12rpx;
+  justify-items: center;
+}
+
+.emoji-item {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 20rpx;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 3rpx solid transparent;
+  transition: all 0.15s var(--spring-bounce);
+
+  &:active {
+    transform: scale(0.9);
+  }
+
+  &.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-subtle);
+    transform: scale(1.08);
+  }
+
+  .emoji-symbol {
+    font-size: 36rpx;
+  }
+}
+
+.custom-emoji-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 4rpx;
+}
+
+.custom-emoji-tip {
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.custom-emoji-input {
+  flex: 1;
+  height: 64rpx;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input-filled);
+  padding: 0 18rpx;
+  font-size: 24rpx;
   color: var(--text-primary);
   box-sizing: border-box;
 }

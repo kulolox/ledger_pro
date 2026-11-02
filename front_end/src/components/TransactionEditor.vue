@@ -1,70 +1,74 @@
 <template>
-  <wd-popup
-    :model-value="visible"
-    position="bottom"
-    :z-index="500"
-    custom-class="editor-popup"
-    custom-style="background: transparent;"
-    @update:model-value="$emit('close')"
-    @close="$emit('close')"
-  >
-    <view class="editor">
-      <view class="sheet-grabber" />
+  <view class="transaction-editor-wrapper">
+    <wd-popup
+      :model-value="visible"
+      position="bottom"
+      :z-index="500"
+      custom-class="editor-popup"
+      custom-style="background: transparent;"
+      @update:model-value="$emit('close')"
+      @close="$emit('close')"
+    >
+      <view class="editor">
+        <view class="sheet-grabber" />
 
-      <view class="editor-header">
-        <text class="editor-title">{{
-          editId != null ? "编辑账单" : "记一笔"
-        }}</text>
-        <view class="editor-close" @click="$emit('close')">
-          <wd-icon name="close" size="26rpx" color="var(--text-tertiary)" />
+        <view class="editor-header">
+          <text class="editor-title">{{
+            editId != null ? "编辑账单" : "记一笔"
+          }}</text>
+          <view class="editor-close" @click="$emit('close')">
+            <wd-icon name="close" size="26rpx" color="var(--text-tertiary)" />
+          </view>
         </view>
-      </view>
 
-      <view class="type-tabs">
-        <view
-          v-for="tab in typeTabs"
-          :key="tab.value"
-          class="type-tab"
-          :class="{ active: currentType === tab.value }"
-          @click="onTypeChange(tab.value)"
-        >
-          <text>{{ tab.label }}</text>
+        <view class="type-tabs">
+          <view
+            v-for="tab in typeTabs"
+            :key="tab.value"
+            class="type-tab"
+            :class="{ active: currentType === tab.value }"
+            @click="onTypeChange(tab.value)"
+          >
+            <text>{{ tab.label }}</text>
+          </view>
         </view>
-      </view>
 
-      <view class="category-area">
-        <CategorySlider
-          v-model="selectedCategory"
-          :categories="currentCategories"
-        />
-      </view>
-
-      <view class="amount-area">
-        <text class="amount-number">{{ rawInput || "0" }}</text>
-      </view>
-
-      <view class="meta-row">
-        <view class="meta-btn" @click="showDatePicker = true">
-          <wd-icon name="calendar" size="28rpx" color="var(--color-primary)" />
-          <text class="meta-text">{{ transDate }}</text>
+        <view class="category-area">
+          <CategorySlider
+            v-model="selectedCategory"
+            :categories="currentCategories"
+          />
         </view>
-        <wd-input
-          v-model="remark"
-          custom-class="remark-input"
-          placeholder="添加备注..."
-          clearable
-        />
-      </view>
 
-      <NumberKeyboard @keyPress="onKeyPress" @keyLongPress="onKeyLongPress" />
-    </view>
+        <view class="amount-area">
+          <text class="amount-number">{{ rawInput || "0" }}</text>
+        </view>
+
+        <view class="meta-row">
+          <view class="meta-btn" @click="showDatePicker = true">
+            <wd-icon name="calendar" size="28rpx" color="var(--color-primary)" />
+            <text class="meta-text">{{ transDate }}</text>
+          </view>
+          <wd-input
+            v-model="remark"
+            custom-class="remark-input"
+            placeholder="添加备注..."
+            clearable
+          />
+        </view>
+
+        <NumberKeyboard @keyPress="onKeyPress" @keyLongPress="onKeyLongPress" />
+      </view>
+    </wd-popup>
 
     <wd-datetime-picker
       v-model="transTimestamp"
       v-model:visible="showDatePicker"
       type="date"
+      title="选择日期"
+      :z-index="600"
     />
-  </wd-popup>
+  </view>
 </template>
 
 <script setup lang="ts">

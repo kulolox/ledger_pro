@@ -1,5 +1,9 @@
 <template>
-  <view class="category-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
+  <view
+    class="category-page"
+    :class="['theme-' + themeMode]"
+    :data-theme="themeMode"
+  >
     <NavBar rightWidth="108rpx">
       <template #left>
         <view class="nav-back" @click="goBack">
@@ -41,7 +45,11 @@
             dimmed: !sortMode && cat.visible === 0,
             'is-dragging': sortMode && draggingIndex === index,
           }"
-          :style="sortMode && draggingIndex === index ? { transform: `translateY(${dragOffsetY}px)`, zIndex: 99 } : {}"
+          :style="
+            sortMode && draggingIndex === index
+              ? { transform: `translateY(${dragOffsetY}px)`, zIndex: 99 }
+              : {}
+          "
           :data-id="cat.id"
         >
           <view class="cat-left">
@@ -61,7 +69,9 @@
             <view class="cat-info">
               <view class="cat-title-row">
                 <text class="cat-name">{{ cat.name }}</text>
-                <text v-if="!sortMode && cat.visible === 0" class="cat-hidden-tag"
+                <text
+                  v-if="!sortMode && cat.visible === 0"
+                  class="cat-hidden-tag"
                   >已隐藏</text
                 >
               </view>
@@ -110,7 +120,9 @@
                 <wd-icon
                   name="arrow-up"
                   size="26rpx"
-                  :color="index === 0 ? 'var(--text-dim)' : 'var(--text-secondary)'"
+                  :color="
+                    index === 0 ? 'var(--text-dim)' : 'var(--text-secondary)'
+                  "
                 />
               </view>
               <view
@@ -121,7 +133,11 @@
                 <wd-icon
                   name="arrow-down"
                   size="26rpx"
-                  :color="index === categoryList.length - 1 ? 'var(--text-dim)' : 'var(--text-secondary)'"
+                  :color="
+                    index === categoryList.length - 1
+                      ? 'var(--text-dim)'
+                      : 'var(--text-secondary)'
+                  "
                 />
               </view>
             </view>
@@ -180,32 +196,54 @@
               <input
                 class="form-input color-input"
                 v-model="form.color"
-                placeholder="#ff6b35"
+                placeholder="#FF4D4F"
                 maxlength="7"
               />
               <view
                 class="color-preview"
                 :style="{ background: form.color || '#ccc' }"
+                @click="openColorPicker"
               />
             </view>
           </view>
 
           <view class="color-presets">
-            <text class="preset-label">预设颜色</text>
             <view class="preset-grid">
               <view
                 v-for="c in presetColors"
                 :key="c"
                 class="preset-item"
-                :class="{ selected: form.color === c }"
+                :class="{
+                  selected: form.color.toUpperCase() === c.toUpperCase(),
+                }"
                 :style="{ background: c }"
                 @click="form.color = c"
               />
+              <!-- 自定义调色盘触发项 -->
+              <view
+                class="preset-item custom-palette-item"
+                :class="{ selected: isCustomColor }"
+                @click="openColorPicker"
+              >
+                <view
+                  class="custom-palette-inner"
+                  :style="isCustomColor ? { background: form.color } : {}"
+                >
+                  <wd-icon
+                    name="fill"
+                    size="28rpx"
+                    :color="isCustomColor ? '#ffffff' : 'var(--text-secondary)'"
+                  />
+                </view>
+              </view>
             </view>
           </view>
         </view>
       </view>
     </wd-popup>
+
+    <!-- 自定义调色盘组件 -->
+    <ColorPicker v-model="form.color" v-model:visible="colorPickerVisible" />
 
     <wd-dialog selector="category-delete" />
   </view>
@@ -215,6 +253,7 @@
 import { ref, computed, onUnmounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
+import ColorPicker from "@/components/ColorPicker.vue";
 import { useDialog } from "@wot-ui/ui";
 import { useCategories } from "@/stores/categoryStore";
 import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
@@ -258,35 +297,37 @@ const categoryDescMap: Record<string, string> = {
 };
 
 function getCategoryDesc(cat: Category): string {
-  return categoryDescMap[cat.name] || (isSystem(cat) ? "系统预设分类" : "自定义分类");
+  return (
+    categoryDescMap[cat.name] || (isSystem(cat) ? "系统预设分类" : "自定义分类")
+  );
 }
 
 function isSystem(cat: Category): boolean {
   return cat.is_system === 1;
 }
 
+// 7 个高频高区分度预设色彩
 const presetColors = [
-  "#ff6b35",
-  "#5b9bd5",
-  "#ff6b8a",
-  "#a29bfe",
-  "#fdcb6e",
-  "#00b894",
-  "#e17055",
-  "#00cec9",
-  "#fd79a8",
-  "#636e72",
-  "#ff3b30",
-  "#34c759",
-  "#007aff",
-  "#ff9500",
-  "#af52de",
-  "#8e44ad",
-  "#2ecc71",
-  "#e74c3c",
-  "#1abc9c",
-  "#f39c12",
+  "#FF4D4F", // 活力红 (餐饮、消费重头)
+  "#FF7A45", // 暖阳橙 (生活、购物日常)
+  "#FAAD14", // 金秋黄 (休闲、娱乐消遣)
+  "#52C41A", // 清新绿 (居住、健康日用)
+  "#1677FF", // 商务蓝 (交通、通讯数码)
+  "#722ED1", // 优雅紫 (医疗、教育人情)
+  "#8C8C8C", // 沉稳灰 (其他、杂项备用)
 ];
+
+const colorPickerVisible = ref(false);
+
+const isCustomColor = computed(() => {
+  if (!form.value.color) return false;
+  const currentUpper = form.value.color.toUpperCase();
+  return !presetColors.some((c) => c.toUpperCase() === currentUpper);
+});
+
+function openColorPicker() {
+  colorPickerVisible.value = true;
+}
 
 const editorVisible = ref(false);
 const isEdit = ref(false);
@@ -397,7 +438,7 @@ function goBack() {
 function onAdd() {
   isEdit.value = false;
   editingId.value = "";
-  form.value = { name: "", icon: "", color: "" };
+  form.value = { name: "", icon: "", color: presetColors[0] };
   editorVisible.value = true;
 }
 
@@ -669,7 +710,9 @@ onShow(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.15s ease, background 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      background 0.15s ease;
 
     &:active:not(.disabled) {
       transform: scale(0.88);
@@ -802,11 +845,7 @@ onShow(() => {
 
 .add-bar {
   padding: 20rpx 32rpx calc(var(--safe-area-bottom, 0px) + 28rpx);
-  background: linear-gradient(
-    to top,
-    var(--bg-primary) 75%,
-    transparent
-  );
+  background: linear-gradient(to top, var(--bg-primary) 75%, transparent);
 }
 
 .add-btn {
@@ -913,6 +952,13 @@ onShow(() => {
   border-radius: 18rpx;
   flex-shrink: 0;
   border: 2rpx solid var(--border-primary);
+  cursor: pointer;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.92);
+  }
 }
 
 .color-presets {
@@ -921,24 +967,38 @@ onShow(() => {
   gap: 16rpx;
 }
 
+.preset-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
 .preset-label {
-  font-size: 24rpx;
-  color: var(--text-tertiary);
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.preset-sub {
+  font-size: 20rpx;
+  color: var(--text-dim);
 }
 
 .preset-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: 18rpx;
+  align-items: center;
 }
 
 .preset-item {
-  width: 60rpx;
-  height: 60rpx;
+  width: 62rpx;
+  height: 62rpx;
   border-radius: 50%;
   transition: transform 0.15s var(--spring-bounce);
   border: 4rpx solid transparent;
   cursor: pointer;
+  box-sizing: border-box;
 
   &.selected {
     border-color: var(--text-primary);
@@ -947,6 +1007,34 @@ onShow(() => {
 
   &:active {
     transform: scale(0.88);
+  }
+}
+
+.custom-palette-item {
+  background: conic-gradient(
+    from 0deg,
+    #ff4d4f,
+    #faad14,
+    #52c41a,
+    #13c2c2,
+    #1677ff,
+    #722ed1,
+    #ff4d4f
+  );
+  padding: 4rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .custom-palette-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
   }
 }
 </style>

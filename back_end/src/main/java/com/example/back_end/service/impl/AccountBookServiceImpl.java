@@ -35,7 +35,10 @@ public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, Accou
         AccountBook book = new AccountBook();
         book.setName(SanitizeUtils.escapeHtml(trimmed));
         book.setOwnerId(AuthUtils.getCurrentUserId());
-        if (req.coverIcon() != null) book.setCoverIcon(SanitizeUtils.escapeHtml(req.coverIcon()));
+        book.setCoverIcon(
+                req.coverIcon() != null
+                        ? SanitizeUtils.escapeHtml(req.coverIcon().trim())
+                        : "");
         book.setType(req.type() != null ? req.type() : 0);
         save(book);
         log.info("新增账本 userId={} bookId={} name={}", AuthUtils.getCurrentUserId(), book.getId(), book.getName());
@@ -60,7 +63,7 @@ public class AccountBookServiceImpl extends ServiceImpl<AccountBookMapper, Accou
         }
         book.setName(SanitizeUtils.escapeHtml(trimmed));
         if (req.coverIcon() != null) {
-            book.setCoverIcon(SanitizeUtils.escapeHtml(req.coverIcon()));
+            book.setCoverIcon(SanitizeUtils.escapeHtml(req.coverIcon().trim()));
         }
         if (req.type() != null) {
             book.setType(req.type());

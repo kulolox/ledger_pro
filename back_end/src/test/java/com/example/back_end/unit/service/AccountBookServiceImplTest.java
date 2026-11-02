@@ -132,6 +132,24 @@ class AccountBookServiceImplTest {
         assertNotNull(res);
         assertFalse(res.name().contains("<script>"));
         assertTrue(res.name().contains("&lt;script&gt;"));
+        assertEquals("📒", res.coverIcon());
         assertEquals(1L, bookCaptor.getValue().getOwnerId());
+    }
+
+    @Test
+    @DisplayName("create: 未提供coverIcon时默认空字符串兜底")
+    void create_withoutCoverIcon_defaultsEmptyString() {
+        CreateAccountBookRequest req = new CreateAccountBookRequest("默认账本", null, 0);
+
+        when(accountBookMapper.insert(bookCaptor.capture())).thenAnswer(invocation -> {
+            AccountBook arg = invocation.getArgument(0);
+            arg.setId(202L);
+            return 1;
+        });
+
+        AccountBookResponse res = service.create(req);
+        assertNotNull(res);
+        assertEquals("", res.coverIcon());
+        assertEquals("", bookCaptor.getValue().getCoverIcon());
     }
 }
