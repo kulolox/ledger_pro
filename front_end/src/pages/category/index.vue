@@ -4,7 +4,7 @@
     :class="['theme-' + themeMode]"
     :data-theme="themeMode"
   >
-    <NavBar rightWidth="108rpx">
+    <NavBar>
       <template #left>
         <view class="nav-back" @click="goBack">
           <wd-icon name="left" size="36rpx" color="var(--text-primary)" />
@@ -12,15 +12,6 @@
       </template>
       <template #center>
         <text class="nav-title">分类管理</text>
-      </template>
-      <template #right>
-        <view
-          class="nav-sort"
-          :class="{ active: sortMode }"
-          @click="toggleSortMode"
-        >
-          <text>{{ sortMode ? "完成" : "排序" }}</text>
-        </view>
       </template>
     </NavBar>
 
@@ -32,21 +23,21 @@
     </view>
 
     <view class="category-list-wrap">
-      <view v-if="categoryList.length === 0" class="empty-state">
-        <text class="empty-text">暂无分类</text>
+      <!-- 可见分类主卡片 -->
+      <view v-if="visibleCategoryList.length === 0" class="empty-state">
+        <text class="empty-text">暂无可见分类</text>
       </view>
 
       <view v-else class="category-list" id="category-sort-list">
         <view
-          v-for="(cat, index) in categoryList"
+          v-for="(cat, index) in visibleCategoryList"
           :key="cat.id"
           class="category-item"
           :class="{
-            dimmed: !sortMode && cat.visible === 0,
-            'is-dragging': sortMode && draggingIndex === index,
+            'is-dragging': draggingIndex === index,
           }"
           :style="
-            sortMode && draggingIndex === index
+            draggingIndex === index
               ? { transform: `translateY(${dragOffsetY}px)`, zIndex: 99 }
               : {}
           "
@@ -54,7 +45,6 @@
         >
           <view class="cat-left">
             <view
-              v-if="sortMode"
               class="sort-handle"
               @touchstart="onTouchStart($event, index)"
               @touchmove.stop.prevent="onTouchMove($event, index)"
@@ -69,39 +59,81 @@
             <view class="cat-info">
               <view class="cat-title-row">
                 <text class="cat-name">{{ cat.name }}</text>
-                <text
-                  v-if="!sortMode && cat.visible === 0"
-                  class="cat-hidden-tag"
-                  >已隐藏</text
-                >
               </view>
               <text class="cat-desc">{{ getCategoryDesc(cat) }}</text>
             </view>
           </view>
           <view class="cat-right">
-            <template v-if="!sortMode">
-              <view class="cat-action visibility" @click="onToggleVisible(cat)">
+            <template v-if="!isSystem(cat)">
+              <view class="cat-action delete" @click="onDelete(cat)">
                 <wd-icon
-                  :name="cat.visible === 0 ? 'eye-invisible' : 'eye'"
-                  size="34rpx"
-                  :color="
-                    cat.visible === 0
-                      ? 'var(--text-tertiary)'
-                      : 'var(--color-primary)'
-                  "
+                  name="delete"
+                  size="30rpx"
+                  color="var(--color-expense)"
                 />
               </view>
-              <view v-if="isSystem(cat)" class="cat-lock">
-                <wd-icon name="menu" size="28rpx" color="var(--text-dim)" />
+              <view class="cat-action edit" @click="onEdit(cat)">
+                <wd-icon
+                  name="edit"
+                  size="30rpx"
+                  color="var(--text-secondary)"
+                />
               </view>
-              <template v-else>
-                <view class="cat-action edit" @click="onEdit(cat)">
-                  <wd-icon
-                    name="edit"
-                    size="30rpx"
-                    color="var(--text-secondary)"
-                  />
+            </template>
+            <view v-else class="cat-lock">
+              <wd-icon name="lock-on" size="28rpx" color="var(--text-dim)" />
+            </view>
+            <view class="cat-action visibility" @click="onToggleVisible(cat)">
+              <wd-icon
+                name="eye"
+                size="34rpx"
+                color="var(--color-primary)"
+              />
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 已隐藏分类手风琴卡片 -->
+      <view
+        v-if="hiddenCategoryList.length > 0"
+        class="hidden-section"
+      >
+        <view class="hidden-section-header" @click="toggleHiddenExpand">
+          <view class="hidden-title-group">
+            <text class="hidden-title">已隐藏分类</text>
+            <text class="hidden-badge">{{ hiddenCategoryList.length }}</text>
+          </view>
+          <wd-icon
+            name="down"
+            size="30rpx"
+            color="var(--text-tertiary)"
+            class="hidden-expand-icon"
+            :class="{ expanded: hiddenExpanded }"
+          />
+        </view>
+
+        <view v-if="hiddenExpanded" class="hidden-list">
+          <view
+            v-for="cat in hiddenCategoryList"
+            :key="cat.id"
+            class="category-item dimmed"
+            :data-id="cat.id"
+          >
+            <view class="cat-left">
+              <view class="cat-icon" :style="{ background: cat.color }">
+                <text>{{ cat.icon }}</text>
+              </view>
+              <view class="cat-info">
+                <view class="cat-title-row">
+                  <text class="cat-name">{{ cat.name }}</text>
+                  <text class="cat-hidden-tag">已隐藏</text>
                 </view>
+                <text class="cat-desc">{{ getCategoryDesc(cat) }}</text>
+              </view>
+            </view>
+            <view class="cat-right">
+              <template v-if="!isSystem(cat)">
                 <view class="cat-action delete" @click="onDelete(cat)">
                   <wd-icon
                     name="delete"
@@ -109,35 +141,22 @@
                     color="var(--color-expense)"
                   />
                 </view>
+                <view class="cat-action edit" @click="onEdit(cat)">
+                  <wd-icon
+                    name="edit"
+                    size="30rpx"
+                    color="var(--text-secondary)"
+                  />
+                </view>
               </template>
-            </template>
-            <view v-else class="sort-actions">
-              <view
-                class="sort-btn move-up"
-                :class="{ disabled: index === 0 }"
-                @click.stop="moveItem(index, -1)"
-              >
-                <wd-icon
-                  name="arrow-up"
-                  size="26rpx"
-                  :color="
-                    index === 0 ? 'var(--text-dim)' : 'var(--text-secondary)'
-                  "
-                />
+              <view v-else class="cat-lock">
+                <wd-icon name="lock-on" size="28rpx" color="var(--text-dim)" />
               </view>
-              <view
-                class="sort-btn move-down"
-                :class="{ disabled: index === categoryList.length - 1 }"
-                @click.stop="moveItem(index, 1)"
-              >
+              <view class="cat-action visibility" @click="onToggleVisible(cat)">
                 <wd-icon
-                  name="arrow-down"
-                  size="26rpx"
-                  :color="
-                    index === categoryList.length - 1
-                      ? 'var(--text-dim)'
-                      : 'var(--text-secondary)'
-                  "
+                  name="eye-invisible"
+                  size="34rpx"
+                  color="var(--text-tertiary)"
                 />
               </view>
             </view>
@@ -146,7 +165,7 @@
       </view>
     </view>
 
-    <view v-if="!sortMode" class="add-bar">
+    <view class="add-bar">
       <view class="add-btn" @click="onAdd">
         <wd-icon name="plus" size="32rpx" color="#ffffff" />
         <text class="add-label">添加分类</text>
@@ -376,7 +395,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed, watch, onUnmounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
 import ColorPicker from "@/components/ColorPicker.vue";
@@ -399,10 +418,27 @@ const {
 const { themeMode } = useTheme();
 
 const currentTab = ref(0);
-const sortMode = ref(false);
+const hiddenExpanded = ref(true);
 
-const categoryList = computed(() => {
+function toggleHiddenExpand() {
+  hiddenExpanded.value = !hiddenExpanded.value;
+}
+
+const allCategoryList = computed(() => {
   return categories.value[currentTab.value] || [];
+});
+
+const visibleCategoryList = computed(() => {
+  return allCategoryList.value.filter((cat) => cat.visible !== 0);
+});
+
+const hiddenCategoryList = computed(() => {
+  return allCategoryList.value.filter((cat) => cat.visible === 0);
+});
+
+watch(currentTab, () => {
+  draggingIndex.value = -1;
+  dragOffsetY.value = 0;
 });
 
 const categoryDescMap: Record<string, string> = {
@@ -481,23 +517,17 @@ const targetCategoryOptions = computed(() => {
 const draggingIndex = ref<number>(-1);
 const dragOffsetY = ref<number>(0);
 let startTouchY = 0;
+let initialOrderIds: string[] = [];
 const ITEM_HEIGHT = 64; // px
 
-function toggleSortMode() {
-  sortMode.value = !sortMode.value;
-  if (!sortMode.value) {
-    draggingIndex.value = -1;
-    dragOffsetY.value = 0;
-  }
-}
-
 function onTouchStart(e: any, index: number) {
-  if (!sortMode.value) return;
+  if (visibleCategoryList.value.length < 2) return;
   const touch = e.touches?.[0] || e.changedTouches?.[0];
   if (!touch) return;
   draggingIndex.value = index;
   startTouchY = touch.clientY;
   dragOffsetY.value = 0;
+  initialOrderIds = (categories.value[currentTab.value] || []).map((c) => c.id);
   // #ifdef APP-PLUS
   try {
     uni.vibrateShort({ success: () => {} });
@@ -506,21 +536,21 @@ function onTouchStart(e: any, index: number) {
 }
 
 function onTouchMove(e: any, index: number) {
-  if (!sortMode.value || draggingIndex.value < 0) return;
+  if (draggingIndex.value < 0) return;
   const touch = e.touches?.[0] || e.changedTouches?.[0];
   if (!touch) return;
   const currentY = touch.clientY;
   const delta = currentY - startTouchY;
   dragOffsetY.value = delta;
 
-  const list = [...categoryList.value];
+  const list = [...visibleCategoryList.value];
   const curIdx = draggingIndex.value;
 
   // 向下滑动跨过一项
   if (delta > 32 && curIdx < list.length - 1) {
     const [moved] = list.splice(curIdx, 1);
     list.splice(curIdx + 1, 0, moved);
-    categories.value[currentTab.value] = list;
+    categories.value[currentTab.value] = [...list, ...hiddenCategoryList.value];
     draggingIndex.value = curIdx + 1;
     startTouchY += ITEM_HEIGHT;
     dragOffsetY.value = currentY - startTouchY;
@@ -534,7 +564,7 @@ function onTouchMove(e: any, index: number) {
   else if (delta < -32 && curIdx > 0) {
     const [moved] = list.splice(curIdx, 1);
     list.splice(curIdx - 1, 0, moved);
-    categories.value[currentTab.value] = list;
+    categories.value[currentTab.value] = [...list, ...hiddenCategoryList.value];
     draggingIndex.value = curIdx - 1;
     startTouchY -= ITEM_HEIGHT;
     dragOffsetY.value = currentY - startTouchY;
@@ -547,25 +577,19 @@ function onTouchMove(e: any, index: number) {
 }
 
 function onTouchEnd() {
-  if (!sortMode.value || draggingIndex.value < 0) return;
+  if (draggingIndex.value < 0) return;
   draggingIndex.value = -1;
   dragOffsetY.value = 0;
-  saveOrder(categoryList.value);
-}
 
-function moveItem(index: number, step: -1 | 1) {
-  const target = index + step;
-  const list = [...categoryList.value];
-  if (target < 0 || target >= list.length) return;
-  const [moved] = list.splice(index, 1);
-  list.splice(target, 0, moved);
-  categories.value[currentTab.value] = list;
-  // #ifdef APP-PLUS
-  try {
-    uni.vibrateShort({ success: () => {} });
-  } catch {}
-  // #endif
-  saveOrder(list);
+  const currentList = categories.value[currentTab.value] || [];
+  const currentOrderIds = currentList.map((c) => c.id);
+  const isChanged =
+    currentOrderIds.length !== initialOrderIds.length ||
+    currentOrderIds.some((id, i) => id !== initialOrderIds[i]);
+
+  if (isChanged) {
+    saveOrder(currentList);
+  }
 }
 
 onUnmounted(() => {
@@ -714,11 +738,39 @@ async function confirmDeleteWithAction() {
 }
 
 async function onToggleVisible(cat: Category) {
-  const newVisible = cat.visible === 0 ? 1 : 0;
-  try {
-    await toggleVisible(cat.id, newVisible);
-  } catch {
-    uni.showToast({ title: "操作失败", icon: "error" });
+  const isHiding = cat.visible !== 0;
+
+  if (isHiding) {
+    if (visibleCategoryList.value.length <= 1) {
+      uni.showToast({ title: "至少保留一个可见分类", icon: "none" });
+      return;
+    }
+
+    const otherVisible = visibleCategoryList.value.filter((c) => c.id !== cat.id);
+    const updatedCat = { ...cat, visible: 0 };
+    const newFullList = [...otherVisible, ...hiddenCategoryList.value, updatedCat];
+    categories.value[currentTab.value] = newFullList;
+
+    try {
+      await toggleVisible(cat.id, 0);
+      await saveOrder(newFullList);
+      uni.showToast({ title: "已隐藏", icon: "none" });
+    } catch {
+      uni.showToast({ title: "操作失败", icon: "error" });
+    }
+  } else {
+    const otherHidden = hiddenCategoryList.value.filter((c) => c.id !== cat.id);
+    const updatedCat = { ...cat, visible: 1 };
+    const newFullList = [...visibleCategoryList.value, updatedCat, ...otherHidden];
+    categories.value[currentTab.value] = newFullList;
+
+    try {
+      await toggleVisible(cat.id, 1);
+      await saveOrder(newFullList);
+      uni.showToast({ title: "已恢复显示", icon: "none" });
+    } catch {
+      uni.showToast({ title: "操作失败", icon: "error" });
+    }
   }
 }
 
@@ -774,29 +826,6 @@ onShow(() => {
   letter-spacing: -0.5rpx;
 }
 
-.nav-sort {
-  padding: 10rpx 26rpx;
-  border-radius: var(--radius-full);
-  font-size: 28rpx;
-  color: var(--color-primary);
-  font-weight: 500;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition:
-    transform 0.15s var(--spring-default),
-    background-color 0.15s;
-
-  &:active {
-    transform: scale(0.94);
-    background: var(--bg-active);
-  }
-
-  &.active {
-    background: var(--color-primary);
-    color: #ffffff;
-    font-weight: 600;
-  }
-}
 
 .segmented-bar {
   padding: 16rpx 32rpx 8rpx;
@@ -868,6 +897,65 @@ onShow(() => {
   overflow: hidden;
 }
 
+.hidden-section {
+  margin-top: 24rpx;
+  background: var(--bg-secondary);
+  border: 1rpx solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+
+  .hidden-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24rpx 32rpx;
+    cursor: pointer;
+    background: var(--bg-secondary);
+    transition: background-color 0.15s;
+
+    &:active {
+      background: var(--bg-hover);
+    }
+
+    .hidden-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12rpx;
+
+      .hidden-title {
+        font-size: 28rpx;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      .hidden-badge {
+        font-size: 22rpx;
+        padding: 2rpx 14rpx;
+        border-radius: var(--radius-full);
+        background: var(--bg-input-filled);
+        color: var(--text-tertiary);
+        font-weight: 500;
+      }
+    }
+
+    .hidden-expand-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.25s var(--spring-default);
+
+      &.expanded {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  .hidden-list {
+    border-top: 1rpx solid var(--border-subtle);
+  }
+}
+
 .category-item {
   display: flex;
   align-items: center;
@@ -901,34 +989,6 @@ onShow(() => {
   }
 }
 
-.sort-actions {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-
-  .sort-btn {
-    width: 52rpx;
-    height: 52rpx;
-    border-radius: 50%;
-    background: var(--bg-tertiary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition:
-      transform 0.15s ease,
-      background 0.15s ease;
-
-    &:active:not(.disabled) {
-      transform: scale(0.88);
-      background: var(--border-focus);
-    }
-
-    &.disabled {
-      opacity: 0.3;
-      pointer-events: none;
-    }
-  }
-}
 
 .cat-left {
   display: flex;
@@ -946,6 +1006,13 @@ onShow(() => {
   justify-content: center;
   flex-shrink: 0;
   cursor: grab;
+  touch-action: none;
+  transition: opacity 0.15s;
+
+  &:active {
+    cursor: grabbing;
+    opacity: 0.7;
+  }
 }
 
 .cat-icon {
