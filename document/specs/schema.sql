@@ -81,6 +81,8 @@ CREATE TABLE `category` (
   `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序顺序',
   `is_system` TINYINT NOT NULL DEFAULT 1 COMMENT '是否系统模板: 固定为1',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0未删 1已删',
   PRIMARY KEY (`id`),
   KEY `idx_type` (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统分类模板表';

@@ -15,5 +15,9 @@ public interface IUserCategoryService extends IService<UserCategory> {
 
     void delete(Long id);
 
+    long countTransactions(Long id);
+
+    void delete(Long id, Long targetCategoryId, Boolean deleteTransactions);
+
     void reorder(List<Long> ids);
 }

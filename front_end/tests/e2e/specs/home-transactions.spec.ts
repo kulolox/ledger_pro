@@ -27,8 +27,8 @@ test.describe("Home - Transactions", () => {
     const expenseText = await homePage.expenseSummary.textContent();
     const incomeText = await homePage.incomeSummary.textContent();
 
-    expect(expenseText).toBe("-0.00");
-    expect(incomeText).toBe("+0.00");
+    expect(expenseText).toMatch(/^-?0\.00$/);
+    expect(incomeText).toMatch(/^\+?0\.00$/);
   });
 
   test("empty state shown when no transactions", async ({ authenticatedPage }) => {

@@ -8,5 +8,7 @@ import com.example.back_end.entity.Transaction;
 public interface IStatisticsService extends IService<Transaction> {
     StatisticsResponse monthly(Long bookId, String month);
 
+    StatisticsResponse yearly(Long bookId, String year);
+
     TrendResponse trend(Long bookId, int months);
 }

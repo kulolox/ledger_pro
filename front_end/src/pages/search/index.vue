@@ -82,7 +82,12 @@
       </view>
     </view>
 
-    <scroll-view scroll-y class="results-body" @scrolltolower="loadMore">
+    <scroll-view
+      scroll-y
+      class="results-body"
+      :lower-threshold="100"
+      @scrolltolower="loadMore"
+    >
       <view class="results-inner">
         <view v-if="loading && results.length === 0" class="loading-state">
           <wd-icon name="loading" size="72rpx" color="var(--text-tertiary)" />
@@ -138,6 +143,7 @@
               'tx-item-pending': tx.sync_status === 'pending',
               'tx-item-failed': tx.sync_status === 'failed',
             }"
+            @click="onSelectTx(tx)"
           >
             <view class="tx-left">
               <view
@@ -176,8 +182,12 @@
           </view>
         </view>
 
-        <view v-if="hasMore" class="loading-more">
-          <text>加载更多...</text>
+        <view v-if="loading && results.length > 0" class="loading-more">
+          <wd-icon name="loading" size="36rpx" color="var(--text-tertiary)" />
+          <text>正在加载更多...</text>
+        </view>
+        <view v-else-if="!hasMore && results.length > 0" class="no-more">
+          <text>— 没有更多账单了 —</text>
         </view>
         <view class="list-bottom" />
       </view>
@@ -261,6 +271,24 @@
       title="选择分类"
       @confirm="onCategoryConfirm"
     />
+
+    <!-- 账单详情弹窗（通用组件复用） -->
+    <TransactionDetailModal
+      v-model:visible="detailVisible"
+      :transaction="selectedTx"
+      :book-name="selectedTxBookName"
+      @edit="onEditFromDetail"
+      @delete="onDeleteFromDetail"
+    />
+
+    <!-- 记账/编辑弹窗（通用组件复用） -->
+    <TransactionEditor
+      :visible="editorVisible"
+      :book-id="currentEditBookId"
+      :edit-data="editingTx"
+      @close="onEditorClose"
+      @saved="onEditorSaved"
+    />
   </view>
 </template>
 
@@ -268,10 +296,12 @@
 import { ref, computed } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import NavBar from "@/components/NavBar.vue";
+import TransactionDetailModal from "@/components/TransactionDetailModal.vue";
+import TransactionEditor from "@/components/TransactionEditor.vue";
 import { useCategories } from "@/stores/categoryStore";
 import { useTransactions } from "@/stores/transactionStore";
 import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
-import { isLoggedIn } from "@/utils/storage";
+import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { formatCents, formatWeekday } from "@/utils/format";
 import {
   searchTransactions,
@@ -297,7 +327,13 @@ const page = ref(1);
 const loading = ref(false);
 const hasMore = ref(false);
 const hasSearched = ref(false);
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
+
+// 账单详情弹窗与记账/编辑弹窗状态
+const detailVisible = ref(false);
+const selectedTx = ref<any | null>(null);
+const editorVisible = ref(false);
+const editingTx = ref<any | null>(null);
 
 // Date range
 const dateRangeStartTs = ref(0);
@@ -311,6 +347,52 @@ const dateTo = ref("");
 const showCategoryPicker = ref(false);
 const showBookPicker = ref(false);
 const books = ref<AccountBook[]>([]);
+
+const selectedTxBookName = computed(() => {
+  if (!selectedTx.value?.book_id) return "";
+  const b = books.value.find(
+    (item) => String(item.id) === String(selectedTx.value.book_id),
+  );
+  return b?.name || "";
+});
+
+const currentEditBookId = computed(() => {
+  return (
+    editingTx.value?.book_id ||
+    selectedBookId.value ||
+    getCurrentBookId() ||
+    (books.value[0]?.id ? String(books.value[0].id) : "1")
+  );
+});
+
+function onSelectTx(tx: any) {
+  selectedTx.value = { ...tx };
+  detailVisible.value = true;
+}
+
+function onEditFromDetail(tx: any) {
+  editingTx.value = { ...tx };
+  detailVisible.value = false;
+  editorVisible.value = true;
+}
+
+function onDeleteFromDetail(id: string) {
+  detailVisible.value = false;
+  selectedTx.value = null;
+  results.value = results.value.filter((item) => String(item.id) !== String(id));
+  total.value = Math.max(0, total.value - 1);
+}
+
+function onEditorClose() {
+  editorVisible.value = false;
+  editingTx.value = null;
+}
+
+async function onEditorSaved() {
+  editorVisible.value = false;
+  editingTx.value = null;
+  await doSearch();
+}
 
 const categoryLabel = computed(() => {
   if (selectedCategoryId.value === undefined) return "全部分类";
@@ -338,8 +420,11 @@ const dateLabel = computed(() => {
 function resetFilters() {
   keyword.value = "";
   selectedType.value = undefined;
+  typePickerValue.value = [0];
   selectedCategoryId.value = undefined;
+  categoryPickerValue.value = [0];
   selectedBookId.value = undefined;
+  bookPickerValue.value = [0];
   initDates();
 }
 
@@ -397,7 +482,7 @@ function quickDate(days: number) {
 
 // wd-picker for type
 const showTypePicker = ref(false);
-const typePickerValue = ref<number[]>([]);
+const typePickerValue = ref<number[]>([0]);
 const typeColumns = [
   { label: "全部", value: 0 },
   { label: "支出", value: 1 },
@@ -411,11 +496,35 @@ const typeLabel = computed(() => {
 
 function onTypeConfirm({ value }: { value: number[] }) {
   const v = value[0];
-  selectedType.value = v === 0 ? undefined : v - 1;
+  const newType = v === 0 ? undefined : v - 1;
+  typePickerValue.value = [v];
+  if (selectedType.value !== newType) {
+    selectedType.value = newType;
+    // 联动检查：如果已选择的分类不属于当前新类型的可选分类范围，则重置分类
+    if (selectedCategoryId.value !== undefined) {
+      let validCats: any[] = [];
+      if (newType === 0) {
+        validCats = (categories.value[0] || []).filter((c: any) => c.visible !== 0);
+      } else if (newType === 1) {
+        validCats = (categories.value[1] || []).filter((c: any) => c.visible !== 0);
+      } else {
+        validCats = (categories.value[0] || [])
+          .concat(categories.value[1] || [])
+          .filter((c: any) => c.visible !== 0);
+      }
+      const exists = validCats.some(
+        (c: any) => String(c.id) === String(selectedCategoryId.value),
+      );
+      if (!exists) {
+        selectedCategoryId.value = undefined;
+        categoryPickerValue.value = [0];
+      }
+    }
+  }
 }
 
 // wd-picker for books
-const bookPickerValue = ref<number[]>([]);
+const bookPickerValue = ref<number[]>([0]);
 const bookColumns = computed(() => {
   const all = [{ label: "全部账本", value: 0 }];
   const list = books.value.map((b) => ({ label: b.name, value: b.id }));
@@ -426,23 +535,32 @@ const selectedBookId = ref<string | undefined>(undefined);
 function onBookConfirm({ value }: { value: number[] }) {
   const v = value[0];
   selectedBookId.value = v === 0 ? undefined : String(v);
+  bookPickerValue.value = [v];
 }
 
-// wd-picker for categories
-const categoryPickerValue = ref<number[]>([]);
+// wd-picker for categories (与类型强联动)
+const categoryPickerValue = ref<number[]>([0]);
 const categoryColumns = computed(() => {
   const all = [{ label: "全部分类", value: 0 }];
-  const cats = (categories.value[0] || [])
-    .concat(categories.value[1] || [])
-    .filter((c: any) => c.visible !== 0);
+  let cats: any[] = [];
+  if (selectedType.value === 0) {
+    cats = (categories.value[0] || []).filter((c: any) => c.visible !== 0);
+  } else if (selectedType.value === 1) {
+    cats = (categories.value[1] || []).filter((c: any) => c.visible !== 0);
+  } else {
+    cats = (categories.value[0] || [])
+      .concat(categories.value[1] || [])
+      .filter((c: any) => c.visible !== 0);
+  }
   const list = cats.map((c: any) => ({ label: c.name, value: c.id }));
   return [...all, ...list];
 });
 const selectedCategoryId = ref<string | undefined>(undefined);
 
-function onCategoryConfirm({ value }: { value: number[] }) {
-  const v = value[0];
-  selectedCategoryId.value = v === 0 ? undefined : String(v);
+function onCategoryConfirm({ value }: { value: any[] }) {
+  const v = Array.isArray(value) ? value[0] : value;
+  selectedCategoryId.value = (v === 0 || v === "0") ? undefined : String(v);
+  categoryPickerValue.value = [v];
 }
 
 async function doSearch() {
@@ -728,6 +846,7 @@ onShow(async () => {
 
 .results-body {
   flex: 1;
+  height: 0;
   min-height: 0;
 }
 
@@ -797,6 +916,7 @@ onShow(async () => {
   padding: 28rpx 32rpx;
   transition: background 0.15s var(--spring-default);
   border-top: 1rpx solid var(--border-subtle);
+  cursor: pointer;
 
   &:first-of-type {
     border-top: none;
@@ -935,8 +1055,12 @@ onShow(async () => {
   }
 }
 
-.loading-more {
-  text-align: center;
+.loading-more,
+.no-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
   padding: 24rpx 0;
 
   text {

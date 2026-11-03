@@ -1,22 +1,17 @@
 spring:
   application:
     name: back_end
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
     import:
       - optional:file:.env[.properties]
       - optional:file:back_end/.env[.properties]
+      - optional:file:.env.local[.properties]
+      - optional:file:back_end/.env.local[.properties]
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-  datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/ledger_pro?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DB_USERNAME:}
-    password: ${DB_PASSWORD:}
   mail:
     host: smtp.qq.com
     port: 587
@@ -49,7 +44,6 @@ logging:
     com.example.back_end.mapper: warn # 需要调试 SQL 时改为 debug
 
 server:
-  port: ${SERVER_PORT:8114}
   servlet:
     context-path: /api/v1
     encoding:

@@ -68,10 +68,30 @@ export class HomePage {
   }
 
   async prevMonth() {
-    await this.prevMonthBtn.click();
+    await this.selectPreviousYearMonth();
   }
 
   async nextMonth() {
-    await this.nextMonthBtn.click();
+    await this.resetToCurrentMonth();
+  }
+
+  async selectPreviousYearMonth() {
+    const capsule = this.page.locator(".month-capsule");
+    await capsule.click();
+    await this.page.waitForTimeout(300);
+    await this.page.locator(".year-step-btn").first().click();
+    await this.page.locator(".month-cell").first().click();
+    await this.page.waitForTimeout(300);
+  }
+
+  async resetToCurrentMonth() {
+    const capsule = this.page.locator(".month-capsule");
+    await capsule.click();
+    await this.page.waitForTimeout(300);
+    const todayBtn = this.page.locator(".today-btn");
+    if (await todayBtn.isVisible()) {
+      await todayBtn.click();
+      await this.page.waitForTimeout(300);
+    }
   }
 }

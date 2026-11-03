@@ -232,8 +232,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
             throw new BizException("交易不存在");
         }
         validateBookOwnership(tx.getBookId());
-        tx.setDeleted(1);
-        updateById(tx);
+        removeById(id);
         evictTransactionCache(
                 tx.getBookId(),
                 extractMonth(tx.getTransTime() != null ? tx.getTransTime().toString() : null));
@@ -394,7 +393,7 @@ public class TransactionServiceImpl extends ServiceImpl<TransactionMapper, Trans
                             .withSecond(0));
         }
         if (dateTo != null && !dateTo.isBlank()) {
-            wrapper.lt(Transaction::getTransTime, LocalDateTime.parse(dateTo.trim() + "T23:59:59"));
+            wrapper.le(Transaction::getTransTime, LocalDateTime.parse(dateTo.trim() + "T23:59:59"));
         }
 
         wrapper.orderByDesc(Transaction::getTransTime);

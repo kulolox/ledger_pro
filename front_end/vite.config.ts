@@ -10,8 +10,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        // target: "http://127.0.0.1", // prod
-        target: "http://192.168.31.135:8114", // dev
+        target: "http://127.0.0.1:8114", // dev
         changeOrigin: true,
       },
     },

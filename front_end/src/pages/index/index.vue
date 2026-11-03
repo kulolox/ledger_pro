@@ -139,70 +139,13 @@
         <wd-icon name="plus" size="52rpx" color="#ffffff" />
       </view>
 
-      <wd-dialog selector="delete-confirm" :z-index="1000" />
-
-      <!-- 账单详情底部弹窗 -->
-      <wd-popup
-        v-model="detailVisible"
-        position="bottom"
-        :z-index="100"
-        custom-class="editor-popup"
-        custom-style="background: transparent;"
-        @close="detailVisible = false"
-      >
-        <view v-if="selectedTx" class="tx-detail-sheet">
-          <view class="sheet-grabber" />
-
-          <view class="detail-header">
-            <text class="detail-title">账单详情</text>
-            <view class="detail-actions">
-              <view
-                class="detail-btn detail-delete-btn"
-                @click="onDeleteFromDetail"
-              >
-                <text>删除</text>
-              </view>
-              <view
-                class="detail-btn detail-edit-btn"
-                @click="onEditFromDetail"
-              >
-                <text>修改</text>
-              </view>
-            </view>
-          </view>
-
-          <!-- Apple HIG Inset Grouped 账单文字信息主卡片 -->
-          <view class="detail-info-card">
-            <view class="detail-row">
-              <text class="detail-label">金额</text>
-              <text
-                class="detail-value tabular amount-val"
-                :class="amountClass(selectedTx.type)"
-              >
-                {{ formatTxAmount(selectedTx) }}
-              </text>
-            </view>
-            <view class="detail-row">
-              <text class="detail-label">分类</text>
-              <text class="detail-value">{{
-                getCategoryName(selectedTx.type, selectedTx.category_id)
-              }}</text>
-            </view>
-            <view class="detail-row">
-              <text class="detail-label">时间</text>
-              <text class="detail-value tabular">{{
-                formatDetailTime(selectedTx.trans_time)
-              }}</text>
-            </view>
-            <view class="detail-row">
-              <text class="detail-label">备注</text>
-              <text class="detail-value remark-val">{{
-                selectedTx.remark || "无"
-              }}</text>
-            </view>
-          </view>
-        </view>
-      </wd-popup>
+      <!-- 账单详情底部弹窗组件 -->
+      <TransactionDetailModal
+        v-model:visible="detailVisible"
+        :transaction="selectedTx"
+        @edit="onEditFromDetail"
+        @delete="onDeleteFromDetail"
+      />
 
       <!-- 记账器组件 -->
       <TransactionEditor
@@ -229,8 +172,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
-import { useDialog } from "@wot-ui/ui";
 import TransactionEditor from "@/components/TransactionEditor.vue";
+import TransactionDetailModal from "@/components/TransactionDetailModal.vue";
 import NavBar from "@/components/NavBar.vue";
 import MonthSelector from "@/components/MonthSelector.vue";
 import Sidebar from "@/components/Sidebar.vue";
@@ -365,30 +308,18 @@ function formatDetailTime(transTime?: string): string {
 }
 
 // 从详情弹窗打开记一笔修改
-function onEditFromDetail() {
-  if (!selectedTx.value) return;
-  editingTx.value = { ...selectedTx.value };
+function onEditFromDetail(tx?: any) {
+  const target = tx || selectedTx.value;
+  if (!target) return;
+  editingTx.value = { ...target };
   detailVisible.value = false;
   editorVisible.value = true;
 }
 
-const dialog = useDialog("delete-confirm");
-
-// 从详情弹窗删除账单
-async function onDeleteFromDetail() {
-  if (!selectedTx.value) return;
-  const targetId = selectedTx.value.id;
-  const result = await dialog.confirm({
-    title: "确认删除",
-    msg: `确定要删除这笔账单吗？`,
-    zIndex: 1000,
-  });
-  if (result.action === "confirm") {
-    detailVisible.value = false;
-    selectedTx.value = null;
-    removeTx(targetId);
-    uni.showToast({ title: "已删除", icon: "success" });
-  }
+// 从详情弹窗删除账单回调
+function onDeleteFromDetail(_id?: string) {
+  detailVisible.value = false;
+  selectedTx.value = null;
 }
 
 // 关闭交易编辑器

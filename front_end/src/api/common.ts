@@ -169,6 +169,10 @@ export const updateTransaction = (
   return request.put<Transaction>(`/api/v1/transactions/${id}`, data);
 };
 
+export const deleteTransaction = (id: string) => {
+  return request.delete<void>(`/api/v1/transactions/${id}`);
+};
+
 // ========== 分类相关 ==========
 
 export const getCategories = () => {
@@ -198,8 +202,24 @@ export const updateCategory = (
   return request.put<Category>(`/api/v1/categories/${id}`, data);
 };
 
-export const deleteCategory = (id: string) => {
-  return request.delete(`/api/v1/categories/${id}`);
+export const getCategoryTransactionCount = (id: string) => {
+  return request.get<{ count: number }>(`/api/v1/categories/${id}/transaction-count`);
+};
+
+export const deleteCategory = (
+  id: string,
+  params?: { targetCategoryId?: string; deleteTransactions?: boolean },
+) => {
+  const query = new URLSearchParams();
+  if (params?.targetCategoryId) {
+    query.set("targetCategoryId", params.targetCategoryId);
+  }
+  if (params?.deleteTransactions) {
+    query.set("deleteTransactions", "true");
+  }
+  const qs = query.toString();
+  const url = qs ? `/api/v1/categories/${id}?${qs}` : `/api/v1/categories/${id}`;
+  return request.delete(url);
 };
 
 export const reorderCategories = (data: { ids: string[] }) => {
@@ -333,6 +353,13 @@ export const getMonthlyStatistics = (params: {
   month: string;
 }) => {
   return request.get<MonthlyStats>("/api/v1/statistics/monthly", params);
+};
+
+export const getYearlyStatistics = (params: {
+  book_id: string;
+  year: string | number;
+}) => {
+  return request.get<MonthlyStats>("/api/v1/statistics/yearly", params);
 };
 
 export const getTrend = (params: { book_id: string; months?: number }) => {

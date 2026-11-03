@@ -34,6 +34,7 @@
 |------|------|------|
 | `architecture.md` | Docker 部署、Security、缓存、E2E 等 | 当前参考 |
 | `wotui.md` | Wot Design Uni 组件库用法指南 | 参考 |
+| `android-studio离线打包教程.md` | uni-app 5+ Android Studio 离线打包避坑与实战教程 | 最新指南 |
 | `技术方案设计.md` | 原始技术设计 | 部分过时，仅供参考 |
 
 ### plans/ — 迭代计划

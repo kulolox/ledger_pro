@@ -200,8 +200,7 @@ class TransactionServiceImplTest {
 
         service.delete(123L);
 
-        verify(transactionMapper).updateById(txCaptor.capture());
-        assertEquals(1, txCaptor.getValue().getDeleted());
+        verify(transactionMapper).deleteById(123L);
         verify(cache, atLeastOnce()).evict(any());
     }
 

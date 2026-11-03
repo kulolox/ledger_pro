@@ -1,12 +1,18 @@
 package com.example.back_end.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.CategoryRequest;
 import com.example.back_end.dto.response.CategoryResponse;
+import com.example.back_end.entity.AccountBook;
 import com.example.back_end.entity.Category;
+import com.example.back_end.entity.Transaction;
 import com.example.back_end.entity.UserCategory;
+import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.CategoryMapper;
+import com.example.back_end.mapper.TransactionMapper;
 import com.example.back_end.mapper.UserCategoryMapper;
 import com.example.back_end.service.IUserCategoryService;
 import com.example.back_end.utils.AuthUtils;
@@ -14,6 +20,8 @@ import com.example.back_end.utils.SanitizeUtils;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,9 +31,19 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         implements IUserCategoryService {
 
     private final CategoryMapper categoryMapper;
+    private final TransactionMapper transactionMapper;
+    private final AccountBookMapper accountBookMapper;
+    private final CacheManager cacheManager;
 
-    public UserCategoryServiceImpl(CategoryMapper categoryMapper) {
+    public UserCategoryServiceImpl(
+            CategoryMapper categoryMapper,
+            TransactionMapper transactionMapper,
+            AccountBookMapper accountBookMapper,
+            CacheManager cacheManager) {
         this.categoryMapper = categoryMapper;
+        this.transactionMapper = transactionMapper;
+        this.accountBookMapper = accountBookMapper;
+        this.cacheManager = cacheManager;
     }
 
     public List<CategoryResponse> listAll() {
@@ -61,10 +79,19 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
             throw new BizException("分类名称不能为空");
         }
         if (req.type() == null || (req.type() != 0 && req.type() != 1)) {
-            throw new BizException("分类类型不能为空且必须为0或1");
+            throw new BizException("无效的分类类型");
         }
+        if (req.icon() == null || req.icon().isBlank()) {
+            throw new BizException("图标不能为空");
+        }
+        if (req.color() == null || req.color().isBlank()) {
+            throw new BizException("颜色不能为空");
+        }
+
         Long userId = AuthUtils.getCurrentUserId();
         String cleanName = SanitizeUtils.escapeHtml(req.name().trim());
+        String cleanIcon = SanitizeUtils.escapeHtml(req.icon());
+        String cleanColor = SanitizeUtils.escapeHtml(req.color());
 
         if (lambdaQuery()
                         .eq(UserCategory::getUserId, userId)
@@ -79,13 +106,14 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         uc.setUserId(userId);
         uc.setName(cleanName);
         uc.setType(req.type());
-        uc.setIcon(req.icon() != null ? SanitizeUtils.escapeHtml(req.icon()) : "");
-        uc.setColor(req.color() != null ? SanitizeUtils.escapeHtml(req.color()) : "");
+        uc.setIcon(cleanIcon);
+        uc.setColor(cleanColor);
         uc.setParentId(req.parent_id() != null ? req.parent_id() : 0L);
         uc.setIsSystem(0);
+        uc.setVisible(1);
         uc.setSortOrder(nextSortOrder(userId, req.type()));
         save(uc);
-        log.info("新增分类 userId={} categoryId={} name={} type={}", userId, uc.getId(), uc.getName(), uc.getType());
+        log.info("创建自定义分类 userId={} name={}", userId, cleanName);
         return CategoryResponse.from(uc);
     }
 
@@ -96,14 +124,11 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         if (uc == null || !uc.getUserId().equals(userId)) {
             throw new BizException("无权操作该分类");
         }
-
-        // 系统分类（模板复制来的）只允许调整可见性/排序，身份信息（名称/图标/颜色）不可改
-        boolean isSystem = uc.getIsSystem() == 1;
-        boolean hasIdentityChange = req.name() != null || req.icon() != null || req.color() != null;
-        if (isSystem && hasIdentityChange) {
-            throw new BizException("系统分类不可编辑");
-        }
-        if (!isSystem && hasIdentityChange) {
+        if (uc.getIsSystem() == 1) {
+            if (req.name() != null || req.icon() != null || req.color() != null) {
+                throw new BizException("系统分类只允许修改显示状态和排序");
+            }
+        } else {
             if (req.name() != null) {
                 if (req.name().isBlank()) {
                     throw new BizException("分类名称不能为空");
@@ -131,8 +156,31 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         return CategoryResponse.from(uc);
     }
 
+    @Override
+    public long countTransactions(Long id) {
+        Long userId = AuthUtils.getCurrentUserId();
+        UserCategory uc = getById(id);
+        if (uc == null || !uc.getUserId().equals(userId)) {
+            throw new BizException("无权操作该分类");
+        }
+        List<Long> bookIds = getOwnedBookIds(userId);
+        if (bookIds.isEmpty()) {
+            return 0L;
+        }
+        return transactionMapper.selectCount(new LambdaQueryWrapper<Transaction>()
+                .eq(Transaction::getCategoryId, id)
+                .in(Transaction::getBookId, bookIds));
+    }
+
+    @Override
     @Transactional
     public void delete(Long id) {
+        delete(id, null, false);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id, Long targetCategoryId, Boolean deleteTransactions) {
         Long userId = AuthUtils.getCurrentUserId();
         UserCategory uc = getById(id);
         if (uc == null || !uc.getUserId().equals(userId)) {
@@ -141,6 +189,50 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
         if (uc.getIsSystem() == 1) {
             throw new BizException("系统分类不可删除");
         }
+
+        List<Long> bookIds = getOwnedBookIds(userId);
+        long txCount = bookIds.isEmpty()
+                ? 0L
+                : transactionMapper.selectCount(new LambdaQueryWrapper<Transaction>()
+                        .eq(Transaction::getCategoryId, id)
+                        .in(Transaction::getBookId, bookIds));
+
+        if (txCount > 0) {
+            if (Boolean.TRUE.equals(deleteTransactions)) {
+                transactionMapper.delete(new LambdaQueryWrapper<Transaction>()
+                        .eq(Transaction::getCategoryId, id)
+                        .in(Transaction::getBookId, bookIds));
+                evictAllTransactionCache();
+                log.info("删除分类连同账单 userId={} categoryId={} txCount={}", userId, id, txCount);
+            } else if (targetCategoryId != null) {
+                if (targetCategoryId.equals(id)) {
+                    throw new BizException("目标归档分类不能为当前分类");
+                }
+                UserCategory targetUc = getById(targetCategoryId);
+                if (targetUc == null || !targetUc.getUserId().equals(userId)) {
+                    throw new BizException("目标归档分类不存在或无权操作");
+                }
+                if (!targetUc.getType().equals(uc.getType())) {
+                    throw new BizException("目标归档分类与当前分类类型不一致");
+                }
+                transactionMapper.update(
+                        null,
+                        new LambdaUpdateWrapper<Transaction>()
+                                .eq(Transaction::getCategoryId, id)
+                                .in(Transaction::getBookId, bookIds)
+                                .set(Transaction::getCategoryId, targetCategoryId));
+                evictAllTransactionCache();
+                log.info(
+                        "删除分类并迁移账单 userId={} categoryId={} targetCategoryId={} txCount={}",
+                        userId,
+                        id,
+                        targetCategoryId,
+                        txCount);
+            } else {
+                throw new BizException("该分类下有关联账单，请选择归档分类或连同账单一起删除");
+            }
+        }
+
         removeById(id);
         log.info("删除分类 userId={} categoryId={}", userId, id);
     }
@@ -155,6 +247,23 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
                     .eq(UserCategory::getUserId, userId)
                     .set(UserCategory::getSortOrder, i + 1)
                     .update();
+        }
+    }
+
+    private List<Long> getOwnedBookIds(Long userId) {
+        return accountBookMapper
+                .selectList(new LambdaQueryWrapper<AccountBook>().eq(AccountBook::getOwnerId, userId))
+                .stream()
+                .map(AccountBook::getId)
+                .toList();
+    }
+
+    private void evictAllTransactionCache() {
+        if (cacheManager != null) {
+            Cache cache = cacheManager.getCache("transactions");
+            if (cache != null) {
+                cache.clear();
+            }
         }
     }
 

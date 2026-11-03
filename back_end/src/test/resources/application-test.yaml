@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/ledger_pro?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456}
+    url: jdbc:mysql://${DEV_DB_HOST:${DB_HOST:127.0.0.1}}:${DEV_DB_PORT:${DB_PORT:3306}}/ledger_pro?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: ${DEV_DB_USERNAME:${DB_USERNAME:root}}
+    password: ${DEV_DB_PASSWORD:${DB_PASSWORD:123456}}
     driver-class-name: com.mysql.cj.jdbc.Driver
   mail:
     username: ${MAIL_USERNAME:test@test.com}
@@ -11,8 +11,8 @@ spring:
       mail.smtp.from: ${MAIL_FROM:test@test.com}
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: ${DEV_REDIS_HOST:${REDIS_HOST:localhost}}
+      port: ${DEV_REDIS_PORT:${REDIS_PORT:6379}}
 
 app:
   jwt:

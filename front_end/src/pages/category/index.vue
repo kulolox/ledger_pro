@@ -242,6 +242,132 @@
       </view>
     </wd-popup>
 
+    <!-- 分类删除与账单归档处理弹窗 -->
+    <wd-popup
+      :model-value="deleteModalVisible"
+      position="bottom"
+      custom-class="delete-modal-popup"
+      custom-style="background: transparent;"
+      @update:model-value="deleteModalVisible = false"
+    >
+      <view class="delete-modal">
+        <view class="modal-header">
+          <text class="modal-title">删除分类</text>
+        </view>
+
+        <view class="modal-body">
+          <!-- 当前被删除分类提示卡片 -->
+          <view class="source-cat-card">
+            <view
+              class="source-cat-badge"
+              :style="{ background: pendingDeleteCat?.color || '#ccc' }"
+            >
+              <text class="source-cat-icon">{{ pendingDeleteCat?.icon }}</text>
+            </view>
+            <view class="source-cat-info">
+              <text class="source-cat-name">{{ pendingDeleteCat?.name }}</text>
+              <text class="source-cat-count">
+                该分类下有关联账单共
+                <text class="highlight-count">{{ pendingDeleteTxCount }}</text>
+                笔
+              </text>
+            </view>
+          </view>
+
+          <!-- 处理方式切换选项 -->
+          <view class="action-tabs">
+            <view
+              class="action-tab-item"
+              :class="{ active: deleteAction === 'migrate' }"
+              @click="deleteAction = 'migrate'"
+            >
+              <wd-icon name="swap" size="30rpx" />
+              <text class="action-tab-text">迁移归档到新分类</text>
+            </view>
+            <view
+              class="action-tab-item danger"
+              :class="{ active: deleteAction === 'delete_all' }"
+              @click="deleteAction = 'delete_all'"
+            >
+              <wd-icon name="delete" size="30rpx" />
+              <text class="action-tab-text">连同账单一起删除</text>
+            </view>
+          </view>
+
+          <!-- 模式一：迁移归档列表 -->
+          <view v-if="deleteAction === 'migrate'" class="migrate-section">
+            <view class="section-title">请选择目标分类：</view>
+            <scroll-view scroll-y class="target-cat-scroll">
+              <view class="target-cat-grid">
+                <view
+                  v-for="target in targetCategoryOptions"
+                  :key="target.id"
+                  class="target-cat-item"
+                  :class="{ selected: selectedTargetId === target.id }"
+                  @click="selectedTargetId = target.id"
+                >
+                  <view
+                    class="target-cat-icon-wrap"
+                    :style="{ background: target.color }"
+                  >
+                    <text class="target-cat-icon">{{ target.icon }}</text>
+                  </view>
+                  <text class="target-cat-name">{{ target.name }}</text>
+                  <view
+                    v-if="selectedTargetId === target.id"
+                    class="check-badge"
+                  >
+                    <wd-icon name="check" size="20rpx" color="#ffffff" />
+                  </view>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
+
+          <!-- 模式二：连同账单删除警告 -->
+          <view v-else class="delete-all-section">
+            <view class="warning-box">
+              <wd-icon name="warn-bold" size="48rpx" color="#ff4d4f" />
+              <view class="warning-content">
+                <text class="warning-title">不可撤销的危险操作</text>
+                <text class="warning-desc">
+                  该分类下的全部
+                  {{
+                    pendingDeleteTxCount
+                  }}
+                  笔历史账单将被同时删除，无法自动恢复！
+                </text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 底部操作按钮 -->
+          <view class="modal-footer">
+            <view
+              v-if="deleteAction === 'migrate'"
+              class="submit-btn"
+              :class="{ disabled: !selectedTargetId || deleteLoading }"
+              @click="confirmDeleteWithAction"
+            >
+              <text class="submit-btn-text">
+                {{ selectedTargetId ? "确认归档并删除" : "请先选择目标分类" }}
+              </text>
+            </view>
+            <view
+              v-else
+              class="submit-btn danger-btn"
+              :class="{ disabled: deleteLoading }"
+              @click="confirmDeleteWithAction"
+            >
+              <text class="submit-btn-text">
+                连同 {{ pendingDeleteTxCount }} 笔账单彻底删除
+              </text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </wd-popup>
+
     <!-- 自定义调色盘组件 -->
     <ColorPicker v-model="form.color" v-model:visible="colorPickerVisible" />
 
@@ -258,6 +384,7 @@ import { useDialog } from "@wot-ui/ui";
 import { useCategories } from "@/stores/categoryStore";
 import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 import type { Category } from "@/constants/categories";
+import { getCategoryTransactionCount } from "@/api/common";
 
 const {
   categories,
@@ -334,6 +461,21 @@ const isEdit = ref(false);
 const editingId = ref<string>("");
 const form = ref({ name: "", icon: "", color: "" });
 const dialog = useDialog("category-delete");
+
+// 删除关联弹窗状态
+const deleteModalVisible = ref(false);
+const pendingDeleteCat = ref<Category | null>(null);
+const pendingDeleteTxCount = ref(0);
+const deleteAction = ref<"migrate" | "delete_all">("migrate");
+const selectedTargetId = ref<string>("");
+const deleteLoading = ref(false);
+
+const targetCategoryOptions = computed(() => {
+  if (!pendingDeleteCat.value) return [];
+  const currentType = pendingDeleteCat.value.type;
+  const list = categories.value[currentType] || [];
+  return list.filter((c) => c.id !== pendingDeleteCat.value?.id);
+});
 
 // 拖拽手势状态
 const draggingIndex = ref<number>(-1);
@@ -495,16 +637,78 @@ async function onSave() {
 }
 
 async function onDelete(cat: Category) {
-  const result = await dialog.confirm({
-    title: "确认删除",
-    msg: `确定要删除"${cat.name}"分类吗？`,
-  });
-  if (result.action === "confirm") {
+  try {
+    uni.showLoading({ title: "检查中..." });
+    const res = await getCategoryTransactionCount(cat.id);
+    uni.hideLoading();
+
+    const count = Number(res?.count ?? 0);
+    if (count === 0) {
+      const result = await dialog.confirm({
+        title: "确认删除",
+        msg: `确定要删除"${cat.name}"分类吗？`,
+      });
+      if (result.action === "confirm") {
+        try {
+          await removeCategory(cat.id);
+          uni.showToast({ title: "已删除", icon: "success" });
+        } catch {
+          uni.showToast({ title: "删除失败", icon: "error" });
+        }
+      }
+    } else {
+      pendingDeleteCat.value = cat;
+      pendingDeleteTxCount.value = count;
+      deleteAction.value = "migrate";
+      selectedTargetId.value = "";
+      deleteModalVisible.value = true;
+    }
+  } catch (err: any) {
+    uni.hideLoading();
+    uni.showToast({ title: err?.message || "检查分类失败", icon: "none" });
+  }
+}
+
+async function confirmDeleteWithAction() {
+  if (!pendingDeleteCat.value) return;
+  const cat = pendingDeleteCat.value;
+
+  if (deleteAction.value === "migrate") {
+    if (!selectedTargetId.value) {
+      uni.showToast({ title: "请选择目标分类", icon: "none" });
+      return;
+    }
     try {
-      await removeCategory(cat.id);
-      uni.showToast({ title: "已删除", icon: "success" });
-    } catch {
-      uni.showToast({ title: "删除失败", icon: "error" });
+      deleteLoading.value = true;
+      await removeCategory(cat.id, {
+        targetCategoryId: selectedTargetId.value,
+      });
+      deleteModalVisible.value = false;
+      uni.showToast({ title: "归档并删除成功", icon: "success" });
+    } catch (err: any) {
+      uni.showToast({ title: err?.message || "操作失败", icon: "none" });
+    } finally {
+      deleteLoading.value = false;
+    }
+  } else if (deleteAction.value === "delete_all") {
+    const result = await dialog.confirm({
+      title: "危险警示",
+      msg: `确定要连同该分类下的 ${pendingDeleteTxCount.value} 笔账单一起彻底删除吗？删除后数据将无法恢复！`,
+      zIndex: 1000,
+    });
+    if (result.action === "confirm") {
+      try {
+        deleteLoading.value = true;
+        await removeCategory(cat.id, {
+          deleteTransactions: true,
+        });
+        deleteModalVisible.value = false;
+        uni.showToast({ title: "分类及账单已删除", icon: "success" });
+      } catch (err: any) {
+        uni.showToast({ title: err?.message || "删除失败", icon: "none" });
+      } finally {
+        deleteLoading.value = false;
+      }
     }
   }
 }
@@ -1036,5 +1240,281 @@ onShow(() => {
     justify-content: center;
     transition: background-color 0.2s ease;
   }
+}
+
+/* 分类删除与归档弹窗样式 */
+.delete-modal {
+  background: var(--bg-card);
+  border-radius: 36rpx 36rpx 0 0;
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28rpx;
+}
+
+.modal-cancel {
+  font-size: 28rpx;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 8rpx 12rpx;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-placeholder {
+  width: 60rpx;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.source-cat-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: var(--bg-primary);
+  padding: 20rpx 24rpx;
+  border-radius: var(--radius-lg);
+  border: 1rpx solid var(--border-light);
+}
+
+.source-cat-badge {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.source-cat-icon {
+  font-size: 36rpx;
+}
+
+.source-cat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  flex: 1;
+}
+
+.source-cat-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.source-cat-count {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.highlight-count {
+  color: var(--color-expense);
+  font-weight: 700;
+  padding: 0 4rpx;
+}
+
+.action-tabs {
+  display: flex;
+  background: var(--bg-seg-track);
+  border-radius: var(--radius-md);
+  padding: 6rpx;
+  gap: 8rpx;
+}
+
+.action-tab-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 16rpx 12rpx;
+  border-radius: calc(var(--radius-md) - 4rpx);
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.active {
+    background: var(--bg-card);
+    color: var(--color-primary);
+    font-weight: 600;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+  }
+
+  &.danger.active {
+    color: var(--color-expense);
+  }
+}
+
+.migrate-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.section-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.target-cat-scroll {
+  max-height: 380rpx;
+}
+
+.target-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx;
+  padding: 6rpx 4rpx;
+}
+
+.target-cat-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18rpx 10rpx;
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  border: 2rpx solid transparent;
+  cursor: pointer;
+  transition: all 0.15s var(--spring-default);
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  &.selected {
+    border-color: var(--color-primary);
+    background: var(--bg-active);
+  }
+}
+
+.target-cat-icon-wrap {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10rpx;
+}
+
+.target-cat-icon {
+  font-size: 32rpx;
+}
+
+.target-cat-name {
+  font-size: 24rpx;
+  color: var(--text-primary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.check-badge {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-all-section {
+  padding: 16rpx 0;
+}
+
+.warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 20rpx;
+  background: rgba(255, 77, 79, 0.08);
+  border: 1rpx solid rgba(255, 77, 79, 0.2);
+  border-radius: var(--radius-md);
+  padding: 24rpx;
+}
+
+.warning-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  flex: 1;
+}
+
+.warning-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--color-expense);
+}
+
+.warning-desc {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.modal-footer {
+  margin-top: 12rpx;
+}
+
+.submit-btn {
+  height: 84rpx;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+
+  &.disabled {
+    background: var(--bg-seg-track);
+    cursor: not-allowed;
+    opacity: 0.6;
+
+    .submit-btn-text {
+      color: var(--text-dim);
+    }
+  }
+
+  &.danger-btn {
+    background: var(--color-expense);
+  }
+}
+
+.submit-btn-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #ffffff;
 }
 </style>

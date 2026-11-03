@@ -160,8 +160,11 @@ export function useCategories() {
     await refreshCategories();
   };
 
-  const removeCategory = async (id: string) => {
-    await deleteCategory(id);
+  const removeCategory = async (
+    id: string,
+    options?: { targetCategoryId?: string; deleteTransactions?: boolean },
+  ) => {
+    await deleteCategory(id, options);
     await refreshCategories();
   };
 

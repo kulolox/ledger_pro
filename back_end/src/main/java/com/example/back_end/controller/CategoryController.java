@@ -47,9 +47,19 @@ public class CategoryController {
         return Result.ok();
     }
 
+    @GetMapping("/{id}/transaction-count")
+    public Result<Map<String, Long>> getTransactionCount(@PathVariable Long id) {
+        long count = userCategoryService.countTransactions(id);
+        return Result.ok(Map.of("count", count));
+    }
+
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id) {
-        userCategoryService.delete(id);
+    public Result<Void> delete(
+            @PathVariable Long id,
+            @RequestParam(value = "targetCategoryId", required = false) Long targetCategoryId,
+            @RequestParam(value = "deleteTransactions", required = false, defaultValue = "false")
+                    Boolean deleteTransactions) {
+        userCategoryService.delete(id, targetCategoryId, deleteTransactions);
         return Result.ok("删除成功", null);
     }
 

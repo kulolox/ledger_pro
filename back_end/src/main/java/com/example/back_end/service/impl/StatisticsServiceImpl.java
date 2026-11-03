@@ -27,6 +27,7 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
         this.accountBookMapper = accountBookMapper;
     }
 
+    @Override
     public StatisticsResponse monthly(Long bookId, String month) {
         if (month == null || !month.matches("^\\d{4}-\\d{2}$")) {
             throw new BizException("月份格式不正确，应为 YYYY-MM");
@@ -35,7 +36,23 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
         LocalDateTime monthStart = LocalDateTime.parse(month + "-01T00:00:00");
         LocalDateTime monthEnd = monthStart.plusMonths(1);
 
-        List<Map<String, Object>> rows = baseMapper.sumByCategoryAndType(bookId, monthStart, monthEnd);
+        return getStatisticsByRange(bookId, monthStart, monthEnd);
+    }
+
+    @Override
+    public StatisticsResponse yearly(Long bookId, String year) {
+        if (year == null || !year.matches("^\\d{4}$")) {
+            throw new BizException("年份格式不正确，应为 YYYY");
+        }
+        validateBookOwnership(bookId);
+        LocalDateTime yearStart = LocalDateTime.parse(year + "-01-01T00:00:00");
+        LocalDateTime yearEnd = yearStart.plusYears(1);
+
+        return getStatisticsByRange(bookId, yearStart, yearEnd);
+    }
+
+    private StatisticsResponse getStatisticsByRange(Long bookId, LocalDateTime start, LocalDateTime end) {
+        List<Map<String, Object>> rows = baseMapper.sumByCategoryAndType(bookId, start, end);
 
         List<StatisticsResponse.CategoryStatItem> expenseItems = new ArrayList<>();
         List<StatisticsResponse.CategoryStatItem> incomeItems = new ArrayList<>();
@@ -62,6 +79,7 @@ public class StatisticsServiceImpl extends ServiceImpl<TransactionMapper, Transa
         return new StatisticsResponse(totalExpense, totalIncome, expenseItems, incomeItems);
     }
 
+    @Override
     public TrendResponse trend(Long bookId, int months) {
         validateBookOwnership(bookId);
         int safeMonths = months <= 0 ? 6 : Math.min(months, 36);

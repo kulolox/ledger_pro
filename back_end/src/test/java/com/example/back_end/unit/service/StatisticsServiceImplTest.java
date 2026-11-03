@@ -98,16 +98,22 @@ class StatisticsServiceImplTest {
     }
 
     @Test
-    @DisplayName("monthly: 账本不属于当前用户抛出异常")
-    void monthly_notOwner_throwsException() {
+    @DisplayName("monthly: 账本不存在或无权访问时抛出异常")
+    void monthly_unauthorizedBook_throwsException() {
         when(accountBookMapper.selectById(100L)).thenReturn(null);
-
         BizException ex = assertThrows(BizException.class, () -> service.monthly(100L, "2026-07"));
         assertEquals("无权访问该账本", ex.getMessage());
+
+        AccountBook otherBook = new AccountBook();
+        otherBook.setId(100L);
+        otherBook.setOwnerId(999L);
+        when(accountBookMapper.selectById(100L)).thenReturn(otherBook);
+        BizException ex2 = assertThrows(BizException.class, () -> service.monthly(100L, "2026-07"));
+        assertEquals("无权访问该账本", ex2.getMessage());
     }
 
     @Test
-    @DisplayName("monthly: 统计支出和收入并按分类聚合")
+    @DisplayName("monthly: 正常分类聚合统计")
     void monthly_success() {
         AccountBook book = new AccountBook();
         book.setId(100L);
@@ -156,6 +162,50 @@ class StatisticsServiceImplTest {
         assertEquals(0L, res.total_income());
         assertTrue(res.expense_by_category().isEmpty());
         assertTrue(res.income_by_category().isEmpty());
+    }
+
+    @Test
+    @DisplayName("yearly: 年份格式不正确时抛出异常")
+    void yearly_invalidYearFormat_throwsException() {
+        BizException ex = assertThrows(BizException.class, () -> service.yearly(100L, "26"));
+        assertEquals("年份格式不正确，应为 YYYY", ex.getMessage());
+
+        BizException ex2 = assertThrows(BizException.class, () -> service.yearly(100L, null));
+        assertEquals("年份格式不正确，应为 YYYY", ex2.getMessage());
+    }
+
+    @Test
+    @DisplayName("yearly: 正常按年分类聚合统计")
+    void yearly_success() {
+        AccountBook book = new AccountBook();
+        book.setId(100L);
+        book.setOwnerId(1L);
+        when(accountBookMapper.selectById(100L)).thenReturn(book);
+
+        Map<String, Object> expenseRow = Map.of(
+                "type", 0,
+                "category_id", 10L,
+                "total", 50000L,
+                "count", 15L);
+
+        Map<String, Object> incomeRow = Map.of(
+                "type", 1,
+                "category_id", 20L,
+                "total", 120000L,
+                "count", 12L);
+
+        when(transactionMapper.sumByCategoryAndType(eq(100L), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of(expenseRow, incomeRow));
+
+        StatisticsResponse res = service.yearly(100L, "2026");
+        assertNotNull(res);
+        assertEquals(50000L, res.total_expense());
+        assertEquals(120000L, res.total_income());
+        assertEquals(1, res.expense_by_category().size());
+        assertEquals(10L, res.expense_by_category().get(0).category_id());
+        assertEquals(15L, res.expense_by_category().get(0).count());
+        assertEquals(1, res.income_by_category().size());
+        assertEquals(20L, res.income_by_category().get(0).category_id());
     }
 
     @Test

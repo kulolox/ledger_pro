@@ -20,6 +20,11 @@ public class StatisticsController {
         return Result.ok(statisticsService.monthly(book_id, month));
     }
 
+    @GetMapping("/yearly")
+    public Result<StatisticsResponse> yearly(@RequestParam Long book_id, @RequestParam String year) {
+        return Result.ok(statisticsService.yearly(book_id, year));
+    }
+
     @GetMapping("/trend")
     public Result<TrendResponse> trend(@RequestParam Long book_id, @RequestParam(defaultValue = "6") int months) {
         return Result.ok(statisticsService.trend(book_id, months));

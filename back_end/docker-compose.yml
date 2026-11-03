@@ -3,13 +3,18 @@ services:
     image: mysql:8.0
     container_name: ledger-mysql
     restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=50
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ledger_pro
-      MYSQL_CHARACTER_SET_SERVER: utf8mb4
-      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:3306:3306"
     volumes:
-      - D:/data_center/prod/mysql:/var/lib/mysql
+      - ./data/mysql:/var/lib/mysql
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - ledger-net
@@ -24,8 +29,9 @@ services:
     image: redis:7-alpine
     container_name: ledger-redis
     restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "100mb", "--maxmemory-policy", "allkeys-lru"]
     volumes:
-      - D:/data_center/prod/redis:/data
+      - ./data/redis:/data
     networks:
       - ledger-net
     healthcheck:
@@ -46,6 +52,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USERNAME: root
@@ -57,10 +64,11 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       MAIL_FROM: ${MAIL_FROM}
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseG1GC"
       TZ: Asia/Shanghai
       TRUST_PROXY_HEADERS: "true"
     volumes:
-      - D:/data_center/prod/rsa-keys:/app/data
+      - ./data/rsa-keys:/app/data
     networks:
       - ledger-net
 

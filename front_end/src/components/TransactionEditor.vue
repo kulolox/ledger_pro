@@ -88,6 +88,7 @@ import CategorySlider from "@/components/CategorySlider.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
 import { timestampToDateStr, yuanToCents, MAX_AMOUNT_YUAN } from "@/utils/format";
+import { updateTransaction as apiUpdateTransaction } from "@/api/common";
 
 const { add, update } = useTransactions();
 const { categories } = useCategories();
@@ -267,7 +268,7 @@ const resetInput = () => {
 
 const editId = ref<string | null>(null);
 
-const handleSave = (keepOpen: boolean) => {
+const handleSave = async (keepOpen: boolean) => {
   const amount = evalExpression();
   if (amount <= 0) {
     uni.showToast({ title: "请输入金额", icon: "none" });
@@ -299,6 +300,21 @@ const handleSave = (keepOpen: boolean) => {
       remark: remark.value || undefined,
       trans_time: transTime,
     });
+    if (!String(editId.value).startsWith("-")) {
+      try {
+        await apiUpdateTransaction(String(editId.value), {
+          book_id: props.bookId,
+          type: currentType.value,
+          amount: amountCents,
+          account_id: accountId,
+          category_id: selectedCategory.value,
+          remark: remark.value || undefined,
+          trans_time: transTime,
+        });
+      } catch (e) {
+        console.warn("apiUpdateTransaction failed:", e);
+      }
+    }
   } else {
     add({
       book_id: props.bookId,

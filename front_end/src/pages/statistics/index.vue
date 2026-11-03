@@ -11,6 +11,8 @@
           <MonthSelector
             v-model:year="currentYear"
             v-model:month="currentMonth"
+            v-model:mode="queryMode"
+            :allow-year="true"
           />
         </view>
       </template>
@@ -56,19 +58,23 @@
           <template v-if="currentCategories.length > 0">
             <view class="chart-section">
               <EChart :options="pieOption" :height="270" />
+              <view v-if="hasMinorCategories" class="chart-footnote">
+                <wd-icon name="info-circle" size="24rpx" color="var(--text-tertiary)" />
+                <text class="footnote-text">占比低于 2% 的分类未在图表中展示，完整数据见下方明细</text>
+              </view>
             </view>
 
             <view class="category-list">
               <view class="insights-header">
                 <view class="insight-metric">
                   <text class="insight-label"
-                    >日均{{ activeTab === 0 ? "支出" : "收入" }}</text
+                    >{{ queryMode === "year" ? "月均" : "日均" }}{{ activeTab === 0 ? "支出" : "收入" }}</text
                   >
-                  <text class="insight-value">¥{{ dailyAverage }}</text>
+                  <text class="insight-value">¥{{ averageAmount }}</text>
                 </view>
                 <view class="insight-divider" />
                 <view class="insight-metric">
-                  <text class="insight-label">本月累计</text>
+                  <text class="insight-label">{{ queryMode === "year" ? "本年累计" : "本月累计" }}</text>
                   <text class="insight-value">{{ totalTxCount }} 笔</text>
                 </view>
               </view>
@@ -116,7 +122,7 @@
               </view>
             </view>
             <text class="empty-hint-text"
-              >本月还没有{{ activeTab === 0 ? "支出" : "收入" }}账单数据</text
+              >{{ queryMode === "year" ? "本年" : "本月" }}还没有{{ activeTab === 0 ? "支出" : "收入" }}账单数据</text
             >
             <view class="empty-action-btn" @click="goRecord">
               <wd-icon name="plus" size="28rpx" color="var(--color-primary)" />
@@ -144,7 +150,7 @@ import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
 import { isLoggedIn, getCurrentBookId } from "@/utils/storage";
 import { pullFromServer } from "@/utils/sync";
 import { formatCents } from "@/utils/format";
-import { getMonthlyStatistics, type MonthlyStats } from "@/api/common";
+import { getMonthlyStatistics, getYearlyStatistics, type MonthlyStats } from "@/api/common";
 
 const { transactions, load } = useTransactions();
 const { getCategoryName, getCategoryColor, getCategoryIcon, loadCategories } =
@@ -161,7 +167,7 @@ function getInitialYearMonth(): { year: number; month: number } {
       const params = new URLSearchParams(window.location.hash.slice(qIdx + 1));
       const y = Number(params.get("year"));
       const m = Number(params.get("month"));
-      if (!Number.isNaN(y) && y >= 1970 && y <= 2100) year = y;
+      if (!Number.isNaN(y) && y >= 2000) year = y;
       if (!Number.isNaN(m) && m >= 1 && m <= 12) month = m;
     }
   }
@@ -171,6 +177,7 @@ function getInitialYearMonth(): { year: number; month: number } {
 const initialYM = getInitialYearMonth();
 const currentYear = ref(initialYM.year);
 const currentMonth = ref(initialYM.month);
+const queryMode = ref<"month" | "year">("month");
 const statsData = ref<MonthlyStats | null>(null);
 const activeTab = ref(0);
 const pageLoading = ref(true);
@@ -178,7 +185,7 @@ const pageLoading = ref(true);
 onLoad((options) => {
   if (options?.year) {
     const y = Number(options.year);
-    if (!Number.isNaN(y) && y >= 1970 && y <= 2100) {
+    if (!Number.isNaN(y) && y >= 2000) {
       currentYear.value = y;
     }
   }
@@ -188,10 +195,13 @@ onLoad((options) => {
       currentMonth.value = m;
     }
   }
+  if (options?.mode === "year" || options?.mode === "month") {
+    queryMode.value = options.mode;
+  }
 });
 
-const totalExpense = computed(() => statsData.value?.total_expense ?? 0);
-const totalIncome = computed(() => statsData.value?.total_income ?? 0);
+const totalExpense = computed(() => Number(statsData.value?.total_expense ?? 0));
+const totalIncome = computed(() => Number(statsData.value?.total_income ?? 0));
 const balance = computed(() => totalIncome.value - totalExpense.value);
 
 interface CatItem {
@@ -205,19 +215,28 @@ interface CatItem {
 }
 
 function buildCategories(
-  rawList: Array<{ category_id: string; amount: number; count: number }>,
+  rawList: Array<{ category_id: string | number; amount: number | string; count: number | string }>,
   type: number,
 ): CatItem[] {
-  const total = rawList.reduce((s, c) => s + c.amount, 0);
-  return rawList.map((c) => ({
-    category_id: c.category_id,
-    name: getCategoryName(type, c.category_id),
-    icon: getCategoryIcon(type, c.category_id),
-    amount: c.amount,
-    count: c.count,
-    percent: total > 0 ? ((c.amount / total) * 100).toFixed(1) : "0",
-    color: getCategoryColor(type, c.category_id),
-  }));
+  const total = rawList.reduce((s, c) => s + Number(c.amount || 0), 0);
+  return rawList.map((c) => {
+    const amount = Number(c.amount || 0);
+    const count = Number(c.count || 0);
+    const percentVal = total > 0 ? (amount / total) * 100 : 0;
+    let percent = percentVal.toFixed(1);
+    if (amount > 0 && percentVal > 0 && percent === "0.0") {
+      percent = "<0.1";
+    }
+    return {
+      category_id: String(c.category_id),
+      name: getCategoryName(type, String(c.category_id)),
+      icon: getCategoryIcon(type, String(c.category_id)),
+      amount,
+      count,
+      percent,
+      color: getCategoryColor(type, String(c.category_id)),
+    };
+  });
 }
 
 const expenseCategories = computed(() => {
@@ -242,7 +261,11 @@ const totalTxCount = computed(() => {
   return currentCategories.value.reduce((s, c) => s + Number(c.count), 0);
 });
 
-const dailyAverage = computed(() => {
+const averageAmount = computed(() => {
+  if (queryMode.value === "year") {
+    const avgCents = currentTotal.value / 12;
+    return formatCents(avgCents);
+  }
   const daysInMonth = new Date(
     currentYear.value,
     currentMonth.value,
@@ -252,8 +275,24 @@ const dailyAverage = computed(() => {
   return formatCents(avgCents);
 });
 
+// 饼图中低于 2% 的分类不做渲染，避免数据差异过大时碎片扎堆
+const renderedPieCategories = computed(() => {
+  const total = currentTotal.value;
+  if (!total || total <= 0) return currentCategories.value;
+  const filtered = currentCategories.value.filter(
+    (c) => (c.amount / total) * 100 >= 2,
+  );
+  return filtered.length > 0 ? filtered : currentCategories.value;
+});
+
+const hasMinorCategories = computed(() => {
+  const total = currentTotal.value;
+  if (!total || total <= 0) return false;
+  return currentCategories.value.some((c) => (c.amount / total) * 100 < 2);
+});
+
 const pieOption = computed(() => {
-  const cats = currentCategories.value;
+  const cats = renderedPieCategories.value;
   const prefix = activeTab.value === 0 ? "-" : "+";
   const totalAmount = currentTotal.value;
   const centerText = `${prefix}¥${formatCents(totalAmount)}`;
@@ -286,7 +325,14 @@ const pieOption = computed(() => {
     },
     title: {
       text: centerText,
-      subtext: activeTab.value === 0 ? "总支出" : "总收入",
+      subtext:
+        queryMode.value === "year"
+          ? activeTab.value === 0
+            ? "年度支出"
+            : "年度收入"
+          : activeTab.value === 0
+            ? "总支出"
+            : "总收入",
       left: "center",
       top: "center",
       itemGap: 4,
@@ -309,6 +355,7 @@ const pieOption = computed(() => {
         data,
         // 单分类时取消间隙与圆角，避免整环出现缺口
         padAngle: data.length > 1 ? 3 : 0,
+        minShowLabelAngle: 5,
         itemStyle: {
           borderRadius: data.length > 1 ? 8 : 0,
           borderColor: isDark ? "#1c1c1e" : "#ffffff",
@@ -316,8 +363,10 @@ const pieOption = computed(() => {
         },
         label: {
           show: true,
-          formatter: (params: any) =>
-            `${params.name} ${Number(params.percent).toFixed(0)}%`,
+          formatter: (params: any) => {
+            if (Number(params.percent) < 1) return "";
+            return `${params.name} ${Number(params.percent).toFixed(0)}%`;
+          },
           fontSize: 11,
           color: textColor,
           overflow: "none",
@@ -356,43 +405,70 @@ function getMonthStr(): string {
 
 async function fetchStats() {
   const bookId = getCurrentBookId();
-  const monthStr = getMonthStr();
-  await pullFromServer(bookId, monthStr);
 
-  const hasLocalForMonth = transactions.value.some(
-    (tx) =>
-      !tx.deleted &&
-      String(tx.book_id) === String(bookId) &&
-      tx.trans_time.startsWith(monthStr),
-  );
-  if (hasLocalForMonth) {
-    calcLocalStats(bookId);
-    return;
-  }
+  if (queryMode.value === "month") {
+    const monthStr = getMonthStr();
+    await pullFromServer(bookId, monthStr);
 
-  try {
-    const res = await getMonthlyStatistics({
-      book_id: bookId,
-      month: monthStr,
-    });
-    if (
-      res &&
-      (res.total_expense > 0 ||
-        res.total_income > 0 ||
-        (res.expense_by_category && res.expense_by_category.length > 0) ||
-        (res.income_by_category && res.income_by_category.length > 0))
-    ) {
-      statsData.value = res;
-    } else {
+    const hasLocalForMonth = transactions.value.some(
+      (tx) =>
+        !tx.deleted &&
+        String(tx.book_id) === String(bookId) &&
+        tx.trans_time.startsWith(monthStr),
+    );
+    if (hasLocalForMonth) {
+      calcLocalStats(bookId);
+      return;
+    }
+
+    try {
+      const res = await getMonthlyStatistics({
+        book_id: bookId,
+        month: monthStr,
+      });
+      if (
+        res &&
+        (res.total_expense > 0 ||
+          res.total_income > 0 ||
+          (res.expense_by_category && res.expense_by_category.length > 0) ||
+          (res.income_by_category && res.income_by_category.length > 0))
+      ) {
+        statsData.value = res;
+      } else {
+        calcLocalStats(bookId);
+      }
+    } catch {
       calcLocalStats(bookId);
     }
-  } catch {
-    calcLocalStats(bookId);
+  } else {
+    // 按年查询：优先通过服务端聚合接口获取整年数据
+    try {
+      const res = await getYearlyStatistics({
+        book_id: bookId,
+        year: currentYear.value,
+      });
+      if (
+        res &&
+        (res.total_expense > 0 ||
+          res.total_income > 0 ||
+          (res.expense_by_category && res.expense_by_category.length > 0) ||
+          (res.income_by_category && res.income_by_category.length > 0))
+      ) {
+        statsData.value = res;
+      } else {
+        calcLocalStats(bookId);
+      }
+    } catch {
+      calcLocalStats(bookId);
+    }
   }
 }
 
 function calcLocalStats(bookId: string) {
-  const prefix = `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
+  const prefix =
+    queryMode.value === "year"
+      ? `${currentYear.value}`
+      : `${currentYear.value}-${String(currentMonth.value).padStart(2, "0")}`;
   const map = new Map<string, { amount: number; count: number }>();
   let expense = 0;
   let income = 0;
@@ -464,7 +540,7 @@ function calcLocalStats(bookId: string) {
   };
 }
 
-watch([currentYear, currentMonth], () => {
+watch([currentYear, currentMonth, queryMode], () => {
   fetchStats();
 });
 
@@ -638,6 +714,22 @@ onShow(async () => {
 
 .chart-section {
   padding: 16rpx 0 8rpx;
+}
+
+.chart-footnote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin-top: 10rpx;
+  margin-bottom: 12rpx;
+  padding: 0 24rpx;
+}
+
+.footnote-text {
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  line-height: 1.4;
 }
 
 .category-list {

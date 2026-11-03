@@ -18,7 +18,10 @@ docker-compose down
 - **MySQL** 数据挂载 `D:/data_center/prod/mysql`，首次启动从 `docker/init.sql` 初始化
 - **Redis** 数据挂载 `D:/data_center/prod/redis`
 - **RSA 密钥** 挂载 `D:/data_center/prod/rsa-keys`
-- **环境变量** 从 `.env` 文件读取（`DB_PASSWORD/JWT_SECRET/MAIL_USERNAME/MAIL_PASSWORD/MAIL_FROM`），参考 `.env.example`
+- **环境变量与多环境隔离**：
+  - **生产环境 (prod)**：`docker-compose.yml` 自动指定 `SPRING_PROFILES_ACTIVE=prod`，加载 `application-prod.yaml`，服务端口为 8080，数据库/Redis 自动解析容器服务名 `mysql`/`redis`；敏感配置直接读取 `back_end/.env`。
+  - **研发环境 (dev)**：本地命令行直接启动（`mvn spring-boot:run`）默认激活 `dev` profile，加载 `application-dev.yaml`，服务端口为 8114，默认连接 `127.0.0.1:3306` 与 `127.0.0.1:6379`。开发者可在 `back_end/.env.local` 中定制本地连接，优先级高于 `.env` 且被 `.gitignore` 自动忽略，实现两套环境彻底互不干涉。
+  - **环境变量参考**：生产环境变量参考 `.env.example`，本地研发环境参考 `.env.local.example`。
 
 ### 编码陷阱
 
