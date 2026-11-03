@@ -503,6 +503,7 @@ const request = new Request({
   timeout: 30000,
 });
 
-// 导出实例和类
+// 导出实例和类与环境变量获取工具
+export const getApiBaseUrl = (): string => getEnv("VITE_API_BASE_URL");
 export default request;
 export { Request, type RequestConfig, type ResponseData };

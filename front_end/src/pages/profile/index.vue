@@ -61,7 +61,7 @@
         </view>
       </view>
 
-      <!-- 账号安全分组 -->
+      <!-- 账号安全分组（包含修改密码与注销账号） -->
       <view class="section-block">
         <text class="section-label">账号安全</text>
         <view class="cell-group">
@@ -73,13 +73,7 @@
               <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
             </view>
           </view>
-        </view>
-      </view>
 
-      <!-- 危险操作分组：注销账号 -->
-      <view class="section-block danger-block">
-        <text class="section-label">危险操作</text>
-        <view class="cell-group danger-group">
           <view class="cell-item clickable" @click="onOpenDeleteDialog">
             <view class="cell-left">
               <view class="danger-text-col">
@@ -89,6 +83,26 @@
             </view>
             <view class="cell-right">
               <wd-icon name="right" size="26rpx" color="var(--color-expense)" />
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 关于系统分组 -->
+      <view class="section-block">
+        <text class="section-label">关于系统</text>
+        <view class="cell-group">
+          <view
+            class="cell-item"
+            :class="{ clickable: isApp }"
+            @click="goCheckUpdate"
+          >
+            <view class="cell-left">
+              <text class="cell-title">软件版本</text>
+            </view>
+            <view class="cell-right">
+              <text class="cell-value" :class="{ readonly: !isApp }">v{{ appVersion }}</text>
+              <wd-icon v-if="isApp" name="right" size="26rpx" color="var(--text-dim)" />
             </view>
           </view>
         </view>
@@ -196,7 +210,14 @@ import { stopSync } from "@/utils/sync";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
 import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
+import { getAppRuntimeInfo, APP_VERSION } from "@/constants/app";
 
+let isApp = false;
+// #ifdef APP-PLUS
+isApp = true;
+// #endif
+
+const appVersion = ref(APP_VERSION);
 const userInfo = ref<UserInfo | null>(getStoredUserInfo());
 const { themeMode } = useTheme();
 
@@ -225,6 +246,9 @@ const { clear: clearCategories } = useCategories();
 
 onShow(async () => {
   syncThemeFromStorage();
+  getAppRuntimeInfo().then((info) => {
+    appVersion.value = info.version;
+  });
   if (!isLoggedIn()) {
     uni.reLaunch({ url: "/pages/login/index" });
     return;
@@ -285,6 +309,11 @@ async function onConfirmNickname() {
 
 function goChangePassword() {
   uni.navigateTo({ url: "/pages/change-password/index" });
+}
+
+function goCheckUpdate() {
+  if (!isApp) return;
+  uni.navigateTo({ url: "/pages/update/index" });
 }
 
 function onOpenDeleteDialog() {

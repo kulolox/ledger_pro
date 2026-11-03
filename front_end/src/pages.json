@@ -75,6 +75,13 @@
         "navigationBarTitleText": "修改密码",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/update/index",
+      "style": {
+        "navigationBarTitleText": "检查更新",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

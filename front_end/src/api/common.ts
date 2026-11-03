@@ -368,3 +368,26 @@ export const getTrend = (params: { book_id: string; months?: number }) => {
     params,
   );
 };
+
+// ========== 系统与更新相关 ==========
+
+export interface AppVersionInfo {
+  hasUpdate: boolean;
+  latestVersion: string;
+  versionCode: number;
+  changelog: string;
+  downloadUrl: string;
+  packageSize: string;
+  forceUpdate: boolean;
+}
+
+export const checkAppUpdate = (
+  currentVersion?: string,
+  currentVersionCode?: number,
+) => {
+  return request.get<AppVersionInfo>("/api/v1/system/version/check", {
+    currentVersion,
+    currentVersionCode,
+  });
+};
+

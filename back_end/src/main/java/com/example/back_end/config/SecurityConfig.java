@@ -31,11 +31,11 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
-        // 无状态 JWT 认证：/auth/** 与 /health 免认证，其余全要 token；JwtAuthFilter 插在认证过滤器之前
+        // 无状态 JWT 认证：/auth/**、/health 与 /system/** 免认证，其余全要 token；JwtAuthFilter 插在认证过滤器之前
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/auth/**", "/health")
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/auth/**", "/health", "/system/**")
                         .permitAll()
                         .requestMatchers("/**")
                         .authenticated())

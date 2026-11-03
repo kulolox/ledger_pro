@@ -1,0 +1,8 @@
+{
+  "$comment": "LedgerPro 本地一键构建 APK 配置文件。若需配置个性化绝对路径，可在根目录新建 build.config.local.json 覆盖以下配置项（已被 git 忽略）",
+  "androidProjectPath": "D:/WorkSpace/Android-SDK@5.34.82692_20261030/UniPlugin-Hello-AS",
+  "backendPort": 8114,
+  "defaultEnv": "lan",
+  "apkOutputDir": "dist-apk",
+  "autoInstallIfDeviceConnected": false
+}

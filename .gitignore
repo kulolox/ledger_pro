@@ -28,3 +28,8 @@ back_end/.mvn/wrapper/maven-wrapper.jar
 .env
 .env.local
 .env.*.local
+
+# android build output and local overrides
+dist-apk/
+build.config.local.json
+android/
