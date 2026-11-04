@@ -208,18 +208,27 @@ export const getCategoryTransactionCount = (id: string) => {
 
 export const deleteCategory = (
   id: string,
-  params?: { targetCategoryId?: string; deleteTransactions?: boolean },
+  params?: {
+    targetCategoryId?: string;
+    target_category_id?: string;
+    deleteTransactions?: boolean;
+    delete_transactions?: boolean;
+  },
 ) => {
-  const query = new URLSearchParams();
-  if (params?.targetCategoryId) {
-    query.set("targetCategoryId", params.targetCategoryId);
+  const parts: string[] = [];
+  const targetId = params?.targetCategoryId || params?.target_category_id;
+  if (targetId) {
+    parts.push(`targetCategoryId=${encodeURIComponent(targetId)}`);
+    parts.push(`target_category_id=${encodeURIComponent(targetId)}`);
   }
-  if (params?.deleteTransactions) {
-    query.set("deleteTransactions", "true");
+  const deleteTx = params?.deleteTransactions ?? params?.delete_transactions;
+  if (deleteTx !== undefined) {
+    parts.push(`deleteTransactions=${deleteTx ? "true" : "false"}`);
+    parts.push(`delete_transactions=${deleteTx ? "true" : "false"}`);
   }
-  const qs = query.toString();
+  const qs = parts.join("&");
   const url = qs ? `/api/v1/categories/${id}?${qs}` : `/api/v1/categories/${id}`;
-  return request.delete(url);
+  return request.delete(url, params);
 };
 
 export const reorderCategories = (data: { ids: string[] }) => {

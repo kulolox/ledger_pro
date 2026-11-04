@@ -34,4 +34,5 @@ vi.stubGlobal("uni", {
   makePhoneCall: vi.fn(),
   setClipboardData: vi.fn(),
   getClipboardData: vi.fn(),
+  setNavigationBarColor: vi.fn(),
 });

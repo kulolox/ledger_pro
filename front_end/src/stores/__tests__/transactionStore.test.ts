@@ -76,6 +76,16 @@ describe("transactionStore", () => {
       expect(updated?.sync_status).toBe("pending");
     });
 
+    it("resets sync_status to pending if was failed", () => {
+      const tx = store.addTransaction(makeTx());
+      const txs = store.useTransactions().transactions.value;
+      txs[0].sync_status = "failed";
+      store.updateTransaction(tx.id, { amount: 3500 });
+      const updated = store.useTransactions().transactions.value.find((t) => t.id === tx.id);
+      expect(updated?.sync_status).toBe("pending");
+      expect(updated?.amount).toBe(3500);
+    });
+
     it("no-ops for non-existent id", () => {
       expect(() => store.updateTransaction("99999", { amount: 1 })).not.toThrow();
     });
@@ -84,6 +94,15 @@ describe("transactionStore", () => {
   describe("deleteTransaction", () => {
     it("hard deletes pending transaction without server_id", () => {
       const tx = store.addTransaction(makeTx());
+      store.deleteTransaction(tx.id);
+      const found = store.useTransactions().transactions.value.find((t) => t.id === tx.id);
+      expect(found).toBeUndefined();
+    });
+
+    it("hard deletes failed transaction without server_id", () => {
+      const tx = store.addTransaction(makeTx());
+      const txs = store.useTransactions().transactions.value;
+      txs[0].sync_status = "failed";
       store.deleteTransaction(tx.id);
       const found = store.useTransactions().transactions.value.find((t) => t.id === tx.id);
       expect(found).toBeUndefined();

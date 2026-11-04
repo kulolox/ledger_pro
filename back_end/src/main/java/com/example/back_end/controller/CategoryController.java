@@ -57,9 +57,35 @@ public class CategoryController {
     public Result<Void> delete(
             @PathVariable Long id,
             @RequestParam(value = "targetCategoryId", required = false) Long targetCategoryId,
-            @RequestParam(value = "deleteTransactions", required = false, defaultValue = "false")
-                    Boolean deleteTransactions) {
-        userCategoryService.delete(id, targetCategoryId, deleteTransactions);
+            @RequestParam(value = "target_category_id", required = false) Long targetCategoryIdSnake,
+            @RequestParam(value = "deleteTransactions", required = false) Boolean deleteTransactions,
+            @RequestParam(value = "delete_transactions", required = false) Boolean deleteTransactionsSnake,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Long finalTargetId = targetCategoryId != null ? targetCategoryId : targetCategoryIdSnake;
+        Boolean finalDeleteTx = deleteTransactions != null ? deleteTransactions : deleteTransactionsSnake;
+
+        if (body != null) {
+            if (finalTargetId == null) {
+                Object val = body.getOrDefault("targetCategoryId", body.get("target_category_id"));
+                if (val != null) {
+                    try {
+                        finalTargetId = Long.valueOf(val.toString().trim());
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+            if (finalDeleteTx == null) {
+                Object val = body.getOrDefault("deleteTransactions", body.get("delete_transactions"));
+                if (val != null) {
+                    finalDeleteTx = Boolean.valueOf(val.toString().trim());
+                }
+            }
+        }
+        if (finalDeleteTx == null) {
+            finalDeleteTx = false;
+        }
+
+        userCategoryService.delete(id, finalTargetId, finalDeleteTx);
         return Result.ok("删除成功", null);
     }
 

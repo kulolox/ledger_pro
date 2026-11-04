@@ -1,5 +1,9 @@
 <template>
-  <view class="profile-page" :class="['theme-' + themeMode]" :data-theme="themeMode">
+  <view
+    class="profile-page"
+    :class="['theme-' + themeMode]"
+    :data-theme="themeMode"
+  >
     <NavBar>
       <template #left>
         <view class="nav-back" @click="goBack">
@@ -18,7 +22,9 @@
           <text class="avatar-text">{{ avatarText }}</text>
         </view>
         <view class="hero-info">
-          <text class="hero-name">{{ userInfo?.nickname || "未设置昵称" }}</text>
+          <text class="hero-name">{{
+            userInfo?.nickname || "未设置昵称"
+          }}</text>
           <text class="hero-email">{{ userInfo?.email || "-" }}</text>
         </view>
       </view>
@@ -78,11 +84,13 @@
             <view class="cell-left">
               <view class="danger-text-col">
                 <text class="cell-title danger-title">注销账号</text>
-                <text class="danger-desc">永久删除账号及名下所有账本、账单数据</text>
+                <text class="danger-desc"
+                  >永久删除账号及名下所有账本、账单数据</text
+                >
               </view>
             </view>
             <view class="cell-right">
-              <wd-icon name="right" size="26rpx" color="var(--color-expense)" />
+              <wd-icon name="right" size="26rpx" color="var(--text-dim)" />
             </view>
           </view>
         </view>
@@ -101,8 +109,15 @@
               <text class="cell-title">软件版本</text>
             </view>
             <view class="cell-right">
-              <text class="cell-value" :class="{ readonly: !isApp }">v{{ appVersion }}</text>
-              <wd-icon v-if="isApp" name="right" size="26rpx" color="var(--text-dim)" />
+              <text class="cell-value" :class="{ readonly: !isApp }"
+                >v{{ appVersion }}</text
+              >
+              <wd-icon
+                v-if="isApp"
+                name="right"
+                size="26rpx"
+                color="var(--text-dim)"
+              />
             </view>
           </view>
         </view>
@@ -158,7 +173,9 @@
           >
           <view class="warning-list">
             <text class="warning-item">• 您的个人资料与注册邮箱登录凭证</text>
-            <text class="warning-item">• 名下所有账本及全部历史收支、转账账单</text>
+            <text class="warning-item"
+              >• 名下所有账本及全部历史收支、转账账单</text
+            >
             <text class="warning-item">• 所有自定义收支分类与资产账户数据</text>
           </view>
         </view>
@@ -636,7 +653,9 @@ async function onConfirmDeleteAccount() {
   font-size: 29rpx;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
 
   &:active {
     transform: scale(0.98);

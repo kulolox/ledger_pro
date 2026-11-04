@@ -1,6 +1,6 @@
 {
   "name": "ledger-pro-front-end",
-  "version": "0.0.1",
+  "version": "1.0.3",
   "scripts": {
     "dev:custom": "uni -p",
     "dev:h5": "uni",
@@ -34,7 +34,6 @@
     "build:quickapp-webview": "uni build -p quickapp-webview",
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
-    "build:apk": "node ../scripts/build-apk.mjs",
     "type-check": "vue-tsc --noEmit",
     "test:unit": "vitest run --config vitest.config.ts",
     "test:comp": "vitest run --config vitest.config.ts src/components/__tests__",

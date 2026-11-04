@@ -84,10 +84,13 @@ export function updateTransaction(
   const idx = transactions.value.findIndex((t) => t.id === id);
   if (idx === -1) return;
   const tx = transactions.value[idx];
-  const updated = { ...tx, ...data, updated_at: new Date().toISOString() };
-  if (updated.sync_status === "synced") {
-    updated.sync_status = "pending";
-  }
+  // 无论之前是 synced 还是 failed，只要被用户本地修改，状态一律重置为 pending 等待同步
+  const updated: LocalTransaction = {
+    ...tx,
+    ...data,
+    sync_status: "pending",
+    updated_at: new Date().toISOString(),
+  };
   transactions.value[idx] = updated;
   persist();
 }
@@ -96,9 +99,11 @@ export function deleteTransaction(id: string) {
   const idx = transactions.value.findIndex((t) => t.id === id);
   if (idx === -1) return;
   const tx = transactions.value[idx];
-  if (tx.sync_status === "pending" && !tx.server_id) {
+  // 凡是未在服务端落库的记录（无 server_id），无论是 pending 还是 failed，一律直接在本地物理删除
+  if (!tx.server_id) {
     transactions.value.splice(idx, 1);
   } else {
+    // 已在服务端落库的记录，标记为删除状态并置为 pending 等待推送到服务端进行软删除
     tx.deleted = 1;
     tx.sync_status = "pending";
     tx.updated_at = new Date().toISOString();

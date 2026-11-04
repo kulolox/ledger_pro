@@ -31,5 +31,13 @@ back_end/.mvn/wrapper/maven-wrapper.jar
 
 # android build output and local overrides
 dist-apk/
-build.config.local.json
 android/
+
+# private devops, release & build workflow (not open source)
+scripts/
+build.config*.json
+*.bat
+*.ps1
+
+# memo & guide docs
+*打包教程*.md

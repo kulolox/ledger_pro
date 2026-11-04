@@ -48,4 +48,16 @@ describe("NavBar", () => {
     expect(wrapper.find(".nav-header").exists()).toBe(true);
     expect(wrapper.find(".nav-bar").exists()).toBe(true);
   });
+
+  it("applies status bar height in non-floating mode", () => {
+    const wrapper = mountNav();
+    const navBar = wrapper.find(".nav-bar");
+    expect(navBar.attributes("style")).toContain("padding-top: calc(44px + 12rpx)");
+  });
+
+  it("applies status bar height in floating mode", () => {
+    const wrapper = mountNav({ floating: true });
+    const navHeader = wrapper.find(".nav-header");
+    expect(navHeader.attributes("style")).toContain("padding-top: calc(44px + 8rpx)");
+  });
 });

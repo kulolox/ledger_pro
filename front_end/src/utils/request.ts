@@ -64,7 +64,7 @@ class InterceptorManager<T> {
 // Token刷新锁，防止并发401重复刷新
 let refreshPromise: Promise<boolean> | null = null;
 
-const tryRefreshToken = async (): Promise<boolean> => {
+export const tryRefreshToken = async (): Promise<boolean> => {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {

@@ -142,13 +142,73 @@ describe("sync.ts unit tests", () => {
       });
     });
 
-    const pulled = await pullFromServer("100");
+    const pulled = await pullFromServer("100", "2026-07");
     expect(pulled).toBe(1);
 
     const saved = JSON.parse(storageData[STORAGE_KEY]) as LocalTransaction[];
     expect(saved.length).toBe(1);
     expect(saved[0].server_id).toBe("888");
     expect(saved[0].sync_status).toBe("synced");
+  });
+
+  it("pullFromServer: reconciles server transactions and safeguards local un-synced data from data-loss", async () => {
+    const localDeletedOrphan: LocalTransaction = {
+      id: "999",
+      server_id: "999",
+      book_id: "100",
+      type: 0,
+      amount: 500,
+      account_id: "1",
+      trans_time: "2026-07-20 10:00:00",
+      sync_status: "pending",
+      deleted: 1, // 用户主动删除了它
+      created_at: "2026-07-20T10:00:00Z",
+      updated_at: "2026-07-20T10:00:00Z",
+    };
+    const localRealData: LocalTransaction = {
+      id: "-10",
+      book_id: "100",
+      type: 0,
+      amount: 800,
+      account_id: "1",
+      trans_time: "2026-07-21 11:00:00",
+      sync_status: "pending",
+      deleted: 0, // 真实数据，绝对不能丢失
+      created_at: "2026-07-21T11:00:00Z",
+      updated_at: "2026-07-21T11:00:00Z",
+    };
+    storageData[STORAGE_KEY] = JSON.stringify([localDeletedOrphan, localRealData]);
+
+    vi.mocked(uni.request).mockImplementation(({ success }: any) => {
+      success({
+        statusCode: 200,
+        data: {
+          code: 0,
+          data: {
+            list: [
+              {
+                id: "1001",
+                book_id: "100",
+                type: 0,
+                amount: 1200,
+                account_id: "1",
+                trans_time: "2026-07-22 12:00:00",
+              },
+            ],
+          },
+        },
+      });
+    });
+
+    const count = await pullFromServer("100", "2026-07");
+    expect(count).toBe(1);
+
+    const saved = JSON.parse(storageData[STORAGE_KEY]) as LocalTransaction[];
+    // localDeletedOrphan (已删且服务端无) 应被清理；localRealData (未删真实数据) 必须安全保留为 pending 等待上报；server 1001 应被加入
+    expect(saved.find((t) => t.id === "999")).toBeUndefined();
+    expect(saved.find((t) => t.id === "-10")?.sync_status).toBe("pending");
+    expect(saved.find((t) => t.id === "1001")).toBeDefined();
+    expect(saved.length).toBe(2);
   });
 
   it("runSyncCycle: completes cycle without throwing", async () => {

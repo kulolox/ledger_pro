@@ -210,23 +210,39 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
                 }
                 UserCategory targetUc = getById(targetCategoryId);
                 if (targetUc == null || !targetUc.getUserId().equals(userId)) {
+                    // 兼容前端传入的系统预设模板分类 ID (source_id) 或通过 id 双向检索
+                    targetUc = lambdaQuery()
+                            .eq(UserCategory::getUserId, userId)
+                            .and(w -> w.eq(UserCategory::getSourceId, targetCategoryId)
+                                    .or()
+                                    .eq(UserCategory::getId, targetCategoryId))
+                            .one();
+                }
+                if (targetUc == null) {
                     throw new BizException("目标归档分类不存在或无权操作");
+                }
+                if (targetUc.getId().equals(id)) {
+                    throw new BizException("目标归档分类不能为当前分类");
                 }
                 if (!targetUc.getType().equals(uc.getType())) {
                     throw new BizException("目标归档分类与当前分类类型不一致");
                 }
+
+                Long finalTargetCatId = targetUc.getId();
+                Transaction updateEntity = new Transaction();
+                updateEntity.setCategoryId(finalTargetCatId);
+
                 transactionMapper.update(
-                        null,
+                        updateEntity,
                         new LambdaUpdateWrapper<Transaction>()
                                 .eq(Transaction::getCategoryId, id)
-                                .in(Transaction::getBookId, bookIds)
-                                .set(Transaction::getCategoryId, targetCategoryId));
+                                .in(Transaction::getBookId, bookIds));
                 evictAllTransactionCache();
                 log.info(
                         "删除分类并迁移账单 userId={} categoryId={} targetCategoryId={} txCount={}",
                         userId,
                         id,
-                        targetCategoryId,
+                        finalTargetCatId,
                         txCount);
             } else {
                 throw new BizException("该分类下有关联账单，请选择归档分类或连同账单一起删除");
@@ -281,6 +297,7 @@ public class UserCategoryServiceImpl extends ServiceImpl<UserCategoryMapper, Use
             uc.setParentId(t.getParentId());
             uc.setIsSystem(1);
             uc.setSortOrder(t.getSortOrder());
+            uc.setSourceId(t.getId());
             list.add(uc);
         }
         saveBatch(list);

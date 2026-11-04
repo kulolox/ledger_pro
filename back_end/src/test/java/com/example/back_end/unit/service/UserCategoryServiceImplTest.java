@@ -355,7 +355,7 @@ class UserCategoryServiceImplTest {
 
         service.delete(22L, 33L, false);
 
-        verify(transactionMapper).update(isNull(), any(LambdaUpdateWrapper.class));
+        verify(transactionMapper).update(any(Transaction.class), any(LambdaUpdateWrapper.class));
         verify(userCategoryMapper).deleteById(22L);
         verify(cache).clear();
     }

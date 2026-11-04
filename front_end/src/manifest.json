@@ -2,11 +2,14 @@
   "name": "LedgerPro",
   "appid": "__UNI__E03086B",
   "description": "",
-  "versionName": "1.0.2",
-  "versionCode": "102",
+  "versionName": "1.0.3",
+  "versionCode": "103",
   "transformPx": false,
   /* 5+App特有相关 */
   "app-plus": {
+    "statusbar": {
+      "immersed": true
+    },
     "screenOrientation": ["portrait-primary"],
     "compatible": {
       "ignoreVersion": true
@@ -26,6 +29,8 @@
     "distribute": {
       /* android打包配置 */
       "android": {
+        "minSdkVersion": 21,
+        "targetSdkVersion": 30,
         "permissions": [
           "<uses-permission android:name=\"android.permission.CHANGE_NETWORK_STATE\"/>",
           "<uses-permission android:name=\"android.permission.MOUNT_UNMOUNT_FILESYSTEMS\"/>",

@@ -1,6 +1,7 @@
 import { ref } from "vue";
 import { DEFAULT_CATEGORIES, type Category } from "@/constants/categories";
 import { createCategory, updateCategory, deleteCategory, reorderCategories } from "@/api/common";
+import { tryRefreshToken } from "@/utils/request";
 
 const CATEGORY_CACHE_KEY = "category_cache";
 const CATEGORY_ETAG_KEY = "category_etag";
@@ -38,54 +39,68 @@ function setEtag(etag: string) {
   uni.setStorageSync(CATEGORY_ETAG_KEY, etag);
 }
 
-function fetchFromServer(
+async function fetchFromServer(
   force?: boolean,
+  retry = false,
 ): Promise<{ data: Record<number, Category[]>; etag: string } | null> {
   const baseURL = import.meta.env?.["VITE_API_BASE_URL"] || "";
   const etag = force ? "" : getEtag();
 
-  return new Promise((resolve, reject) => {
-    const header: Record<string, string> = {};
-    const token = uni.getStorageSync("token");
-    if (token) {
-      header["Authorization"] = `Bearer ${token}`;
-    }
-    if (etag) {
-      header["If-None-Match"] = etag;
-    }
+  try {
+    return await new Promise((resolve, reject) => {
+      const header: Record<string, string> = {};
+      const token = uni.getStorageSync("token");
+      if (token) {
+        header["Authorization"] = `Bearer ${token}`;
+      }
+      if (etag) {
+        header["If-None-Match"] = etag;
+      }
 
-    uni.request({
-      url: `${baseURL}/api/v1/categories`,
-      method: "GET",
-      header,
-      success: (res) => {
-        if (res.statusCode === 304) {
-          const cache = getCache();
-          if (cache) {
-            resolve({ data: cache.categories, etag });
+      uni.request({
+        url: `${baseURL}/api/v1/categories`,
+        method: "GET",
+        header,
+        success: (res) => {
+          if (res.statusCode === 304) {
+            const cache = getCache();
+            if (cache) {
+              resolve({ data: cache.categories, etag });
+            } else {
+              resolve(null);
+            }
+            return;
+          }
+          const body = res.data as Record<string, any>;
+          if (res.statusCode >= 200 && res.statusCode < 300 && (body?.code === 0 || body?.code === 200)) {
+            const list = body.data as Category[];
+            const grouped: Record<number, Category[]> = {};
+            for (const cat of list) {
+              if (!grouped[cat.type]) grouped[cat.type] = [];
+              grouped[cat.type].push(cat);
+            }
+            const headers = res.header as Record<string, string>;
+            const newEtag = headers["ETag"] || headers["etag"] || "";
+            resolve({ data: grouped, etag: newEtag });
           } else {
-            resolve(null);
+            const err = new Error("Failed to fetch categories") as Error & { statusCode: number };
+            err.statusCode = res.statusCode;
+            reject(err);
           }
-          return;
-        }
-        const body = res.data as Record<string, any>;
-        if (res.statusCode >= 200 && res.statusCode < 300 && (body?.code === 0 || body?.code === 200)) {
-          const list = body.data as Category[];
-          const grouped: Record<number, Category[]> = {};
-          for (const cat of list) {
-            if (!grouped[cat.type]) grouped[cat.type] = [];
-            grouped[cat.type].push(cat);
-          }
-          const headers = res.header as Record<string, string>;
-          const newEtag = headers["ETag"] || headers["etag"] || "";
-          resolve({ data: grouped, etag: newEtag });
-        } else {
-          reject(new Error("Failed to fetch categories"));
-        }
-      },
-      fail: reject,
+        },
+        fail: reject,
+      });
     });
-  });
+  } catch (error: any) {
+    const is401 = error?.statusCode === 401 || error?.code === 401;
+    if (is401 && !retry) {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        return fetchFromServer(force, true);
+      }
+    }
+    throw error;
+  }
 }
 
 export function useCategories() {

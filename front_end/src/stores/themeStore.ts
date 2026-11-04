@@ -21,19 +21,70 @@ const themeMode = ref<ThemeMode>(getInitialTheme());
 const PAGE_SELECTORS =
   "uni-page-body, page, .home-page, .login-page, .auth-page, .stats-page, .category-page, .search-page, .profile-page, .import-export-page, .page";
 
-export function applyThemeToDom(mode: ThemeMode = themeMode.value) {
-  // #ifdef APP-PLUS
-  try {
-    // App 端状态栏颜色联动：深色模式文字设为白色(light)，浅色模式文字设为黑色(dark)
-    // @ts-ignore
-    if (typeof plus !== "undefined" && plus.navigator) {
+export function syncStatusBarStyle(mode: ThemeMode = themeMode.value) {
+  const isDark = mode === "dark";
+  const statusStyle = isDark ? "light" : "dark"; // 5+App: light为白字(深色背景)，dark为黑字(浅色背景)
+  const frontColor = isDark ? "#ffffff" : "#000000";
+  const navBgColor = isDark ? "#1c1c1e" : "#ffffff";
+
+  const execute = () => {
+    // #ifdef APP-PLUS
+    try {
       // @ts-ignore
-      plus.navigator.setStatusBarStyle(mode === "dark" ? "light" : "dark");
+      if (typeof plus !== "undefined") {
+        // 1. 顶部状态栏文字颜色
+        if (plus.navigator) {
+          // @ts-ignore
+          plus.navigator.setStatusBarStyle(statusStyle);
+        }
+
+        // 2. 底部虚拟导航栏颜色联动 (Android)
+        // @ts-ignore
+        if (plus.os && plus.os.name === "Android" && plus.android) {
+          // @ts-ignore
+          const Color = plus.android.importClass("android.graphics.Color") as any;
+          // @ts-ignore
+          const windowAndroid = plus.android.runtimeMainActivity().getWindow();
+          const bottomBgColor = isDark ? "#000000" : "#f2f2f7";
+          windowAndroid.setNavigationBarColor(Color.parseColor(bottomBgColor));
+
+          // 联动底部导航栏按键图标颜色 (浅色背景黑图标，深色背景白图标)
+          const decorView = windowAndroid.getDecorView();
+          let flags = decorView.getSystemUiVisibility();
+          // SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR = 16 (Android 8.0+)
+          if (!isDark) {
+            flags |= 16;
+          } else {
+            flags &= ~16;
+          }
+          decorView.setSystemUiVisibility(flags);
+        }
+      }
+    } catch {
+      // Ignore native error
     }
-  } catch {
-    // Ignore native error
-  }
-  // #endif
+    // #endif
+
+    try {
+      if (typeof uni !== "undefined" && typeof uni.setNavigationBarColor === "function") {
+        uni.setNavigationBarColor({
+          frontColor,
+          backgroundColor: navBgColor,
+        });
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  execute();
+  // 二次与三次确认，彻底防止原生页面转场动画结束后的系统默认反向覆盖
+  setTimeout(execute, 80);
+  setTimeout(execute, 260);
+}
+
+export function applyThemeToDom(mode: ThemeMode = themeMode.value) {
+  syncStatusBarStyle(mode);
 
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-theme", mode);
@@ -128,6 +179,7 @@ export function useTheme() {
     setTheme,
     toggleTheme,
     syncThemeFromStorage,
+    syncStatusBarStyle,
     isDark: () => themeMode.value === "dark",
   };
 }

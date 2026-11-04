@@ -17,6 +17,9 @@ public class UserCategory {
     /** 用户 ID（如果为 null，则可能是系统分类） */
     private Long userId;
 
+    /** 来源模板 ID（null 表示用户完全自定义） */
+    private Long sourceId;
+
     /** 分类名称 */
     private String name;
 
