@@ -409,6 +409,9 @@ export interface AppVersionInfo {
   downloadUrl: string;
   packageSize: string;
   forceUpdate: boolean;
+  lanzouUrl?: string;
+  lanzouPwd?: string;
+  githubUrl?: string;
 }
 
 export const checkAppUpdate = (

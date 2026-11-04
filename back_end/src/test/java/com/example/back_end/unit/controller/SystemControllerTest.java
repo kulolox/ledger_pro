@@ -16,10 +16,17 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 class SystemControllerTest {
 
+    private SystemController createIsolatedController() {
+        SystemController controller = new SystemController();
+        // 隔离 metaFilePath，避免读取本地真实 latest.json 干扰纯内存断言
+        ReflectionTestUtils.setField(controller, "metaFilePath", "data/apk/non-existent-test-meta.json");
+        return controller;
+    }
+
     @Test
     @DisplayName("检查更新：比最新版本低时返回 hasUpdate=true")
     void shouldReturnHasUpdateTrueWhenCurrentVersionIsLower() {
-        SystemController controller = new SystemController();
+        SystemController controller = createIsolatedController();
         ReflectionTestUtils.setField(controller, "latestVersion", "1.2.0");
         ReflectionTestUtils.setField(controller, "versionCode", 120);
         ReflectionTestUtils.setField(controller, "minVersion", "1.0.0");
@@ -42,7 +49,7 @@ class SystemControllerTest {
     @Test
     @DisplayName("检查更新：传入 currentVersionCode 比最新小，返回 hasUpdate=true")
     void shouldReturnHasUpdateTrueWhenVersionCodeIsLower() {
-        SystemController controller = new SystemController();
+        SystemController controller = createIsolatedController();
         ReflectionTestUtils.setField(controller, "latestVersion", "1.0.1");
         ReflectionTestUtils.setField(controller, "versionCode", 101);
 
@@ -55,7 +62,7 @@ class SystemControllerTest {
     @Test
     @DisplayName("检查更新：传入 currentVersionCode 与最新一致，返回 hasUpdate=false")
     void shouldReturnHasUpdateFalseWhenVersionCodeMatches() {
-        SystemController controller = new SystemController();
+        SystemController controller = createIsolatedController();
         ReflectionTestUtils.setField(controller, "latestVersion", "1.0.1");
         ReflectionTestUtils.setField(controller, "versionCode", 101);
 
@@ -66,11 +73,9 @@ class SystemControllerTest {
     }
 
     @Test
-    @DisplayName("检查更新：优先读取 data/apk/latest.json 发布的最新元数据")
+    @DisplayName("检查更新：优先读取 latest.json 发布的最新元数据及蓝奏云与 GitHub 外部链接")
     void shouldPrioritizeLatestJsonMetadata() throws Exception {
-        Path metaDir = Path.of("data", "apk");
-        Files.createDirectories(metaDir);
-        Path metaFile = metaDir.resolve("latest.json");
+        Path tempMetaFile = Files.createTempFile("test-meta-", ".json");
 
         String jsonContent =
                 """
@@ -78,14 +83,16 @@ class SystemControllerTest {
                   "version": "1.0.5",
                   "versionCode": 105,
                   "packageSize": "35.0 MB",
-                  "changelog": "1. Git 提交自动提取日志",
-                  "downloadUrl": "/api/v1/system/version/download"
+                  "changelog": "1. Git 提交自动提取日志\\n【蓝奏云提取码: eond】",
+                  "downloadUrl": "/api/v1/system/version/download",
+                  "lanzouUrl": "https://wwaog.lanzouq.com/ieg8b4ep449g"
                 }
                 """;
-        Files.writeString(metaFile, jsonContent);
+        Files.writeString(tempMetaFile, jsonContent);
 
         try {
             SystemController controller = new SystemController();
+            ReflectionTestUtils.setField(controller, "metaFilePath", tempMetaFile.toString());
             ReflectionTestUtils.setField(controller, "latestVersion", "1.0.0");
             ReflectionTestUtils.setField(controller, "versionCode", 100);
 
@@ -97,17 +104,20 @@ class SystemControllerTest {
             assertTrue(data.hasUpdate());
             assertEquals("1.0.5", data.latestVersion());
             assertEquals(105, data.versionCode());
-            assertEquals("1. Git 提交自动提取日志", data.changelog());
+            assertTrue(data.changelog().contains("【蓝奏云提取码: eond】"));
+            assertEquals("https://wwaog.lanzouq.com/ieg8b4ep449g", data.lanzouUrl());
+            assertEquals("eond", data.lanzouPwd());
+            assertNotNull(data.githubUrl());
+            assertTrue(data.githubUrl().contains("v1.0.5"));
         } finally {
-            // 清理临时测试元数据文件
-            Files.deleteIfExists(metaFile);
+            Files.deleteIfExists(tempMetaFile);
         }
     }
 
     @Test
     @DisplayName("下载 APK：配置了外部绝对 URL 时返回 302 重定向")
     void shouldRedirectWhenExternalUrlProvided() {
-        SystemController controller = new SystemController();
+        SystemController controller = createIsolatedController();
         ReflectionTestUtils.setField(controller, "downloadUrl", "https://example.com/app.apk");
 
         ResponseEntity<?> response = controller.downloadApk();
@@ -122,7 +132,7 @@ class SystemControllerTest {
     @Test
     @DisplayName("下载 APK：本地无 apk 文件且为默认相对路径时返回 404")
     void shouldReturnNotFoundWhenNoApkPresent() {
-        SystemController controller = new SystemController();
+        SystemController controller = createIsolatedController();
         ReflectionTestUtils.setField(controller, "downloadUrl", "/api/v1/system/version/download");
 
         ResponseEntity<?> response = controller.downloadApk();

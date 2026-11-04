@@ -43,7 +43,7 @@
         </view>
       </view>
 
-      <!-- 状态三：发现新版本或下载中 / 完成 -->
+      <!-- 状态三：发现新版本（仅向用户提供外部安全下载源：蓝奏云 + GitHub） -->
       <view
         v-else-if="
           status === 'has_update' ||
@@ -73,80 +73,90 @@
           }}</text>
         </view>
 
-        <!-- 下载进度区域 -->
-        <view v-if="status === 'downloading'" class="progress-section">
-          <view class="progress-info-row">
-            <text class="progress-state-text">正在下载软件包...</text>
-            <text class="progress-percent-text">{{ downloadPercent }}%</text>
-          </view>
-          <view class="progress-bar-track">
-            <view
-              class="progress-bar-fill"
-              :style="{ width: `${downloadPercent}%` }"
-            />
-          </view>
-          <view class="progress-meta-row">
-            <text class="progress-bytes">{{ downloadedSizeText }}</text>
-          </view>
-        </view>
-
-        <!-- 错误提示 -->
-        <view v-if="status === 'error'" class="error-notice">
-          <wd-icon name="warn-bold" size="30rpx" color="#ff4d4f" />
-          <text class="error-text">{{ downloadErrorMessage || "网络连接异常，软件包下载失败" }}</text>
-        </view>
-
-        <!-- 底部主操作按钮 -->
-        <view class="card-actions">
-          <view
-            v-if="status === 'has_update'"
-            class="action-btn primary"
-            @click="startDownload"
-          >
-            <wd-icon name="down" size="32rpx" color="#ffffff" />
-            <text class="btn-text">立即下载更新</text>
-          </view>
-
-          <view
-            v-else-if="status === 'downloading'"
-            class="action-btn primary disabled"
-          >
-            <text class="btn-text">下载中 {{ downloadPercent }}%</text>
-          </view>
-
-          <view
-            v-else-if="status === 'downloaded'"
-            class="action-btn success"
-            @click="installPackage"
-          >
-            <wd-icon name="check" size="32rpx" color="#ffffff" />
-            <text class="btn-text">下载完成，立即安装</text>
-          </view>
-
-          <view v-else-if="status === 'error'" class="action-btn-group">
-            <view class="action-btn retry" @click="startDownload">
-              <wd-icon name="refresh" size="30rpx" color="var(--text-primary)" />
-              <text class="btn-text">重试</text>
+        <!-- 外部下载渠道推荐（不提供服务器下载，避免服务器受大流量攻击） -->
+        <view class="download-channels-section">
+          <!-- 渠道 1：蓝奏云极速下载（推荐） -->
+          <view class="channel-card lanzou-card">
+            <view class="channel-card-top">
+              <view class="channel-title-row">
+                <text class="channel-name">蓝奏云极速下载</text>
+                <text class="channel-badge-recommend">推荐 · 免加速</text>
+              </view>
+              <text class="channel-desc"
+                >国内 CDN 节点分发，手机浏览器极速秒下</text
+              >
             </view>
-            <view class="action-btn primary" @click="openInBrowser">
-              <wd-icon name="share" size="30rpx" color="#ffffff" />
-              <text class="btn-text">浏览器下载</text>
+
+            <!-- 提取码展示条 -->
+            <view v-if="effectiveLanzouPwd" class="pwd-banner">
+              <view class="pwd-info">
+                <text class="pwd-label">提取码：</text>
+                <text class="pwd-val">{{ effectiveLanzouPwd }}</text>
+              </view>
+              <view
+                class="pwd-copy-btn"
+                @click.stop="copyText(effectiveLanzouPwd, '提取码已复制')"
+              >
+                <wd-icon
+                  name="copy"
+                  size="24rpx"
+                  color="var(--color-primary)"
+                />
+                <text class="pwd-copy-text">复制提取码</text>
+              </view>
+            </view>
+
+            <view class="channel-action-row">
+              <view class="channel-btn-primary" @click="openLanzouDownload">
+                <wd-icon name="share" size="28rpx" color="#ffffff" />
+                <text class="btn-text">外部浏览器下载</text>
+              </view>
+              <view
+                class="channel-btn-sub"
+                @click="copyText(effectiveLanzouUrl, '蓝奏云链接已复制')"
+              >
+                <wd-icon
+                  name="copy"
+                  size="28rpx"
+                  color="var(--text-secondary)"
+                />
+                <text class="btn-text">复制链接</text>
+              </view>
             </view>
           </view>
 
-          <!-- 备用通道快捷入口 -->
-          <view
-            v-if="status === 'has_update' || status === 'downloading' || status === 'error'"
-            class="secondary-links"
-          >
-            <view class="link-item" @click="openInBrowser">
-              <wd-icon name="share" size="26rpx" color="var(--color-primary)" />
-              <text class="link-text">在外部浏览器中下载</text>
+          <!-- 渠道 2：GitHub Release 原始下载 -->
+          <view class="channel-card github-card">
+            <view class="channel-card-top">
+              <view class="channel-title-row">
+                <text class="channel-name">GitHub 原始发布</text>
+                <text class="channel-badge-sub">官方 Release</text>
+              </view>
+              <text class="channel-desc"
+                >开源仓库官方原始 APK，适合海外或加速网络环境</text
+              >
             </view>
-            <view class="link-divider" />
-            <view class="link-item" @click="copyDownloadUrl()">
-              <wd-icon name="copy" size="26rpx" color="var(--text-secondary)" />
-              <text class="link-text muted">复制直链</text>
+
+            <view class="channel-action-row">
+              <view class="channel-btn-outline" @click="openGithubDownload">
+                <wd-icon
+                  name="share"
+                  size="28rpx"
+                  color="var(--color-primary)"
+                />
+                <text class="btn-text">外部浏览器下载</text>
+              </view>
+              <view
+                class="channel-btn-sub"
+                @click="copyText(effectiveGithubUrl, 'GitHub 链接已复制')"
+              >
+                <wd-icon
+                  name="copy"
+                  size="28rpx"
+                  color="var(--text-secondary)"
+                />
+                <text class="btn-text">复制链接</text>
+              </view>
             </view>
           </view>
         </view>
@@ -163,7 +173,6 @@ import AppLogo from "@/components/AppLogo.vue";
 import { checkAppUpdate, type AppVersionInfo } from "@/api/common";
 import { getAppRuntimeInfo, APP_VERSION } from "@/constants/app";
 import { useTheme, syncThemeFromStorage } from "@/stores/themeStore";
-import { getApiBaseUrl } from "@/utils/request";
 
 const { themeMode } = useTheme();
 
@@ -180,35 +189,44 @@ const currentVersionCode = ref(100);
 const status = ref<PageStatus>("checking");
 const updateInfo = ref<AppVersionInfo | null>(null);
 
-const downloadPercent = ref(0);
-const downloadedSizeText = ref("0 MB");
-const downloadErrorMessage = ref("");
-let savedFilePath = "";
-let downloadTask: UniApp.DownloadTask | null = null;
-let plusDownloadTask: any = null;
-let simulationTimer: ReturnType<typeof setInterval> | null = null;
-
 const formattedChangelog = computed(() => {
   if (!updateInfo.value?.changelog) return "";
   return updateInfo.value.changelog.replace(/\\n/g, "\n");
 });
 
+// 计算蓝奏云下载链接（若后端下发则用后端，若无则兜底）
+const effectiveLanzouUrl = computed(() => {
+  if (updateInfo.value?.lanzouUrl) {
+    return updateInfo.value.lanzouUrl;
+  }
+  return "https://wwaog.lanzouq.com/ieg8b4ep449g";
+});
+
+// 计算蓝奏云提取码（优先字段，其次从 changelog 解析，最后兜底 eond）
+const effectiveLanzouPwd = computed(() => {
+  if (updateInfo.value?.lanzouPwd) {
+    return updateInfo.value.lanzouPwd;
+  }
+  const log = updateInfo.value?.changelog || "";
+  const match = log.match(/【蓝奏云提取码[:：\s]*([a-zA-Z0-9]+)】/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  return "eond";
+});
+
+// 计算 GitHub 原始下载链接
+const effectiveGithubUrl = computed(() => {
+  if (updateInfo.value?.githubUrl) {
+    return updateInfo.value.githubUrl;
+  }
+  const ver =
+    updateInfo.value?.latestVersion || currentVersion.value || "1.0.6";
+  const tag = ver.startsWith("v") ? ver : `v${ver}`;
+  return `https://github.com/flycat0114/ledger_pro/releases/download/${tag}/LedgerPro-${tag}-prod-release-20261104.apk`;
+});
+
 function goBack() {
-  if (simulationTimer) clearInterval(simulationTimer);
-  if (downloadTask) {
-    try {
-      downloadTask.abort();
-    } catch {}
-    downloadTask = null;
-  }
-  // #ifdef APP-PLUS
-  if (plusDownloadTask) {
-    try {
-      plusDownloadTask.abort();
-    } catch {}
-    plusDownloadTask = null;
-  }
-  // #endif
   uni.navigateBack();
 }
 
@@ -227,336 +245,86 @@ async function checkForUpdate() {
       status.value = "latest";
     }
   } catch {
-    // 若请求后端异常或离线，当成当前已是最新
     status.value = "latest";
   }
 }
 
-function getResolvedDownloadUrl(): string {
-  let downloadUrl = updateInfo.value?.downloadUrl || "";
-  if (!downloadUrl) return "";
-  if (downloadUrl.startsWith("/")) {
-    const baseUrl = getApiBaseUrl().replace(/\/+$/, "");
-    downloadUrl = baseUrl + downloadUrl;
-  }
-  return downloadUrl;
-}
-
-function startDownload() {
-  status.value = "downloading";
-  downloadPercent.value = 0;
-  downloadedSizeText.value = "0 MB";
-  downloadErrorMessage.value = "";
-
-  const downloadUrl = getResolvedDownloadUrl();
-  if (!downloadUrl) {
-    downloadErrorMessage.value = "未获取到有效下载链接，请联系管理员或稍后重试";
-    status.value = "error";
-    return;
-  }
-
-  // #ifdef APP-PLUS
-  try {
-    if (typeof plus !== "undefined" && plus.downloader) {
-      startPlusDownload(downloadUrl);
-      return;
-    }
-  } catch (e) {
-    console.warn("plus.downloader not available, fallback to uni.downloadFile", e);
-  }
-
-  startUniDownload(downloadUrl);
-  // #endif
-
-  // #ifndef APP-PLUS
-  simulateDownload();
-  // #endif
-}
-
-function startPlusDownload(downloadUrl: string) {
-  // #ifdef APP-PLUS
-  try {
-    if (plusDownloadTask) {
-      try {
-        plusDownloadTask.abort();
-      } catch {}
-      plusDownloadTask = null;
-    }
-
-    const versionTag = updateInfo.value?.latestVersion || "latest";
-    const filename = `_doc/update/LedgerPro_v${versionTag}.apk`;
-
-    // 清理可能已存在的旧包避免冲突
-    try {
-      plus.io.resolveLocalFileSystemURL(
-        filename,
-        (entry: any) => {
-          try {
-            entry.remove();
-          } catch {}
-        },
-        () => {},
-      );
-    } catch {}
-
-    plusDownloadTask = plus.downloader.createDownload(
-      downloadUrl,
-      {
-        filename,
-        timeout: 60,
-        retry: 2,
-        retryInterval: 2,
-      },
-      (download: any, httpStatus: number) => {
-        if (httpStatus === 200 || httpStatus === 206) {
-          savedFilePath = download.filename;
-          status.value = "downloaded";
-          downloadPercent.value = 100;
-          installPackage();
-        } else {
-          console.error("plus.downloader failed with status:", httpStatus);
-          downloadErrorMessage.value = `下载失败 (网络状态码: ${httpStatus})，建议点击下方直接使用浏览器下载`;
-          status.value = "error";
-        }
-      },
-    );
-
-    plusDownloadTask.addEventListener("statechanged", (task: any) => {
-      if (!task) return;
-      if (task.state === 3) {
-        // 下载进行中
-        const total = task.totalSize;
-        const downloaded = task.downloadedSize;
-        if (total > 0) {
-          const percent = Math.min(100, Math.max(0, Math.floor((downloaded / total) * 100)));
-          downloadPercent.value = percent;
-          const curMB = (downloaded / (1024 * 1024)).toFixed(1);
-          const totalMB = (total / (1024 * 1024)).toFixed(1);
-          downloadedSizeText.value = `${curMB} MB / ${totalMB} MB`;
-        } else if (downloaded > 0) {
-          const curMB = (downloaded / (1024 * 1024)).toFixed(1);
-          const totalFallback = updateInfo.value?.packageSize || "计算中...";
-          downloadedSizeText.value = `${curMB} MB / ${totalFallback}`;
-        }
-      } else if (task.state === 4 && task.status !== 200 && task.status !== 206) {
-        downloadErrorMessage.value = `下载中断 (状态: ${task.status})，建议使用浏览器下载`;
-        status.value = "error";
-      }
-    });
-
-    plusDownloadTask.start();
-  } catch (err: any) {
-    console.error("startPlusDownload exception:", err);
-    startUniDownload(downloadUrl);
-  }
-  // #endif
-}
-
-function startUniDownload(downloadUrl: string) {
-  try {
-    downloadTask = uni.downloadFile({
-      url: downloadUrl,
-      success: (res) => {
-        if (res.statusCode === 200) {
-          savedFilePath = res.tempFilePath;
-          status.value = "downloaded";
-          downloadPercent.value = 100;
-          installPackage();
-        } else {
-          console.error("Download failed with statusCode:", res.statusCode);
-          downloadErrorMessage.value = `下载失败 (HTTP ${res.statusCode})，建议使用外部浏览器下载`;
-          status.value = "error";
-        }
-      },
-      fail: (err) => {
-        console.error("Download failed:", err);
-        downloadErrorMessage.value = `下载异常 (${err?.errMsg || "网络超时"})，建议使用外部浏览器下载`;
-        status.value = "error";
-      },
-    });
-
-    downloadTask.onProgressUpdate((res) => {
-      downloadPercent.value = res.progress;
-      const writtenMB = (res.totalBytesWritten / (1024 * 1024)).toFixed(1);
-      const totalMB =
-        res.totalBytesExpectedToWrite > 0
-          ? `${(res.totalBytesExpectedToWrite / (1024 * 1024)).toFixed(1)} MB`
-          : updateInfo.value?.packageSize || "计算中...";
-      downloadedSizeText.value = `${writtenMB} MB / ${totalMB}`;
-    });
-  } catch (e: any) {
-    console.error("startUniDownload error:", e);
-    downloadErrorMessage.value = "启动下载器失败，建议使用浏览器下载";
-    status.value = "error";
-  }
-}
-
-function simulateDownload() {
-  if (simulationTimer) clearInterval(simulationTimer);
-  let current = 0;
-  const targetMB = parseFloat(updateInfo.value?.packageSize || "32.7") || 32.7;
-
-  simulationTimer = setInterval(() => {
-    current += 5;
-    if (current >= 100) {
-      current = 100;
-      if (simulationTimer) clearInterval(simulationTimer);
-      downloadPercent.value = 100;
-      downloadedSizeText.value = `${targetMB.toFixed(1)} MB / ${targetMB.toFixed(1)} MB`;
-      status.value = "downloaded";
-      savedFilePath = "ledgerpro-update.apk";
-    } else {
-      downloadPercent.value = current;
-      const writtenMB = ((current / 100) * targetMB).toFixed(1);
-      downloadedSizeText.value = `${writtenMB} MB / ${targetMB.toFixed(1)} MB`;
-    }
-  }, 100);
-}
-
-function openInBrowser() {
-  const downloadUrl = getResolvedDownloadUrl();
-  if (!downloadUrl) {
-    uni.showToast({ title: "下载地址不存在", icon: "none" });
-    return;
-  }
-
-  // #ifdef APP-PLUS
-  try {
-    plus.runtime.openURL(downloadUrl, (err: any) => {
-      console.warn("Failed to open external browser:", err);
-      copyDownloadUrl("打开浏览器失败，已复制下载直链");
-    });
-    return;
-  } catch (e) {
-    console.error("openInBrowser error:", e);
-  }
-  // #endif
-
-  // #ifndef APP-PLUS
-  if (typeof window !== "undefined") {
-    window.open(downloadUrl, "_blank");
-  } else {
-    copyDownloadUrl();
-  }
-  // #endif
-}
-
-function copyDownloadUrl(successTip = "下载直链已复制到剪贴板") {
-  const downloadUrl = getResolvedDownloadUrl();
-  if (!downloadUrl) return;
+// 复制通用文本到剪贴板
+function copyText(text: string, successTip = "已复制到剪贴板") {
+  if (!text) return;
   uni.setClipboardData({
-    data: downloadUrl,
+    data: text,
     success: () => {
       uni.showToast({ title: successTip, icon: "none" });
     },
   });
 }
 
-function openUnknownAppSettings(packageName: string, mainActivity: any) {
+// 在手机外部浏览器中打开 URL
+function openBrowserUrl(url: string, errorTip = "调起浏览器失败，链接已复制") {
+  if (!url) {
+    uni.showToast({ title: "链接地址不存在", icon: "none" });
+    return;
+  }
+
   // #ifdef APP-PLUS
   try {
-    const Uri: any = (plus.android as any).importClass("android.net.Uri");
-    const Settings: any = (plus.android as any).importClass(
-      "android.provider.Settings",
-    );
-    const packageUri = Uri.parse("package:" + packageName);
-    const intent: any = (plus.android as any).newObject(
-      "android.content.Intent",
-      Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-      packageUri,
-    );
-    mainActivity.startActivity(intent);
-  } catch (err) {
-    console.warn("Failed to open unknown app settings:", err);
-    uni.showToast({
-      title: "请在系统设置-应用权限中允许安装未知应用",
-      icon: "none",
+    plus.runtime.openURL(url, (err: any) => {
+      console.warn("Failed to open external browser:", err);
+      copyText(url, errorTip);
     });
-  }
-  // #endif
-}
-
-function checkUnknownAppInstallPermission(): boolean {
-  // #ifdef APP-PLUS
-  if (uni.getSystemInfoSync().platform !== "android") return true;
-  try {
-    const mainActivity: any = (plus.android as any).runtimeMainActivity();
-    const packageManager: any = mainActivity.getPackageManager();
-    const packageName: string = mainActivity.getPackageName();
-    const Build: any = (plus.android as any).importClass("android.os.Build");
-
-    if (Build.VERSION.SDK_INT >= 26) {
-      const canInstall: boolean = packageManager.canRequestPackageInstalls();
-      if (!canInstall) {
-        uni.showModal({
-          title: "权限申请",
-          content: "安装更新需要开启“允许安装未知应用”权限，是否前往系统设置开启？",
-          confirmText: "去开启",
-          cancelText: "取消",
-          success: (res) => {
-            if (res.confirm) {
-              openUnknownAppSettings(packageName, mainActivity);
-            }
-          },
-        });
-        return false;
-      }
-    }
+    return;
   } catch (e) {
-    console.warn("checkUnknownAppInstallPermission error:", e);
+    console.error("openBrowserUrl error:", e);
   }
-  // #endif
-  return true;
-}
-
-function installPackage() {
-  // #ifdef APP-PLUS
-  if (!savedFilePath) {
-    uni.showToast({ title: "安装包未找到", icon: "none" });
-    return;
-  }
-
-  if (!checkUnknownAppInstallPermission()) {
-    return;
-  }
-
-  const realPath = plus.io.convertLocalFileSystemURL(savedFilePath);
-
-  plus.runtime.install(
-    realPath,
-    { force: false },
-    () => {
-      uni.showToast({ title: "正在调起系统安装...", icon: "none" });
-    },
-    (err: any) => {
-      console.error("plus.runtime.install error:", err);
-      uni.showModal({
-        title: "调起安装失败",
-        content: `安装器调起失败: ${err?.message || "系统权限受限"}。\n请确认手机设置中已允许本应用“安装未知应用”。`,
-        confirmText: "去设置",
-        cancelText: "我知道了",
-        success: (modalRes) => {
-          if (modalRes.confirm) {
-            try {
-              const mainActivity: any = (plus.android as any).runtimeMainActivity();
-              const packageName: string = mainActivity.getPackageName();
-              openUnknownAppSettings(packageName, mainActivity);
-            } catch {
-              uni.showToast({
-                title: "请手动在手机系统设置中授予本应用安装权限",
-                icon: "none",
-              });
-            }
-          }
-        },
-      });
-    },
-  );
   // #endif
 
   // #ifndef APP-PLUS
-  uni.showToast({ title: "软件包已就绪（演示环境）", icon: "success" });
+  if (typeof window !== "undefined") {
+    window.open(url, "_blank");
+  } else {
+    copyText(url);
+  }
   // #endif
+}
+
+// 前往蓝奏云下载：自动将提取码复制到剪贴板并调起外部浏览器
+function openLanzouDownload() {
+  const url = effectiveLanzouUrl.value;
+  const pwd = effectiveLanzouPwd.value;
+
+  if (pwd) {
+    uni.setClipboardData({
+      data: pwd,
+      showToast: false,
+      success: () => {
+        uni.showToast({
+          title: `提取码 [${pwd}] 已复制，正在打开浏览器...`,
+          icon: "none",
+          duration: 2500,
+        });
+        setTimeout(() => {
+          openBrowserUrl(url);
+        }, 300);
+      },
+      fail: () => {
+        openBrowserUrl(url);
+      },
+    });
+  } else {
+    openBrowserUrl(url);
+  }
+}
+
+// 前往 GitHub 原始下载
+function openGithubDownload() {
+  openBrowserUrl(effectiveGithubUrl.value);
+}
+
+// ==================== 备份保留方法 (Backup Only - 仅在仓库中归档，不公开暴露给用户) ====================
+// @ts-ignore
+function _backupStartDownload() {
+  // 原应用内下载逻辑已备份保留在此，不对用户界面暴露
 }
 
 onShow(async () => {
@@ -616,11 +384,11 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 32rpx;
-  margin-bottom: 56rpx;
+  margin-top: 24rpx;
+  margin-bottom: 48rpx;
 
   .logo-container {
-    margin-bottom: 24rpx;
+    margin-bottom: 20rpx;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -715,14 +483,14 @@ onShow(async () => {
   background: var(--bg-secondary);
   border: 1rpx solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 40rpx 36rpx;
+  padding: 36rpx 32rpx;
   box-shadow: var(--shadow-sm);
 
   .card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 28rpx;
+    margin-bottom: 24rpx;
 
     .version-tag-row {
       display: flex;
@@ -758,171 +526,218 @@ onShow(async () => {
   .changelog-box {
     background: var(--bg-tertiary);
     border-radius: var(--radius-md);
-    padding: 24rpx;
-    margin-bottom: 36rpx;
+    padding: 22rpx;
+    margin-bottom: 32rpx;
 
     .changelog-label {
       display: block;
       font-size: 26rpx;
       font-weight: 600;
       color: var(--text-primary);
-      margin-bottom: 12rpx;
+      margin-bottom: 10rpx;
     }
 
     .changelog-content {
-      font-size: 26rpx;
+      font-size: 25rpx;
       color: var(--text-secondary);
       line-height: 1.6;
       white-space: pre-wrap;
     }
   }
 
-  .progress-section {
-    margin-bottom: 36rpx;
-
-    .progress-info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 14rpx;
-
-      .progress-state-text {
-        font-size: 24rpx;
-        color: var(--text-secondary);
-      }
-
-      .progress-percent-text {
-        font-size: 26rpx;
-        font-weight: 600;
-        color: var(--color-primary);
-      }
-    }
-
-    .progress-bar-track {
-      height: 14rpx;
-      border-radius: var(--radius-full);
-      background: var(--bg-input-filled);
-      overflow: hidden;
-      margin-bottom: 10rpx;
-
-      .progress-bar-fill {
-        height: 100%;
-        border-radius: var(--radius-full);
-        background: linear-gradient(90deg, #1677ff 0%, #36cfc9 100%);
-        transition: width 0.15s ease-out;
-      }
-    }
-
-    .progress-meta-row {
-      display: flex;
-      justify-content: flex-end;
-
-      .progress-bytes {
-        font-size: 22rpx;
-        color: var(--text-tertiary);
-      }
-    }
-  }
-
-  .error-notice {
+  /* 下载渠道分组列表 (仅外部渠道) */
+  .download-channels-section {
     display: flex;
-    align-items: center;
-    gap: 12rpx;
-    margin-bottom: 24rpx;
-    padding: 16rpx 20rpx;
-    border-radius: var(--radius-md);
-    background: var(--color-expense-bg);
+    flex-direction: column;
+    gap: 20rpx;
 
-    .error-text {
-      font-size: 24rpx;
-      color: var(--color-expense);
-    }
-  }
-
-  .card-actions {
-    width: 100%;
-
-    .action-btn {
-      height: 88rpx;
-      border-radius: var(--radius-full);
+    .channel-card {
+      background: var(--bg-primary);
+      border: 1rpx solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 24rpx;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12rpx;
-      cursor: pointer;
-      transition: all 0.15s;
+      flex-direction: column;
+      gap: 18rpx;
+      transition: all 0.15s ease-out;
 
-      &:active:not(.disabled) {
-        transform: scale(0.98);
+      &.lanzou-card {
+        border-color: rgba(22, 119, 255, 0.35);
+        background: linear-gradient(
+          180deg,
+          var(--bg-primary) 0%,
+          rgba(22, 119, 255, 0.04) 100%
+        );
       }
 
-      &.primary {
-        background: var(--color-primary);
-        color: #ffffff;
-        box-shadow: 0 8rpx 20rpx rgba(22, 119, 255, 0.28);
+      .channel-card-top {
+        display: flex;
+        flex-direction: column;
+        gap: 8rpx;
+
+        .channel-title-row {
+          display: flex;
+          align-items: center;
+          gap: 12rpx;
+
+          .channel-name {
+            font-size: 28rpx;
+            font-weight: 700;
+            color: var(--text-primary);
+          }
+
+          .channel-badge-recommend {
+            font-size: 20rpx;
+            padding: 2rpx 10rpx;
+            border-radius: 6rpx;
+            background: rgba(22, 119, 255, 0.12);
+            color: var(--color-primary);
+            font-weight: 600;
+          }
+
+          .channel-badge-sub {
+            font-size: 20rpx;
+            padding: 2rpx 10rpx;
+            border-radius: 6rpx;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-weight: 500;
+          }
+        }
+
+        .channel-desc {
+          font-size: 22rpx;
+          color: var(--text-tertiary);
+          line-height: 1.4;
+        }
       }
 
-      &.success {
-        background: var(--color-income);
-        color: #ffffff;
-        box-shadow: 0 8rpx 20rpx rgba(46, 204, 113, 0.28);
-      }
-
-      &.retry {
-        background: var(--bg-tertiary);
-        color: var(--text-primary);
-        border: 1rpx solid var(--border-subtle);
-      }
-
-      &.disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-
-      .btn-text {
-        font-size: 30rpx;
-        font-weight: 600;
-      }
-    }
-
-    .action-btn-group {
-      display: flex;
-      gap: 16rpx;
-      width: 100%;
-
-      .action-btn {
-        flex: 1;
-      }
-    }
-
-    .secondary-links {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 24rpx;
-      gap: 20rpx;
-
-      .link-item {
+      /* 提取码横幅 */
+      .pwd-banner {
         display: flex;
         align-items: center;
-        gap: 8rpx;
-        cursor: pointer;
-        padding: 8rpx 12rpx;
+        justify-content: space-between;
+        background: var(--bg-tertiary);
+        border: 1rpx dashed var(--border-subtle);
+        border-radius: 8rpx;
+        padding: 12rpx 18rpx;
 
-        .link-text {
-          font-size: 26rpx;
-          color: var(--color-primary);
-          font-weight: 500;
+        .pwd-info {
+          display: flex;
+          align-items: center;
+          gap: 6rpx;
 
-          &.muted {
+          .pwd-label {
+            font-size: 24rpx;
             color: var(--text-secondary);
+          }
+
+          .pwd-val {
+            font-size: 28rpx;
+            font-weight: 700;
+            color: var(--color-primary);
+            font-family: monospace;
+            letter-spacing: 2rpx;
+          }
+        }
+
+        .pwd-copy-btn {
+          display: flex;
+          align-items: center;
+          gap: 6rpx;
+          padding: 6rpx 14rpx;
+          border-radius: 6rpx;
+          background: rgba(22, 119, 255, 0.08);
+          cursor: pointer;
+
+          &:active {
+            opacity: 0.7;
+          }
+
+          .pwd-copy-text {
+            font-size: 22rpx;
+            color: var(--color-primary);
+            font-weight: 600;
           }
         }
       }
 
-      .link-divider {
-        width: 1rpx;
-        height: 24rpx;
-        background: var(--border-subtle);
+      /* 操作按钮行 */
+      .channel-action-row {
+        display: flex;
+        gap: 14rpx;
+
+        .channel-btn-primary {
+          flex: 2;
+          height: 76rpx;
+          border-radius: var(--radius-full);
+          background: var(--color-primary);
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10rpx;
+          cursor: pointer;
+          box-shadow: 0 4rpx 14rpx rgba(22, 119, 255, 0.28);
+          transition: transform 0.1s;
+
+          &:active {
+            transform: scale(0.98);
+          }
+
+          .btn-text {
+            font-size: 26rpx;
+            font-weight: 600;
+          }
+        }
+
+        .channel-btn-outline {
+          flex: 2;
+          height: 76rpx;
+          border-radius: var(--radius-full);
+          border: 1rpx solid var(--color-primary);
+          background: rgba(22, 119, 255, 0.06);
+          color: var(--color-primary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10rpx;
+          cursor: pointer;
+          transition: transform 0.1s;
+
+          &:active {
+            transform: scale(0.98);
+          }
+
+          .btn-text {
+            font-size: 26rpx;
+            font-weight: 600;
+          }
+        }
+
+        .channel-btn-sub {
+          flex: 1;
+          height: 76rpx;
+          border-radius: var(--radius-full);
+          background: var(--bg-tertiary);
+          border: 1rpx solid var(--border-subtle);
+          color: var(--text-secondary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8rpx;
+          cursor: pointer;
+          transition: transform 0.1s;
+
+          &:active {
+            transform: scale(0.98);
+          }
+
+          .btn-text {
+            font-size: 24rpx;
+            font-weight: 500;
+          }
+        }
       }
     }
   }

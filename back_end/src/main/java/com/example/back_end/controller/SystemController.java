@@ -11,6 +11,8 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -28,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/system")
 public class SystemController {
 
+    private static final Pattern LANZOU_PWD_PATTERN = Pattern.compile("【蓝奏云提取码[:：\\s]*([a-zA-Z0-9]+)】");
+
     @Autowired(required = false)
     private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -43,7 +47,7 @@ public class SystemController {
     @Value("${app.update.changelog:1. 优化分类拖拽排序与交互体验\\n2. 新增检查更新与软件包下载功能\\n3. 修复已知异常，提升系统性能}")
     private String changelog;
 
-    @Value("${app.update.download-url:/api/v1/system/version/download}")
+    @Value("${app.update.download-url:}")
     private String downloadUrl;
 
     @Value("${app.update.package-size:}")
@@ -51,6 +55,18 @@ public class SystemController {
 
     @Value("${app.update.force-update:false}")
     private boolean forceUpdate;
+
+    @Value("${app.update.lanzou-url:}")
+    private String lanzouUrl;
+
+    @Value("${app.update.lanzou-pwd:}")
+    private String lanzouPwd;
+
+    @Value("${app.update.github-url:}")
+    private String githubUrl;
+
+    @Value("${app.update.meta-file:data/apk/latest.json}")
+    private String metaFilePath = "data/apk/latest.json";
 
     @GetMapping("/version/check")
     public Result<AppVersionResponse> checkVersion(
@@ -84,11 +100,27 @@ public class SystemController {
                 ? meta.downloadUrl()
                 : downloadUrl;
 
-        // 若配置文件显式指定了外部 HTTP(S) CDN 地址，保留最高优先级
-        if (downloadUrl != null
-                && (downloadUrl.startsWith("http://") || downloadUrl.startsWith("https://"))
-                && !downloadUrl.contains("/system/version/download")) {
-            effectiveDownloadUrl = downloadUrl;
+        String effectiveLanzouUrl =
+                (meta != null && meta.lanzouUrl() != null && !meta.lanzouUrl().isBlank())
+                        ? meta.lanzouUrl()
+                        : lanzouUrl;
+
+        String effectiveLanzouPwd =
+                (meta != null && meta.lanzouPwd() != null && !meta.lanzouPwd().isBlank())
+                        ? meta.lanzouPwd()
+                        : lanzouPwd;
+
+        String effectiveGithubUrl =
+                (meta != null && meta.githubUrl() != null && !meta.githubUrl().isBlank())
+                        ? meta.githubUrl()
+                        : githubUrl;
+
+        // 若 changelog 中包含提取码但 effectiveLanzouPwd 为空，自动解析兜底
+        if ((effectiveLanzouPwd == null || effectiveLanzouPwd.isBlank()) && effectiveChangelog != null) {
+            Matcher m = LANZOU_PWD_PATTERN.matcher(effectiveChangelog);
+            if (m.find()) {
+                effectiveLanzouPwd = m.group(1);
+            }
         }
 
         boolean hasUpdate;
@@ -106,19 +138,26 @@ public class SystemController {
             effectivePackageSize = "";
         }
 
-        if (effectiveDownloadUrl != null && effectiveDownloadUrl.startsWith("/") && request != null) {
-            String scheme = request.getHeader("X-Forwarded-Proto");
-            if (scheme == null || scheme.isBlank()) {
-                scheme = request.getScheme();
-            }
-            String host = request.getHeader("X-Forwarded-Host");
-            if (host == null || host.isBlank()) {
-                host = request.getHeader("Host");
-            }
-            if (host == null || host.isBlank()) {
-                host = request.getServerName() + ":" + request.getServerPort();
-            }
-            effectiveDownloadUrl = scheme + "://" + host + effectiveDownloadUrl;
+        // 智能补充 GitHub 原始直链（若未显式指定）
+        if ((effectiveGithubUrl == null || effectiveGithubUrl.isBlank()) && effectiveLatestVersion != null) {
+            String tag = effectiveLatestVersion.startsWith("v") ? effectiveLatestVersion : "v" + effectiveLatestVersion;
+            String fileName = (meta != null
+                            && meta.apkFileName() != null
+                            && !meta.apkFileName().isBlank())
+                    ? meta.apkFileName()
+                    : (latestApk != null ? latestApk.getName() : ("LedgerPro-" + tag + "-prod-release.apk"));
+            effectiveGithubUrl = "https://github.com/flycat0114/ledger_pro/releases/download/" + tag + "/" + fileName;
+        }
+
+        // 安全防刷保护：
+        // 绝不对外向客户端暴露本服务器自身的下载链接，防止服务器带宽被恶意大流量刷爆或 DDoS
+        // 默认将外部安全下载源（蓝奏云 / GitHub）作为默认 downloadUrl
+        if (effectiveDownloadUrl == null
+                || effectiveDownloadUrl.isBlank()
+                || effectiveDownloadUrl.contains("/system/version/download")) {
+            effectiveDownloadUrl = (effectiveLanzouUrl != null && !effectiveLanzouUrl.isBlank())
+                    ? effectiveLanzouUrl
+                    : effectiveGithubUrl;
         }
 
         return Result.ok(new AppVersionResponse(
@@ -128,9 +167,15 @@ public class SystemController {
                 effectiveChangelog,
                 effectiveDownloadUrl,
                 effectivePackageSize,
-                forceUpdate));
+                forceUpdate,
+                effectiveLanzouUrl,
+                effectiveLanzouPwd,
+                effectiveGithubUrl));
     }
 
+    /**
+     * 服务器本地 APK 下载接口（保留在代码库中作为备份/内部兜底，不对外向用户主动公开暴露）
+     */
     @GetMapping("/version/download")
     public ResponseEntity<?> downloadApk() {
         if (downloadUrl != null
@@ -158,8 +203,11 @@ public class SystemController {
     }
 
     private ApkReleaseMetadata readReleaseMetadata() {
+        if (metaFilePath == null || metaFilePath.isBlank()) {
+            return null;
+        }
         try {
-            Path metaPath = Path.of("data", "apk", "latest.json");
+            Path metaPath = Path.of(metaFilePath);
             File file = metaPath.toFile();
             if (file.exists() && file.isFile()) {
                 ObjectMapper mapper = objectMapper != null ? objectMapper : new ObjectMapper();
@@ -226,6 +274,9 @@ public class SystemController {
             String packageSize,
             String apkFileName,
             String downloadUrl,
+            String lanzouUrl,
+            String lanzouPwd,
+            String githubUrl,
             String changelog,
             String buildTime) {}
 }
