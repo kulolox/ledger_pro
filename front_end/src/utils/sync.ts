@@ -96,7 +96,7 @@ async function silentRequest<T = any>(
   }
 }
 
-// 将本地 pending 状态且未删除的记录批量推送到服务端，成功则标记为已同步
+// 将本地 pending 或 failed 状态且未删除的记录批量推送到服务端，成功则标记为已同步
 export async function pushPending(): Promise<{ success: number; fail: number; error?: string }> {
   const localList = getLocalTransactions();
   // 1. 清理本地未上报却已被标记删除的历史无效数据（无需且不能上报）
@@ -105,7 +105,10 @@ export async function pushPending(): Promise<{ success: number; fail: number; er
     setLocalTransactions(sanitizedList);
   }
 
-  const pending = sanitizedList.filter((t) => t.sync_status === "pending" && t.deleted !== 1);
+  // 待推送列表：包含 pending 和先前网络原因 failed 的记录，允许重新尝试推送
+  const pending = sanitizedList.filter(
+    (t) => (t.sync_status === "pending" || t.sync_status === "failed") && t.deleted !== 1,
+  );
   if (pending.length === 0) return { success: 0, fail: 0 };
 
   let success = 0;
@@ -206,6 +209,43 @@ export async function pushPending(): Promise<{ success: number; fail: number; er
       success++;
     } catch (e: any) {
       console.error(`[sync] pushPending update ${item.id} failed:`, e);
+      const isNotFound =
+        e?.statusCode === 404 ||
+        e?.code === 404 ||
+        e?.message?.includes("404") ||
+        e?.message?.includes("不存在");
+
+      if (isNotFound) {
+        // 本地未同步数据权重最大：若服务端记录已被远端删除，自动降级为新建重新入库
+        try {
+          const res = (await silentRequest({
+            url: "/api/v1/transactions",
+            method: "POST",
+            data: {
+              book_id: item.book_id,
+              type: item.type,
+              amount: item.amount,
+              account_id: item.account_id,
+              to_account_id: item.to_account_id,
+              category_id: item.category_id,
+              remark: item.remark,
+              trans_time: item.trans_time,
+            },
+          })) as any;
+          const newServerId = String(res?.id || res?.data?.id || item.id);
+          const updated = getLocalTransactions().map((t) =>
+            t.id === item.id
+              ? { ...t, id: newServerId, server_id: newServerId, sync_status: "synced" as const }
+              : t,
+          );
+          setLocalTransactions(updated);
+          success++;
+          continue;
+        } catch (createErr: any) {
+          console.error(`[sync] pushPending downgrade create ${item.id} failed:`, createErr);
+        }
+      }
+
       fail++;
       lastError = e?.message || "更新同步失败";
       const updated = getLocalTransactions().map((t) =>
@@ -321,16 +361,21 @@ export async function pullFromServer(
             deleted: 0,
             updated_at: serverItem.updated_at || serverItem.trans_time,
           });
-        } else if (t.deleted !== 1) {
-          // 安全兜底保护：凡是未被用户主动删除的本地记录，绝对不丢弃！
-          // 若服务端无此记录（属于离线新建或先前漏同步的真实数据），保留并转为 pending 状态等待补推到服务端
-          reconciledList.push({
-            ...t,
-            sync_status: "pending",
-            server_id: undefined, // 清理无效 server_id，确保作为本地新增安全推送
-          });
+        } else if (
+          (t.sync_status === "pending" || t.sync_status === "failed" || !t.server_id) &&
+          t.deleted !== 1
+        ) {
+          // 本地未同步或同步失败的真实数据绝对保护（权重最大）：
+          // 1. 若为本地新建未上报（!t.server_id），保留等待补推
+          // 2. 若为本地离线修改未上报（Boolean(t.server_id)），保留等待 PUT 推送
+          // 3. 若为先前网络波动导致的同步失败（failed），安全保留等待重试
+          // 严禁抹除 server_id，保留原始状态，绝对不丢弃！
+          reconciledList.push(t);
         } else {
-          // 仅丢弃已被用户主动删除且在服务端已无痕迹的废弃记录
+          // 核心对齐修复（同步后以服务器为准）：
+          // 1. 若本地为已同步数据（sync_status === 'synced'）且属于当前拉取月份，
+          //    但服务端未返回该记录，明确说明该记录已被远端（如其他设备）删除，本地直接清理！
+          // 2. 若本地为待删除标记（deleted === 1）但在服务端已无记录，直接清理无残留！
         }
       }
 

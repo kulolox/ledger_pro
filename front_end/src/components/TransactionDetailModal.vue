@@ -156,15 +156,23 @@ async function onDelete() {
   });
   if (result.action === "confirm") {
     onClose();
-    await removeTx(targetId);
     if (!String(targetId).startsWith("-")) {
       try {
         await apiDeleteTransaction(String(targetId));
+        // 在线删除成功，本地物理移除，零脏数据残留
+        await removeTx(targetId, true);
+        uni.showToast({ title: "已删除", icon: "success" });
       } catch (err) {
-        console.warn("API deleteTransaction failed:", err);
+        console.warn("API deleteTransaction failed, fallback to offline delete:", err);
+        // 断网或失败，降级为待同步软删除
+        await removeTx(targetId, false);
+        uni.showToast({ title: "网络不佳，已标记删除", icon: "none" });
       }
+    } else {
+      // 本地临时新建数据，直接物理删除
+      await removeTx(targetId, true);
+      uni.showToast({ title: "已删除", icon: "success" });
     }
-    uni.showToast({ title: "已删除", icon: "success" });
     emit("delete", targetId);
   }
 }

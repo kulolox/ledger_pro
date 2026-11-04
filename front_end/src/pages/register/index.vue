@@ -42,6 +42,28 @@
           </view>
         </view>
         <view class="form-item">
+          <text class="form-label">邮箱验证码</text>
+          <view class="code-row">
+            <view class="input-surface code-surface">
+              <wd-input
+                v-model="formData.code"
+                class="form-input"
+                placeholder="请输入6位验证码"
+                clearable
+              />
+            </view>
+            <view
+              class="send-code-btn"
+              :class="{ disabled: countdown > 0 || sending }"
+              @click="openCaptchaModal"
+            >
+              <text class="send-code-text">
+                {{ countdown > 0 ? `${countdown}s 后重新发送` : "获取验证码" }}
+              </text>
+            </view>
+          </view>
+        </view>
+        <view class="form-item">
           <text class="form-label">设置密码</text>
           <view class="input-surface">
             <wd-input
@@ -81,14 +103,23 @@
         <text class="link" @click="goLogin">已有账号？去登录</text>
       </view>
     </view>
+
+    <!-- 人机图形验证码弹窗 -->
+    <CaptchaModal
+      ref="captchaModalRef"
+      v-model="showCaptcha"
+      :loading="sending"
+      @confirm="handleCaptchaConfirm"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, onUnmounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import AppLogo from "@/components/AppLogo.vue";
-import { register } from "@/api/common";
+import CaptchaModal from "@/components/CaptchaModal.vue";
+import { register, sendRegisterCode } from "@/api/common";
 import { setToken, setRefreshToken, setUserInfo } from "@/utils/storage";
 import { useTheme } from "@/stores/themeStore";
 
@@ -101,10 +132,67 @@ onShow(() => {
 const formData = reactive({
   nickname: "",
   email: "",
+  code: "",
   password: "",
 });
 const confirmPassword = ref("");
 const loading = ref(false);
+const sending = ref(false);
+const countdown = ref(0);
+const showCaptcha = ref(false);
+const captchaModalRef = ref<InstanceType<typeof CaptchaModal> | null>(null);
+
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+});
+
+const openCaptchaModal = () => {
+  if (countdown.value > 0 || sending.value) return;
+  if (!formData.email) {
+    uni.showToast({ title: "请先输入邮箱", icon: "none" });
+    return;
+  }
+  const emailRegex = /^[\w.+-]+@[\w-]+\.[\w.]+$/;
+  if (!emailRegex.test(formData.email.trim())) {
+    uni.showToast({ title: "邮箱格式不正确", icon: "none" });
+    return;
+  }
+  showCaptcha.value = true;
+};
+
+const handleCaptchaConfirm = async (payload: { captchaKey: string; captchaCode: string }) => {
+  if (sending.value) return;
+  sending.value = true;
+  try {
+    await sendRegisterCode({
+      email: formData.email.trim(),
+      captchaKey: payload.captchaKey,
+      captchaCode: payload.captchaCode,
+    });
+    showCaptcha.value = false;
+    uni.showToast({ title: "验证码已发送", icon: "success" });
+    countdown.value = 60;
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      countdown.value--;
+      if (countdown.value <= 0) {
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+      }
+    }, 1000);
+  } catch (_e) {
+    captchaModalRef.value?.refresh();
+  } finally {
+    sending.value = false;
+  }
+};
 
 const handleRegister = async () => {
   if (!formData.nickname) {
@@ -113,6 +201,10 @@ const handleRegister = async () => {
   }
   if (!formData.email) {
     uni.showToast({ title: "请输入邮箱", icon: "none" });
+    return;
+  }
+  if (!formData.code || formData.code.trim().length !== 6) {
+    uni.showToast({ title: "请输入6位邮箱验证码", icon: "none" });
     return;
   }
   if (formData.password.length < 6) {
@@ -127,9 +219,10 @@ const handleRegister = async () => {
   loading.value = true;
   try {
     const { token, refreshToken, userInfo } = await register({
-      email: formData.email,
+      email: formData.email.trim(),
       password: formData.password,
-      nickname: formData.nickname,
+      nickname: formData.nickname.trim(),
+      code: formData.code.trim(),
     });
     setToken(token);
     setRefreshToken(refreshToken);
@@ -264,6 +357,49 @@ const goLogin = () => {
       font-weight: 500;
       margin-bottom: 12rpx;
       padding-left: 8rpx;
+    }
+
+    .code-row {
+      display: flex;
+      align-items: center;
+      gap: 20rpx;
+
+      .code-surface {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .send-code-btn {
+        flex-shrink: 0;
+        height: 100rpx;
+        box-sizing: border-box;
+        padding: 0 32rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-lg);
+        background: var(--bg-active);
+        border: 1rpx solid rgba(0, 122, 255, 0.22);
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.15s var(--spring-default), opacity 0.15s;
+
+        &:active {
+          transform: scale(0.97);
+        }
+
+        &.disabled {
+          opacity: 0.5;
+          pointer-events: none;
+        }
+
+        .send-code-text {
+          font-size: 28rpx;
+          font-weight: 600;
+          color: var(--color-primary);
+          white-space: nowrap;
+        }
+      }
     }
   }
 

@@ -211,6 +211,82 @@ describe("sync.ts unit tests", () => {
     expect(saved.length).toBe(2);
   });
 
+  it("pullFromServer: purges synced record when deleted on server by device B, preventing resurrection", async () => {
+    // 场景：A 设备本地原有一条已经同步成功的数据（server_id: "2001", sync_status: "synced"）
+    const syncedTxOnDeviceA: LocalTransaction = {
+      id: "2001",
+      server_id: "2001",
+      book_id: "100",
+      type: 0,
+      amount: 6600,
+      account_id: "1",
+      trans_time: "2026-07-15 15:00:00",
+      sync_status: "synced",
+      deleted: 0,
+      created_at: "2026-07-15T15:00:00Z",
+      updated_at: "2026-07-15T15:00:00Z",
+    };
+    storageData[STORAGE_KEY] = JSON.stringify([syncedTxOnDeviceA]);
+
+    // B 设备在服务端删除了该账单，服务端返回的当前月列表中为空
+    vi.mocked(uni.request).mockImplementation(({ success }: any) => {
+      success({
+        statusCode: 200,
+        data: {
+          code: 0,
+          data: {
+            list: [],
+          },
+        },
+      });
+    });
+
+    const pulled = await pullFromServer("100", "2026-07");
+    expect(pulled).toBe(0);
+
+    const saved = JSON.parse(storageData[STORAGE_KEY]) as LocalTransaction[];
+    // A 设备刷新后，该记录已被远端权威删除，本地直接清理，绝不复活且绝不转为 pending
+    expect(saved.length).toBe(0);
+  });
+
+  it("pullFromServer: preserves failed records and does not discard un-synced data", async () => {
+    // 场景：本地有一笔此前由于网络异常同步失败（failed）的本地新建账单
+    const failedTx: LocalTransaction = {
+      id: "-88",
+      book_id: "100",
+      type: 0,
+      amount: 3200,
+      account_id: "1",
+      trans_time: "2026-07-16 16:00:00",
+      sync_status: "failed",
+      deleted: 0,
+      created_at: "2026-07-16T16:00:00Z",
+      updated_at: "2026-07-16T16:00:00Z",
+    };
+    storageData[STORAGE_KEY] = JSON.stringify([failedTx]);
+
+    vi.mocked(uni.request).mockImplementation(({ success }: any) => {
+      success({
+        statusCode: 200,
+        data: {
+          code: 0,
+          data: {
+            list: [],
+          },
+        },
+      });
+    });
+
+    const pulled = await pullFromServer("100", "2026-07");
+    expect(pulled).toBe(0);
+
+    const saved = JSON.parse(storageData[STORAGE_KEY]) as LocalTransaction[];
+    // failed 记录绝对不能被丢弃！
+    expect(saved.length).toBe(1);
+    expect(saved[0].id).toBe("-88");
+    expect(saved[0].sync_status).toBe("failed");
+  });
+
   it("runSyncCycle: completes cycle without throwing", async () => {
     storageData[STORAGE_KEY] = JSON.stringify([]);
 

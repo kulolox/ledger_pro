@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS `category` (
 CREATE TABLE IF NOT EXISTS `user_category` (
     `id` BIGINT NOT NULL,
     `user_id` BIGINT NOT NULL,
+    `source_id` BIGINT DEFAULT NULL,
     `parent_id` BIGINT NOT NULL DEFAULT 0,
     `name` VARCHAR(32) NOT NULL DEFAULT '',
     `type` TINYINT NOT NULL DEFAULT 0,

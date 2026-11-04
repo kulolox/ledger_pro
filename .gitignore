@@ -9,6 +9,7 @@ Thumbs.db
 *.swo
 
 # front-end
+node_modules/
 front_end/node_modules/
 front_end/dist/
 front_end/unpackage/

@@ -88,7 +88,10 @@ import CategorySlider from "@/components/CategorySlider.vue";
 import { useTransactions } from "@/stores/transactionStore";
 import { useCategories } from "@/stores/categoryStore";
 import { timestampToDateStr, yuanToCents, MAX_AMOUNT_YUAN } from "@/utils/format";
-import { updateTransaction as apiUpdateTransaction } from "@/api/common";
+import {
+  createTransaction as apiCreateTransaction,
+  updateTransaction as apiUpdateTransaction,
+} from "@/api/common";
 
 const { add, update } = useTransactions();
 const { categories } = useCategories();
@@ -291,16 +294,11 @@ const handleSave = async (keepOpen: boolean) => {
 
   const accountId = "1";
 
+  let isOfflineFallback = false;
+
   if (editId.value != null) {
-    update(editId.value, {
-      type: currentType.value,
-      amount: amountCents,
-      category_id: selectedCategory.value,
-      account_id: accountId,
-      remark: remark.value || undefined,
-      trans_time: transTime,
-    });
-    if (!String(editId.value).startsWith("-")) {
+    const isServerRecord = !String(editId.value).startsWith("-");
+    if (isServerRecord) {
       try {
         await apiUpdateTransaction(String(editId.value), {
           book_id: props.bookId,
@@ -311,20 +309,81 @@ const handleSave = async (keepOpen: boolean) => {
           remark: remark.value || undefined,
           trans_time: transTime,
         });
+        update(editId.value, {
+          type: currentType.value,
+          amount: amountCents,
+          category_id: selectedCategory.value,
+          account_id: accountId,
+          remark: remark.value || undefined,
+          trans_time: transTime,
+          sync_status: "synced",
+        });
       } catch (e) {
-        console.warn("apiUpdateTransaction failed:", e);
+        console.warn("apiUpdateTransaction offline fallback:", e);
+        isOfflineFallback = true;
+        update(editId.value, {
+          type: currentType.value,
+          amount: amountCents,
+          category_id: selectedCategory.value,
+          account_id: accountId,
+          remark: remark.value || undefined,
+          trans_time: transTime,
+          sync_status: "pending",
+        });
       }
+    } else {
+      update(editId.value, {
+        type: currentType.value,
+        amount: amountCents,
+        category_id: selectedCategory.value,
+        account_id: accountId,
+        remark: remark.value || undefined,
+        trans_time: transTime,
+        sync_status: "pending",
+      });
     }
   } else {
-    add({
-      book_id: props.bookId,
-      type: currentType.value,
-      amount: amountCents,
-      account_id: accountId,
-      category_id: selectedCategory.value,
-      remark: remark.value || undefined,
-      trans_time: transTime,
-    });
+    try {
+      const res = await apiCreateTransaction({
+        book_id: props.bookId,
+        type: currentType.value,
+        amount: amountCents,
+        account_id: accountId,
+        category_id: selectedCategory.value,
+        remark: remark.value || undefined,
+        trans_time: transTime,
+      });
+      const serverId = String((res as any)?.id || (res as any)?.data?.id || "");
+      if (serverId) {
+        add({
+          id: serverId,
+          server_id: serverId,
+          book_id: props.bookId,
+          type: currentType.value,
+          amount: amountCents,
+          account_id: accountId,
+          category_id: selectedCategory.value,
+          remark: remark.value || undefined,
+          trans_time: transTime,
+          sync_status: "synced",
+        });
+      } else {
+        throw new Error("Missing server id");
+      }
+    } catch (e) {
+      console.warn("apiCreateTransaction offline fallback:", e);
+      isOfflineFallback = true;
+      add({
+        book_id: props.bookId,
+        type: currentType.value,
+        amount: amountCents,
+        account_id: accountId,
+        category_id: selectedCategory.value,
+        remark: remark.value || undefined,
+        trans_time: transTime,
+        sync_status: "pending",
+      });
+    }
   }
 
   uni.vibrateShort();
@@ -332,9 +391,15 @@ const handleSave = async (keepOpen: boolean) => {
   if (keepOpen) {
     editId.value = null;
     resetInput();
-    uni.showToast({ title: "已保存，继续记", icon: "success" });
+    uni.showToast({
+      title: isOfflineFallback ? "网络不佳，已暂存本地" : "已保存，继续记",
+      icon: isOfflineFallback ? "none" : "success",
+    });
   } else {
-    uni.showToast({ title: "记账成功", icon: "success" });
+    uni.showToast({
+      title: isOfflineFallback ? "网络不佳，已暂存本地" : "记账成功",
+      icon: isOfflineFallback ? "none" : "success",
+    });
     emit("saved");
     emit("close");
   }

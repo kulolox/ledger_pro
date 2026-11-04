@@ -43,6 +43,8 @@ function persist() {
 }
 
 export function addTransaction(data: {
+  id?: string;
+  server_id?: string;
   book_id: string;
   type: number;
   amount: number;
@@ -51,15 +53,27 @@ export function addTransaction(data: {
   category_id?: string;
   remark?: string;
   trans_time: string;
+  sync_status?: "pending" | "synced" | "failed";
+  created_at?: string;
+  updated_at?: string;
 }): LocalTransaction {
   const now = new Date().toISOString();
+  const txId = data.id || (data.server_id ? String(data.server_id) : String(nextLocalId--));
   const tx: LocalTransaction = {
-    id: String(nextLocalId--),
-    ...data,
-    sync_status: "pending",
+    book_id: data.book_id,
+    type: data.type,
+    amount: data.amount,
+    account_id: data.account_id,
+    to_account_id: data.to_account_id,
+    category_id: data.category_id,
+    remark: data.remark,
+    trans_time: data.trans_time,
+    id: txId,
+    server_id: data.server_id,
+    sync_status: data.sync_status || "pending",
     deleted: 0,
-    created_at: now,
-    updated_at: now,
+    created_at: data.created_at || now,
+    updated_at: data.updated_at || now,
   };
   transactions.value.unshift(tx);
   persist();
@@ -78,32 +92,32 @@ export function updateTransaction(
       | "remark"
       | "trans_time"
       | "type"
+      | "sync_status"
     >
   >,
 ) {
   const idx = transactions.value.findIndex((t) => t.id === id);
   if (idx === -1) return;
   const tx = transactions.value[idx];
-  // 无论之前是 synced 还是 failed，只要被用户本地修改，状态一律重置为 pending 等待同步
   const updated: LocalTransaction = {
     ...tx,
     ...data,
-    sync_status: "pending",
+    sync_status: data.sync_status || "pending",
     updated_at: new Date().toISOString(),
   };
   transactions.value[idx] = updated;
   persist();
 }
 
-export function deleteTransaction(id: string) {
+export function deleteTransaction(id: string, hard = false) {
   const idx = transactions.value.findIndex((t) => t.id === id);
   if (idx === -1) return;
   const tx = transactions.value[idx];
-  // 凡是未在服务端落库的记录（无 server_id），无论是 pending 还是 failed，一律直接在本地物理删除
-  if (!tx.server_id) {
+  // 若显式指定硬删除（如在线删除已成功）或未落库的本地临时记录，直接物理移除
+  if (hard || !tx.server_id) {
     transactions.value.splice(idx, 1);
   } else {
-    // 已在服务端落库的记录，标记为删除状态并置为 pending 等待推送到服务端进行软删除
+    // 离线软删除，标记为 pending 待恢复网络后上报
     tx.deleted = 1;
     tx.sync_status = "pending";
     tx.updated_at = new Date().toISOString();

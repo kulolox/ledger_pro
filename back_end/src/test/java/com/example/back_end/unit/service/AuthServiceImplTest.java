@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.back_end.common.BizException;
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.dto.request.RegisterRequest;
+import com.example.back_end.dto.response.CaptchaResponse;
 import com.example.back_end.dto.response.LoginResponse;
 import com.example.back_end.entity.Account;
 import com.example.back_end.entity.AccountBook;
@@ -16,6 +17,7 @@ import com.example.back_end.mapper.AccountBookMapper;
 import com.example.back_end.mapper.AccountMapper;
 import com.example.back_end.mapper.UserMapper;
 import com.example.back_end.service.ITokenBlacklistService;
+import com.example.back_end.service.IVerificationCodeService;
 import com.example.back_end.service.impl.AuthServiceImpl;
 import com.example.back_end.service.impl.MailService;
 import com.example.back_end.utils.JwtUtils;
@@ -61,6 +63,9 @@ class AuthServiceImplTest {
     @Mock
     ITokenBlacklistService tokenBlacklistService;
 
+    @Mock
+    IVerificationCodeService verificationCodeService;
+
     @Captor
     ArgumentCaptor<User> userCaptor;
 
@@ -75,24 +80,96 @@ class AuthServiceImplTest {
                 jwtUtils,
                 rsaUtils,
                 mailService,
-                tokenBlacklistService);
+                tokenBlacklistService,
+                verificationCodeService);
         ReflectionTestUtils.setField(service, "baseMapper", userMapper);
         ReflectionTestUtils.setField(service, "entityClass", User.class);
     }
 
     @Test
+    @DisplayName("getCaptcha: 成功生成图形验证码并存入缓存")
+    void getCaptcha_success() {
+        CaptchaResponse resp = service.getCaptcha();
+        assertNotNull(resp);
+        assertNotNull(resp.captchaKey());
+        assertTrue(resp.captchaBase64().startsWith("data:image/png;base64,"));
+        verify(verificationCodeService).saveCaptcha(eq(resp.captchaKey()), anyString(), eq(120L));
+    }
+
+    @Test
+    @DisplayName("sendRegisterCode: 邮箱已注册时抛出异常")
+    void sendRegisterCode_emailExists_throwsException() {
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(1L);
+        BizException ex =
+                assertThrows(BizException.class, () -> service.sendRegisterCode("test@test.com", "key123", "code123"));
+        assertEquals("该邮箱已被注册", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("sendRegisterCode: 图形验证码错误或失效时抛出异常")
+    void sendRegisterCode_invalidCaptcha_throwsException() {
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(verificationCodeService.verifyAndInvalidateCaptcha("key123", "wrong"))
+                .thenReturn(false);
+
+        BizException ex =
+                assertThrows(BizException.class, () -> service.sendRegisterCode("test@test.com", "key123", "wrong"));
+        assertEquals("图形验证码错误或已失效", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("sendRegisterCode: 冷却时间内抛出异常")
+    void sendRegisterCode_inCooldown_throwsException() {
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(verificationCodeService.verifyAndInvalidateCaptcha("key123", "valid"))
+                .thenReturn(true);
+        when(verificationCodeService.isRegisterCooldown("test@test.com")).thenReturn(true);
+
+        BizException ex =
+                assertThrows(BizException.class, () -> service.sendRegisterCode("test@test.com", "key123", "valid"));
+        assertEquals("验证码发送太频繁，请稍后再试", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("sendRegisterCode: 成功发送并写入缓存")
+    void sendRegisterCode_success() {
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(verificationCodeService.verifyAndInvalidateCaptcha("key123", "valid"))
+                .thenReturn(true);
+        when(verificationCodeService.isRegisterCooldown("test@test.com")).thenReturn(false);
+
+        service.sendRegisterCode("test@test.com", "key123", "valid");
+
+        verify(mailService).sendRegisterCode(eq("test@test.com"), anyString());
+        verify(verificationCodeService).saveRegisterCode(eq("test@test.com"), anyString(), eq(600L));
+        verify(verificationCodeService).setRegisterCooldown(eq("test@test.com"), eq(60L));
+    }
+
+    @Test
     @DisplayName("register: 邮箱格式不正确时抛出异常")
     void register_invalidEmail_throwsException() {
-        RegisterRequest req = new RegisterRequest("invalid-email", "pwd", "nick");
+        RegisterRequest req = new RegisterRequest("invalid-email", "pwd", "nick", "123456");
         BizException ex = assertThrows(BizException.class, () -> service.register(req));
         assertEquals("邮箱格式不正确", ex.getMessage());
     }
 
     @Test
+    @DisplayName("register: 邮箱验证码错误或失效时抛出异常")
+    void register_invalidCode_throwsException() {
+        when(verificationCodeService.verifyAndInvalidateRegisterCode("test@test.com", "123456"))
+                .thenReturn(false);
+        RegisterRequest req = new RegisterRequest("test@test.com", "encPwd", "nick", "123456");
+        BizException ex = assertThrows(BizException.class, () -> service.register(req));
+        assertEquals("邮箱验证码错误或已过期", ex.getMessage());
+    }
+
+    @Test
     @DisplayName("register: 密码过短时抛出异常")
     void register_shortPassword_throwsException() {
+        when(verificationCodeService.verifyAndInvalidateRegisterCode("test@test.com", "123456"))
+                .thenReturn(true);
         when(rsaUtils.decrypt("encPwd")).thenReturn("123");
-        RegisterRequest req = new RegisterRequest("test@test.com", "encPwd", "nick");
+        RegisterRequest req = new RegisterRequest("test@test.com", "encPwd", "nick", "123456");
         BizException ex = assertThrows(BizException.class, () -> service.register(req));
         assertEquals("密码长度必须在6-32位之间", ex.getMessage());
     }
@@ -100,10 +177,12 @@ class AuthServiceImplTest {
     @Test
     @DisplayName("register: 邮箱已存在时抛出异常")
     void register_emailExists_throwsException() {
+        when(verificationCodeService.verifyAndInvalidateRegisterCode("existing@test.com", "123456"))
+                .thenReturn(true);
         when(rsaUtils.decrypt("encPwd")).thenReturn("123456");
         when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(1L);
 
-        RegisterRequest req = new RegisterRequest("existing@test.com", "encPwd", "nick");
+        RegisterRequest req = new RegisterRequest("existing@test.com", "encPwd", "nick", "123456");
         BizException ex = assertThrows(BizException.class, () -> service.register(req));
         assertEquals("邮箱已注册", ex.getMessage());
     }
@@ -111,6 +190,8 @@ class AuthServiceImplTest {
     @Test
     @DisplayName("register: 注册成功自动创建默认账本和账户并返回Token")
     void register_success() {
+        when(verificationCodeService.verifyAndInvalidateRegisterCode("new@test.com", "123456"))
+                .thenReturn(true);
         when(rsaUtils.decrypt("encPwd")).thenReturn("123456");
         when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
         when(passwordEncoder.encode("123456")).thenReturn("hashedPassword");
@@ -127,7 +208,7 @@ class AuthServiceImplTest {
         when(jwtUtils.generateToken(99L, "new@test.com")).thenReturn("access-token-123");
         when(jwtUtils.generateRefreshToken(99L, "new@test.com")).thenReturn("refresh-token-123");
 
-        RegisterRequest req = new RegisterRequest("new@test.com", "encPwd", "新用户");
+        RegisterRequest req = new RegisterRequest("new@test.com", "encPwd", "新用户", "123456");
         LoginResponse res = service.register(req);
 
         assertNotNull(res);
@@ -143,11 +224,10 @@ class AuthServiceImplTest {
     void login_wrongPassword_throws401() {
         when(rsaUtils.decrypt("wrongEncPwd")).thenReturn("wrongPwd");
         User user = new User();
-        user.setId(1L);
         user.setEmail("user@test.com");
-        user.setPasswordHash("correctHash");
+        user.setPasswordHash("hashedActualPwd");
         when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
-        when(passwordEncoder.matches("wrongPwd", "correctHash")).thenReturn(false);
+        when(passwordEncoder.matches("wrongPwd", "hashedActualPwd")).thenReturn(false);
 
         LoginRequest req = new LoginRequest("user@test.com", "wrongEncPwd");
         BizException ex = assertThrows(BizException.class, () -> service.login(req));
@@ -156,46 +236,48 @@ class AuthServiceImplTest {
     }
 
     @Test
-    @DisplayName("login: 用户不存在抛出 401 统一异常")
+    @DisplayName("login: 用户不存在同样抛出 401 统一异常")
     void login_userNotFound_throws401() {
-        when(rsaUtils.decrypt("anyPwd")).thenReturn("pwd");
+        when(rsaUtils.decrypt("anyEncPwd")).thenReturn("anyPwd");
         when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
 
-        LoginRequest req = new LoginRequest("unknown@test.com", "anyPwd");
+        LoginRequest req = new LoginRequest("nobody@test.com", "anyEncPwd");
         BizException ex = assertThrows(BizException.class, () -> service.login(req));
         assertEquals(401, ex.getCode());
         assertEquals("邮箱或密码错误", ex.getMessage());
     }
 
     @Test
-    @DisplayName("login: 验证通过返回登录信息")
+    @DisplayName("login: 密码正确返回 Token 和用户信息")
     void login_success() {
-        when(rsaUtils.decrypt("correctEncPwd")).thenReturn("secret123");
+        when(rsaUtils.decrypt("validEncPwd")).thenReturn("correctPwd");
         User user = new User();
         user.setId(10L);
         user.setEmail("user@test.com");
-        user.setNickname("用户10");
-        user.setPasswordHash("hashedSecret");
+        user.setPasswordHash("hashedPwd");
+        user.setNickname("老王");
         when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
-        when(passwordEncoder.matches("secret123", "hashedSecret")).thenReturn(true);
-        when(jwtUtils.generateToken(10L, "user@test.com")).thenReturn("access_token");
-        when(jwtUtils.generateRefreshToken(10L, "user@test.com")).thenReturn("refresh_token");
+        when(passwordEncoder.matches("correctPwd", "hashedPwd")).thenReturn(true);
+        when(jwtUtils.generateToken(10L, "user@test.com")).thenReturn("access-token");
+        when(jwtUtils.generateRefreshToken(10L, "user@test.com")).thenReturn("refresh-token");
 
-        LoginRequest req = new LoginRequest("user@test.com", "correctEncPwd");
+        LoginRequest req = new LoginRequest("user@test.com", "validEncPwd");
         LoginResponse res = service.login(req);
 
         assertNotNull(res);
-        assertEquals("access_token", res.token());
-        assertEquals(10L, res.userInfo().id());
+        assertEquals("access-token", res.token());
+        assertEquals("refresh-token", res.refreshToken());
+        assertEquals("老王", res.userInfo().nickname());
     }
 
     @Test
-    @DisplayName("logout: 拉黑有效token")
-    void logout_blacklistsValidTokens() {
+    @DisplayName("logout: access_token 和 refresh_token 均加入黑名单")
+    void logout_validTokens_blacklisted() {
         when(jwtUtils.validateToken("validAccess")).thenReturn(true);
-        when(jwtUtils.getExpiration("validAccess")).thenReturn(new Date(System.currentTimeMillis() + 60000));
         when(jwtUtils.validateRefreshToken("validRefresh")).thenReturn(true);
-        when(jwtUtils.getExpiration("validRefresh")).thenReturn(new Date(System.currentTimeMillis() + 120000));
+        Date future = new Date(System.currentTimeMillis() + 60000);
+        when(jwtUtils.getExpiration("validAccess")).thenReturn(future);
+        when(jwtUtils.getExpiration("validRefresh")).thenReturn(future);
 
         service.logout("validAccess", "validRefresh");
 

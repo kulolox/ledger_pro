@@ -33,4 +33,19 @@ public class MailService {
             throw new BizException("验证码发送失败，请稍后再试");
         }
     }
+
+    public void sendRegisterCode(String toEmail, String code) {
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(mailFrom);
+            msg.setTo(toEmail);
+            msg.setSubject("LedgerPro 账号注册验证码");
+            msg.setText("您正在注册 LedgerPro 账号，验证码为：" + code + "，有效期10分钟。如非本人操作，请忽略此邮件。");
+            mailSender.send(msg);
+            log.info("注册验证码邮件发送成功 toEmail={}", toEmail);
+        } catch (Exception e) {
+            log.error("注册验证码邮件发送失败 toEmail={}", toEmail, e);
+            throw new BizException("验证码发送失败，请稍后再试");
+        }
+    }
 }

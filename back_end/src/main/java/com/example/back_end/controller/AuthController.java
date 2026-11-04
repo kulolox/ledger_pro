@@ -3,6 +3,7 @@ package com.example.back_end.controller;
 import com.example.back_end.common.Result;
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.dto.request.RegisterRequest;
+import com.example.back_end.dto.response.CaptchaResponse;
 import com.example.back_end.dto.response.LoginResponse;
 import com.example.back_end.service.IAuthService;
 import com.example.back_end.utils.RsaUtils;
@@ -24,6 +25,17 @@ public class AuthController {
     @GetMapping("/public-key")
     public Result<Map<String, String>> publicKey() {
         return Result.ok(Map.of("publicKey", rsaUtils.getPublicKeyBase64()));
+    }
+
+    @GetMapping("/captcha")
+    public Result<CaptchaResponse> captcha() {
+        return Result.ok(authService.getCaptcha());
+    }
+
+    @PostMapping("/send-register-code")
+    public Result<Map<String, String>> sendRegisterCode(@RequestBody Map<String, String> params) {
+        authService.sendRegisterCode(params.get("email"), params.get("captchaKey"), params.get("captchaCode"));
+        return Result.ok("验证码已发送", Map.of());
     }
 
     @PostMapping("/register")
@@ -50,7 +62,14 @@ public class AuthController {
 
     @PostMapping("/send-reset-code")
     public Result<Map<String, String>> sendResetCode(@RequestBody Map<String, String> params) {
-        authService.sendResetCode(params.get("email"));
+        String email = params.get("email");
+        String captchaKey = params.get("captchaKey");
+        String captchaCode = params.get("captchaCode");
+        if (captchaKey != null || captchaCode != null) {
+            authService.sendResetCode(email, captchaKey, captchaCode);
+        } else {
+            authService.sendResetCode(email);
+        }
         return Result.ok("验证码已发送", Map.of());
     }
 

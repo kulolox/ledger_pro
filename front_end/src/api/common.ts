@@ -3,6 +3,21 @@ import { encryptPassword } from "@/utils/crypto";
 
 // ========== 认证相关 ==========
 
+export const getCaptcha = () => {
+  return request.get<{
+    captchaKey: string;
+    captchaBase64: string;
+  }>("/api/v1/auth/captcha");
+};
+
+export const sendRegisterCode = (data: {
+  email: string;
+  captchaKey: string;
+  captchaCode: string;
+}) => {
+  return request.post("/api/v1/auth/send-register-code", data);
+};
+
 export const login = async (data: { email: string; password: string }) => {
   const encryptedPassword = await encryptPassword(data.password);
   return request.post<{
@@ -19,6 +34,7 @@ export const register = async (data: {
   email: string;
   password: string;
   nickname: string;
+  code: string;
 }) => {
   const encryptedPassword = await encryptPassword(data.password);
   console.log("encryptedPassword", encryptedPassword);
@@ -30,10 +46,15 @@ export const register = async (data: {
     email: data.email,
     password: encryptedPassword,
     nickname: data.nickname,
+    code: data.code,
   });
 };
 
-export const sendResetCode = (data: { email: string }) => {
+export const sendResetCode = (data: {
+  email: string;
+  captchaKey?: string;
+  captchaCode?: string;
+}) => {
   return request.post("/api/v1/auth/send-reset-code", data);
 };
 

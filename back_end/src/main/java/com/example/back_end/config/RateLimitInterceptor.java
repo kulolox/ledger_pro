@@ -31,12 +31,18 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         } else if (path.contains("/auth/register")) {
             maxAttempts = 5;
             prefix = "rate:register:";
+        } else if (path.contains("/auth/send-register-code")) {
+            maxAttempts = 5;
+            prefix = "rate:reg-code:";
         } else if (path.contains("/auth/send-reset-code")) {
             maxAttempts = 3;
             prefix = "rate:reset-code:";
         } else if (path.contains("/auth/reset-password")) {
             maxAttempts = 5;
             prefix = "rate:reset-pwd:";
+        } else if (path.contains("/auth/captcha")) {
+            maxAttempts = 30;
+            prefix = "rate:captcha:";
         } else {
             return true;
         }
@@ -50,7 +56,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
                 redis.expire(key, Duration.ofMinutes(1));
             }
         } catch (Exception e) {
-            // Redis 故障时放行，保证登录可用性（限流失效但记录告警）
+            // Redis 故障时放行，保证可用性（限流失效但记录告警）
             log.error("限流计数失败，本次放行 path={} ip={}", path, clientIp, e);
             return true;
         }
@@ -59,7 +65,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             log.warn("触发限流 path={} ip={} count={} max={}", path, clientIp, count, maxAttempts);
             response.setStatus(200);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"code\":429,\"message\":\"请求过于频繁，请稍后再试\"}");
+            response.getWriter().write("{\"code\":429,\"message\":\"操作过于频繁，请稍后再试\"}");
             return false;
         }
 
@@ -67,15 +73,16 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        // 仅当显式配置 TRUST_PROXY_HEADERS=true 才信任代理头，防止客户端伪造 IP 绕过限流
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank() && "true".equals(System.getenv("TRUST_PROXY_HEADERS"))) {
-            return xff.split(",")[0].trim();
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
         }
-        String xri = request.getHeader("X-Real-IP");
-        if (xri != null && !xri.isBlank() && "true".equals(System.getenv("TRUST_PROXY_HEADERS"))) {
-            return xri;
+        if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
         }
-        return request.getRemoteAddr();
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip != null ? ip : "unknown";
     }
 }

@@ -124,7 +124,7 @@ describe("TransactionDetailModal.vue", () => {
     await flushPromises();
 
     expect(mockDialogConfirm).toHaveBeenCalled();
-    expect(mockRemoveTx).toHaveBeenCalledWith("tx_123");
+    expect(mockRemoveTx).toHaveBeenCalledWith("tx_123", true);
     expect(wrapper.emitted("delete")).toBeTruthy();
     expect(wrapper.emitted("delete")![0]).toEqual(["tx_123"]);
   });

@@ -80,6 +80,14 @@
         <text class="link" @click="goLogin">返回登录</text>
       </view>
     </view>
+
+    <!-- 人机图形验证码弹窗 -->
+    <CaptchaModal
+      ref="captchaModalRef"
+      v-model="showCaptcha"
+      :loading="sending"
+      @confirm="handleCaptchaConfirm"
+    />
   </view>
 </template>
 
@@ -87,6 +95,7 @@
 import { reactive, ref, onUnmounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import AppLogo from "@/components/AppLogo.vue";
+import CaptchaModal from "@/components/CaptchaModal.vue";
 import { sendResetCode, resetPassword } from "@/api/common";
 import { useTheme } from "@/stores/themeStore";
 
@@ -104,6 +113,8 @@ const formData = reactive({
 const loading = ref(false);
 const sending = ref(false);
 const countdown = ref(0);
+const showCaptcha = ref(false);
+const captchaModalRef = ref<InstanceType<typeof CaptchaModal> | null>(null);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 onUnmounted(() => {
@@ -113,15 +124,30 @@ onUnmounted(() => {
   }
 });
 
-const handleSendCode = async () => {
+const handleSendCode = () => {
   if (countdown.value > 0 || sending.value) return;
   if (!formData.email) {
     uni.showToast({ title: "请输入邮箱", icon: "none" });
     return;
   }
+  const emailRegex = /^[\w.+-]+@[\w-]+\.[\w.]+$/;
+  if (!emailRegex.test(formData.email.trim())) {
+    uni.showToast({ title: "邮箱格式不正确", icon: "none" });
+    return;
+  }
+  showCaptcha.value = true;
+};
+
+const handleCaptchaConfirm = async (payload: { captchaKey: string; captchaCode: string }) => {
+  if (sending.value) return;
   sending.value = true;
   try {
-    await sendResetCode({ email: formData.email });
+    await sendResetCode({
+      email: formData.email.trim(),
+      captchaKey: payload.captchaKey,
+      captchaCode: payload.captchaCode,
+    });
+    showCaptcha.value = false;
     uni.showToast({ title: "验证码已发送", icon: "success" });
     countdown.value = 60;
     if (countdownTimer) clearInterval(countdownTimer);
@@ -135,7 +161,7 @@ const handleSendCode = async () => {
       }
     }, 1000);
   } catch (_e) {
-    uni.showToast({ title: "发送失败，请稍后重试", icon: "error" });
+    captchaModalRef.value?.refresh();
   } finally {
     sending.value = false;
   }
