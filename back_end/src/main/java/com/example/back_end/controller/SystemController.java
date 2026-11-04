@@ -103,7 +103,7 @@ public class SystemController {
             double mb = latestApk.length() / (1024.0 * 1024.0);
             effectivePackageSize = String.format(Locale.ROOT, "%.1f MB", mb);
         } else if (effectivePackageSize == null || effectivePackageSize.isBlank()) {
-            effectivePackageSize = "18.5 MB";
+            effectivePackageSize = "";
         }
 
         if (effectiveDownloadUrl != null && effectiveDownloadUrl.startsWith("/") && request != null) {

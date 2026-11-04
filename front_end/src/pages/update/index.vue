@@ -93,7 +93,7 @@
         <!-- 错误提示 -->
         <view v-if="status === 'error'" class="error-notice">
           <wd-icon name="warn-bold" size="30rpx" color="#ff4d4f" />
-          <text class="error-text">网络连接异常，软件包下载失败</text>
+          <text class="error-text">{{ downloadErrorMessage || "网络连接异常，软件包下载失败" }}</text>
         </view>
 
         <!-- 底部主操作按钮 -->
@@ -123,12 +123,31 @@
             <text class="btn-text">下载完成，立即安装</text>
           </view>
 
+          <view v-else-if="status === 'error'" class="action-btn-group">
+            <view class="action-btn retry" @click="startDownload">
+              <wd-icon name="refresh" size="30rpx" color="var(--text-primary)" />
+              <text class="btn-text">重试</text>
+            </view>
+            <view class="action-btn primary" @click="openInBrowser">
+              <wd-icon name="share" size="30rpx" color="#ffffff" />
+              <text class="btn-text">浏览器下载</text>
+            </view>
+          </view>
+
+          <!-- 备用通道快捷入口 -->
           <view
-            v-else-if="status === 'error'"
-            class="action-btn retry"
-            @click="startDownload"
+            v-if="status === 'has_update' || status === 'downloading' || status === 'error'"
+            class="secondary-links"
           >
-            <text class="btn-text">重新下载</text>
+            <view class="link-item" @click="openInBrowser">
+              <wd-icon name="share" size="26rpx" color="var(--color-primary)" />
+              <text class="link-text">在外部浏览器中下载</text>
+            </view>
+            <view class="link-divider" />
+            <view class="link-item" @click="copyDownloadUrl()">
+              <wd-icon name="copy" size="26rpx" color="var(--text-secondary)" />
+              <text class="link-text muted">复制直链</text>
+            </view>
           </view>
         </view>
       </view>
@@ -163,8 +182,10 @@ const updateInfo = ref<AppVersionInfo | null>(null);
 
 const downloadPercent = ref(0);
 const downloadedSizeText = ref("0 MB");
+const downloadErrorMessage = ref("");
 let savedFilePath = "";
 let downloadTask: UniApp.DownloadTask | null = null;
+let plusDownloadTask: any = null;
 let simulationTimer: ReturnType<typeof setInterval> | null = null;
 
 const formattedChangelog = computed(() => {
@@ -178,7 +199,16 @@ function goBack() {
     try {
       downloadTask.abort();
     } catch {}
+    downloadTask = null;
   }
+  // #ifdef APP-PLUS
+  if (plusDownloadTask) {
+    try {
+      plusDownloadTask.abort();
+    } catch {}
+    plusDownloadTask = null;
+  }
+  // #endif
   uni.navigateBack();
 }
 
@@ -202,24 +232,127 @@ async function checkForUpdate() {
   }
 }
 
-function startDownload() {
-  status.value = "downloading";
-  downloadPercent.value = 0;
-  downloadedSizeText.value = "0 MB";
-
-  let downloadUrl = updateInfo.value?.downloadUrl;
-  if (!downloadUrl) {
-    status.value = "error";
-    return;
-  }
-
-  // 若为相对路径，自动拼接当前 API 基础路径
+function getResolvedDownloadUrl(): string {
+  let downloadUrl = updateInfo.value?.downloadUrl || "";
+  if (!downloadUrl) return "";
   if (downloadUrl.startsWith("/")) {
     const baseUrl = getApiBaseUrl().replace(/\/+$/, "");
     downloadUrl = baseUrl + downloadUrl;
   }
+  return downloadUrl;
+}
+
+function startDownload() {
+  status.value = "downloading";
+  downloadPercent.value = 0;
+  downloadedSizeText.value = "0 MB";
+  downloadErrorMessage.value = "";
+
+  const downloadUrl = getResolvedDownloadUrl();
+  if (!downloadUrl) {
+    downloadErrorMessage.value = "未获取到有效下载链接，请联系管理员或稍后重试";
+    status.value = "error";
+    return;
+  }
 
   // #ifdef APP-PLUS
+  try {
+    if (typeof plus !== "undefined" && plus.downloader) {
+      startPlusDownload(downloadUrl);
+      return;
+    }
+  } catch (e) {
+    console.warn("plus.downloader not available, fallback to uni.downloadFile", e);
+  }
+
+  startUniDownload(downloadUrl);
+  // #endif
+
+  // #ifndef APP-PLUS
+  simulateDownload();
+  // #endif
+}
+
+function startPlusDownload(downloadUrl: string) {
+  // #ifdef APP-PLUS
+  try {
+    if (plusDownloadTask) {
+      try {
+        plusDownloadTask.abort();
+      } catch {}
+      plusDownloadTask = null;
+    }
+
+    const versionTag = updateInfo.value?.latestVersion || "latest";
+    const filename = `_doc/update/LedgerPro_v${versionTag}.apk`;
+
+    // 清理可能已存在的旧包避免冲突
+    try {
+      plus.io.resolveLocalFileSystemURL(
+        filename,
+        (entry: any) => {
+          try {
+            entry.remove();
+          } catch {}
+        },
+        () => {},
+      );
+    } catch {}
+
+    plusDownloadTask = plus.downloader.createDownload(
+      downloadUrl,
+      {
+        filename,
+        timeout: 60,
+        retry: 2,
+        retryInterval: 2,
+      },
+      (download: any, httpStatus: number) => {
+        if (httpStatus === 200 || httpStatus === 206) {
+          savedFilePath = download.filename;
+          status.value = "downloaded";
+          downloadPercent.value = 100;
+          installPackage();
+        } else {
+          console.error("plus.downloader failed with status:", httpStatus);
+          downloadErrorMessage.value = `下载失败 (网络状态码: ${httpStatus})，建议点击下方直接使用浏览器下载`;
+          status.value = "error";
+        }
+      },
+    );
+
+    plusDownloadTask.addEventListener("statechanged", (task: any) => {
+      if (!task) return;
+      if (task.state === 3) {
+        // 下载进行中
+        const total = task.totalSize;
+        const downloaded = task.downloadedSize;
+        if (total > 0) {
+          const percent = Math.min(100, Math.max(0, Math.floor((downloaded / total) * 100)));
+          downloadPercent.value = percent;
+          const curMB = (downloaded / (1024 * 1024)).toFixed(1);
+          const totalMB = (total / (1024 * 1024)).toFixed(1);
+          downloadedSizeText.value = `${curMB} MB / ${totalMB} MB`;
+        } else if (downloaded > 0) {
+          const curMB = (downloaded / (1024 * 1024)).toFixed(1);
+          const totalFallback = updateInfo.value?.packageSize || "计算中...";
+          downloadedSizeText.value = `${curMB} MB / ${totalFallback}`;
+        }
+      } else if (task.state === 4 && task.status !== 200 && task.status !== 206) {
+        downloadErrorMessage.value = `下载中断 (状态: ${task.status})，建议使用浏览器下载`;
+        status.value = "error";
+      }
+    });
+
+    plusDownloadTask.start();
+  } catch (err: any) {
+    console.error("startPlusDownload exception:", err);
+    startUniDownload(downloadUrl);
+  }
+  // #endif
+}
+
+function startUniDownload(downloadUrl: string) {
   try {
     downloadTask = uni.downloadFile({
       url: downloadUrl,
@@ -231,11 +364,13 @@ function startDownload() {
           installPackage();
         } else {
           console.error("Download failed with statusCode:", res.statusCode);
+          downloadErrorMessage.value = `下载失败 (HTTP ${res.statusCode})，建议使用外部浏览器下载`;
           status.value = "error";
         }
       },
       fail: (err) => {
         console.error("Download failed:", err);
+        downloadErrorMessage.value = `下载异常 (${err?.errMsg || "网络超时"})，建议使用外部浏览器下载`;
         status.value = "error";
       },
     });
@@ -243,24 +378,23 @@ function startDownload() {
     downloadTask.onProgressUpdate((res) => {
       downloadPercent.value = res.progress;
       const writtenMB = (res.totalBytesWritten / (1024 * 1024)).toFixed(1);
-      const totalMB = (res.totalBytesExpectedToWrite / (1024 * 1024)).toFixed(1);
-      downloadedSizeText.value = `${writtenMB} MB / ${totalMB} MB`;
+      const totalMB =
+        res.totalBytesExpectedToWrite > 0
+          ? `${(res.totalBytesExpectedToWrite / (1024 * 1024)).toFixed(1)} MB`
+          : updateInfo.value?.packageSize || "计算中...";
+      downloadedSizeText.value = `${writtenMB} MB / ${totalMB}`;
     });
-  } catch (e) {
-    console.error("startDownload error:", e);
+  } catch (e: any) {
+    console.error("startUniDownload error:", e);
+    downloadErrorMessage.value = "启动下载器失败，建议使用浏览器下载";
     status.value = "error";
   }
-  // #endif
-
-  // #ifndef APP-PLUS
-  simulateDownload();
-  // #endif
 }
 
 function simulateDownload() {
   if (simulationTimer) clearInterval(simulationTimer);
   let current = 0;
-  const targetMB = parseFloat(updateInfo.value?.packageSize || "18.5") || 18.5;
+  const targetMB = parseFloat(updateInfo.value?.packageSize || "32.7") || 32.7;
 
   simulationTimer = setInterval(() => {
     current += 5;
@@ -277,6 +411,45 @@ function simulateDownload() {
       downloadedSizeText.value = `${writtenMB} MB / ${targetMB.toFixed(1)} MB`;
     }
   }, 100);
+}
+
+function openInBrowser() {
+  const downloadUrl = getResolvedDownloadUrl();
+  if (!downloadUrl) {
+    uni.showToast({ title: "下载地址不存在", icon: "none" });
+    return;
+  }
+
+  // #ifdef APP-PLUS
+  try {
+    plus.runtime.openURL(downloadUrl, (err: any) => {
+      console.warn("Failed to open external browser:", err);
+      copyDownloadUrl("打开浏览器失败，已复制下载直链");
+    });
+    return;
+  } catch (e) {
+    console.error("openInBrowser error:", e);
+  }
+  // #endif
+
+  // #ifndef APP-PLUS
+  if (typeof window !== "undefined") {
+    window.open(downloadUrl, "_blank");
+  } else {
+    copyDownloadUrl();
+  }
+  // #endif
+}
+
+function copyDownloadUrl(successTip = "下载直链已复制到剪贴板") {
+  const downloadUrl = getResolvedDownloadUrl();
+  if (!downloadUrl) return;
+  uni.setClipboardData({
+    data: downloadUrl,
+    success: () => {
+      uni.showToast({ title: successTip, icon: "none" });
+    },
+  });
 }
 
 function openUnknownAppSettings(packageName: string, mainActivity: any) {
@@ -708,6 +881,48 @@ onShow(async () => {
       .btn-text {
         font-size: 30rpx;
         font-weight: 600;
+      }
+    }
+
+    .action-btn-group {
+      display: flex;
+      gap: 16rpx;
+      width: 100%;
+
+      .action-btn {
+        flex: 1;
+      }
+    }
+
+    .secondary-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 24rpx;
+      gap: 20rpx;
+
+      .link-item {
+        display: flex;
+        align-items: center;
+        gap: 8rpx;
+        cursor: pointer;
+        padding: 8rpx 12rpx;
+
+        .link-text {
+          font-size: 26rpx;
+          color: var(--color-primary);
+          font-weight: 500;
+
+          &.muted {
+            color: var(--text-secondary);
+          }
+        }
+      }
+
+      .link-divider {
+        width: 1rpx;
+        height: 24rpx;
+        background: var(--border-subtle);
       }
     }
   }
