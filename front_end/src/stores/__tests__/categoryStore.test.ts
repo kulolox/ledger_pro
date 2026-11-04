@@ -46,6 +46,13 @@ describe("categoryStore", () => {
       const firstCat = store.categories.value[0][0];
       const name = store.getCategoryName(0, firstCat.id);
       expect(name).toBe(firstCat.name);
+
+      // 支持收入分类
+      const incomeCat = store.categories.value[1][0];
+      expect(store.getCategoryName(1, incomeCat.id)).toBe(incomeCat.name);
+
+      // 支持数字类型的 id 匹配
+      expect(store.getCategoryName(1, Number(incomeCat.id))).toBe(incomeCat.name);
     });
 
     it('returns "其他" for invalid id', () => {

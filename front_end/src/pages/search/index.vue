@@ -396,10 +396,23 @@ async function onEditorSaved() {
 
 const categoryLabel = computed(() => {
   if (selectedCategoryId.value === undefined) return "全部分类";
-  const name =
-    getCategoryName(0, selectedCategoryId.value) ||
-    getCategoryName(1, selectedCategoryId.value);
-  return name || "全部分类";
+
+  if (selectedType.value !== undefined) {
+    const list = categories.value[selectedType.value] || [];
+    const cat = list.find((c: any) => String(c.id) === String(selectedCategoryId.value));
+    if (cat) return cat.name;
+    return getCategoryName(selectedType.value, selectedCategoryId.value);
+  }
+
+  // 类型为全部时，在支出与收入分类列表中联合查找
+  const allCats = [
+    ...(categories.value[0] || []),
+    ...(categories.value[1] || []),
+  ];
+  const found = allCats.find((c: any) => String(c.id) === String(selectedCategoryId.value));
+  if (found) return found.name;
+
+  return "全部分类";
 });
 
 const bookLabel = computed(() => {
@@ -609,7 +622,7 @@ function fallbackLocalSearch() {
       return false;
     if (
       selectedCategoryId.value !== undefined &&
-      tx.category_id !== selectedCategoryId.value
+      String(tx.category_id) !== String(selectedCategoryId.value)
     )
       return false;
     if (

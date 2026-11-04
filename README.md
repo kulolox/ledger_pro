@@ -84,7 +84,7 @@ mvn spotless:apply
 
 ## 更多文档
 
-详细架构设计、安全策略、同步机制与开发规范见 [AGENTS.md](./AGENTS.md) 与 [CLAUDE.md](./CLAUDE.md)。
+详细架构设计、安全策略、同步机制与开发规范见 [AGENTS.md](./AGENTS.md)。
 
 ## 页面预览
 

@@ -46,6 +46,8 @@ services:
       dockerfile: Dockerfile
     container_name: ledger-backend
     restart: unless-stopped
+    env_file:
+      - .env
     depends_on:
       mysql:
         condition: service_healthy
@@ -69,6 +71,7 @@ services:
       TRUST_PROXY_HEADERS: "true"
     volumes:
       - ./data/rsa-keys:/app/data
+      - ./.env:/app/.env:ro
     networks:
       - ledger-net
 

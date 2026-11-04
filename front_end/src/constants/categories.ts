@@ -33,14 +33,14 @@ export const DEFAULT_CATEGORIES: Record<number, Category[]> = {
   ],
 };
 
-export function getCategoryName(type: number, categoryId?: string): string {
+export function getCategoryName(type: number, categoryId?: string | number): string {
   if (categoryId == null) return type === 0 ? "支出" : "收入";
   const cats = DEFAULT_CATEGORIES[type] || [];
-  return cats.find((c) => c.id === categoryId)?.name || "其他";
+  return cats.find((c) => String(c.id) === String(categoryId))?.name || "其他";
 }
 
-export function getCategoryColor(type: number, categoryId?: string): string {
+export function getCategoryColor(type: number, categoryId?: string | number): string {
   if (categoryId == null) return "#607d8b";
   const cats = DEFAULT_CATEGORIES[type] || [];
-  return cats.find((c) => c.id === categoryId)?.color || "#607d8b";
+  return cats.find((c) => String(c.id) === String(categoryId))?.color || "#607d8b";
 }

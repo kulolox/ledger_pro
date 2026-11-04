@@ -4,6 +4,17 @@
 
 ---
 
+## 0. 用户核心红线与纪律（最高执行优先级）
+
+> [!CAUTION]
+> 1. **严禁擅自 `git commit` 或 `git push`**：任何后端改动完成后必须先向用户清晰汇报变更文件与内容，等待用户审核通过并给出明确指令后方可提交。
+> 2. **严禁擅自执行全量测试 (`mvn test`)**：
+>    - 严禁擅自执行全量测试套件 `mvn test`（全量 100+ 单测与集成测试）。
+>    - 日常功能开发或 Bug 修复，仅允许执行语法校验（`mvn test-compile`）或单个测试类测试（`mvn test -Dtest=XxxTest`）。
+>    - **只有在用户明确给出“跑全量测试”指令时才允许全量运行**。
+
+---
+
 ## 1. 核心架构与分层设计
 
 * **标准分层**：
@@ -49,7 +60,7 @@
 
 ---
 
-## 3. 认证、安全与防御
+## 4. 认证、安全与防御
 
 * **Spring Security 踩坑指南**：
   * 当配置了 `server.servlet.context-path=/api/v1` 时，Security 配置类的 `requestMatchers()` 匹配路径**不含** context-path。配置 `requestMatchers("/auth/**")` 即可匹配 `/api/v1/auth/**`，切忌重复拼接。
@@ -63,7 +74,7 @@
 
 ---
 
-## 4. 缓存与分类隔离架构
+## 5. 缓存与分类隔离架构
 
 * **交易缓存策略**：
   * 查询缓存：`@Cacheable(value="transactions", key="T(...AuthUtils).getCurrentUserId() + '::' + #bookId + '::' + #month")`，带租户隔离，TTL 为 30 分钟。
@@ -75,7 +86,7 @@
 
 ---
 
-## 5. 异常处理与统一响应
+## 6. 异常处理与统一响应
 
 * **统一返回**：HTTP 状态码固定为 200，包体为标准 `Result<T>`。
   * 成功：`Result.success(data)`（`code: 0`）。
@@ -84,12 +95,10 @@
 
 ---
 
-## 6. 验证与构建命令
+## 7. 构建与验证命令守则
 
-```bash
-mvn test                  # 执行所有后端单元与集成测试
-mvn test-compile          # 校验编译语法与 Lombok/MapStruct 生成
-mvn clean package         # 打包可执行 jar
-mvn spotless:apply        # 代码自动对齐与格式化（提交前必须执行）
-mvn spotless:check        # 格式规范检查
-```
+* **日常单类测试（精准验证）**：`mvn test -Dtest=XxxTest`
+* **日常语法与编译校验**：`mvn test-compile`
+* **代码格式化**：`mvn spotless:apply`
+* **全量测试（严禁默认执行，需用户显式授权）**：`mvn test`
+* **打包可执行 jar**：`mvn clean package`

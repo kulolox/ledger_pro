@@ -1,52 +1,48 @@
-# LedgerPro 文档索引
+# LedgerPro 项目核心文档体系 (`document/`)
 
-## 快速导航
+本项目已进入成熟稳定运行阶段，所有历史过程性记录、过期技术方案与已作废迭代计划均已整理清理。核心业务、架构、接口与数据库技术资产集中收纳如下：
 
-- **想了解产品功能？** → [specs/产品需求.md](./specs/产品需求.md)
-- **想了解技术架构？** → [design/architecture.md](./design/architecture.md)
-- **想看 API 定义？** → [specs/一期接口清单.md](./specs/一期接口清单.md)
-- **想看数据库表结构？** → [specs/schema.sql](./specs/schema.sql)
-- **想看下一阶段计划？** → [plans/一期计划.md](./plans/一期计划.md)
+---
 
-## 目录结构
+## 核心文档快速导航
 
-| 目录 | 用途 | 包含 |
-|------|------|------|
-| `specs/` | 产品与接口规格 | PRD、API 清单、DDL |
-| `design/` | 技术设计参考 | 架构文档、UI 库指南、原始技术方案 |
-| `plans/` | 迭代计划 | 一期任务分解 |
-| `reports/` | 审查与进度报告 | 安全审计、历史进度、月度进度 |
-| `images/` | 页面截图 | README 引用 |
+- 📘 **产品需求与功能规格** → [specs/产品需求.md](./specs/产品需求.md)
+- 🏗️ **全栈架构与部署设计** → [design/architecture.md](./design/architecture.md)
+- 🔌 **RESTful API 接口契约** → [specs/API接口清单.md](./specs/API接口清单.md)
+- 🗄️ **数据库表结构设计 (DDL)** → [specs/schema.sql](./specs/schema.sql)
+- 🎨 **Wot UI 组件知识库** → [reference/wotui-knowledge.md](./reference/wotui-knowledge.md)
 
-## 文档清单
+---
 
-### specs/ — 规格说明
+## 目录结构说明
 
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| `产品需求.md` | PRD v1.0，产品功能定义 | 已定稿 |
-| `一期接口清单.md` | 14 个 API 端点完整定义 | 匹配实际 |
-| `schema.sql` | MySQL 建表脚本（5 表 + 种子数据） | 可执行 |
+```
+document/
+├── specs/       # 业务与系统规格（PRD、RESTful API 契约、MySQL DDL）
+├── design/      # 技术架构方案（Docker 部署、离线同步、安全防护、多账本隔离）
+├── reference/   # 第三方组件库知识库（Wot UI 规范数据）
+├── images/      # 系统核心展示截图
+└── README.md    # 文档导航中心（当前文档）
+```
 
-### design/ — 技术设计
+---
 
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| `architecture.md` | Docker 部署、Security、缓存、E2E 等 | 当前参考 |
-| `wotui.md` | Wot Design Uni 组件库用法指南 | 参考 |
-| `android-studio离线打包教程.md` | uni-app 5+ Android Studio 离线打包避坑与实战教程 | 最新指南 |
-| `技术方案设计.md` | 原始技术设计 | 部分过时，仅供参考 |
+## 文档明细清单
 
-### plans/ — 迭代计划
+### 1. `specs/` —— 业务与技术规格
+| 文件 | 类型 | 内容说明 | 维护状态 |
+| :--- | :--- | :--- | :--- |
+| **`产品需求.md`** | Markdown | 产品定义、目标用户、核心功能阵型与页面流转定义 | 核心资产 |
+| **`API接口清单.md`** | Markdown | 认证、账本、分类、记账流水、查询、导入导出全量 REST 契约 | 核心资产 |
+| **`schema.sql`** | SQL | MySQL 8.0 完整建表脚本（含 utf8mb4、TINYINT、多租户硬隔离索引） | 核心资产 |
 
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| `一期计划.md` | 一期任务分解（5 阶段） | 已完成 |
+### 2. `design/` —— 架构与设计
+| 文件 | 类型 | 内容说明 | 维护状态 |
+| :--- | :--- | :--- | :--- |
+| **`architecture.md`** | Markdown | 4 容器部署、本地优先离线同步状态机、Spring Security、Redis 租户缓存与安全防注入 | 核心资产 |
 
-### reports/ — 报告
-
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| `项目审查报告-2026-06-17.md` | 安全审查（23 问题，19 已修复） | 已处理 |
-| `一期进度分析.md` | 一期进度日志（2026-06-08 ~ 06-12） | 历史记录 |
-| `progress/` | 月度进度报告目录 | 后续使用 |
+### 3. `reference/` —— 参考与知识库
+| 文件 | 类型 | 内容说明 | 维护状态 |
+| :--- | :--- | :--- | :--- |
+| **`wotui-knowledge.md`** | Markdown | Wot UI 组件属性、事件、插槽与移动端避坑用法 | 长期维护 |
+| **`wotui-data.json`** | JSON | Wot UI 组件库元数据结构化定义 | 长期维护 |

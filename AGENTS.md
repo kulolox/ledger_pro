@@ -7,7 +7,32 @@
 
 ---
 
-## 1. 核心业务与架构强约束（红线）
+## 0. 最高执行红线与交互纪律（用户明确提出，最高执行优先级）
+
+> [!CAUTION]
+> 以下三项为用户明确提出的**绝对红线**，任何时候其优先级均高于自主决策，无任何例外：
+
+### 1. 严禁擅自执行 `git commit` 或 `git push`（修改审核与提交红线）
+* **绝对禁止自主提交或推送**：任何代码、文档或脚本修改完成后，**严禁私自执行 `git commit`、`git push` 或 `git tag`**。
+* **强制汇报机制**：完成任何文件改动后，**必须先清晰、准确地向用户汇报改动的文件列表及具体的代码变更内容**。
+* **等待授权**：只有在用户明确审核确认并给出明确提交指令（如“提交代码”、“推送分支”）后，方可执行对应操作。
+
+### 2. 严禁擅自执行全量验证（验证范围控制红线）
+* **日常开发/Bug修复严禁跑全量**：
+  - 严禁擅自执行 `pnpm test:unit`（前端全部 110+ 单测）；
+  - 严禁擅自执行 `mvn test`（后端全部 100+ 单测）；
+  - 严禁擅自执行 Playwright 全量 E2E 测试或全栈全量验证脚本。
+* **改哪测哪，最小作用域验证原则**：
+  - 日常改动仅允许针对改动文件做最小范围必要验证（如前端执行 `pnpm type-check` 类型检查，或针对性单文件测试 `npx vitest run src/xxx/__tests__/xxx.test.ts`；后端执行 `mvn test-compile` 或单个测试类 `mvn test -Dtest=XxxTest`）。
+* **全量验证唯一例外**：**只有在用户明确给出特别文本指令（如“走全量验证”、“跑全量测试”）时，才允许执行全量测试套件**。
+
+### 3. 私有发包与运维工作流绝对解耦（不开源红线）
+* **工作流私有化**：自动化发包脚本（`scripts/`）、构建脚本（`release.bat`）、生产服务器运维部署与环境变量文件（`.env`）均属于私有工作流，**绝不开源**。
+* **防泄露隔离**：上述私有文件必须严格被 `.gitignore` 保护，**严禁将其跟踪进 Git 仓库或推送到公开仓库**。
+
+---
+
+## 1. 核心业务与架构强约束
 
 1. **金额存储与传输**：
    * 数据库与后端一律使用 `INT` 存储，单位为**“分”**。
@@ -34,13 +59,6 @@
    * 字段强制 `NOT NULL` 并赋默认值，禁止随意留 `NULL`。
    * 核心流水表建立 `(book_id, deleted, trans_time)` 覆盖复合索引；`account_id`、`category_id` 必须建立索引。
    * 具备唯一性特征的字段（如 `email`）必须建立物理 `UNIQUE KEY` 防并发重复。
-7. **修改审核与提交红线（核心纪律）**：
-   * **严禁擅自执行 `git commit` 或 `git push`**。
-   * 任何代码或文件修改完成后，**必须先清晰向用户汇报改动的文件及具体变更内容**，等待用户审核通过并给出明确指令后，方可执行提交。
-8. **验证范围控制（严禁默认执行全量验证）**：
-   * 日常功能开发或修改时，**仅针对改动范围进行精准必要的验证**（如前端 `pnpm type-check`、相关模块单元测试或改动功能的针对性用例）。
-   * **严禁擅自执行耗时冗长的全栈全量验证**（如跑遍前端全部 100+ 单测、后端全部 100+ 单测与全量 E2E）。
-   * **只有在用户明确给出特别指令（如“走全量验证”、“跑全量测试”）时，才允许执行全量验证**。
 
 ---
 
@@ -50,7 +68,7 @@
 
 * **产品需求与 PRD**：[document/specs/产品需求.md](document/specs/产品需求.md)
 * **技术架构与运维配置**：[document/design/architecture.md](document/design/architecture.md)（含 Docker、Nginx、Spring Security、Redis 缓存与邮件配置）
-* **接口详细契约**：[document/specs/一期接口清单.md](document/specs/一期接口清单.md)
+* **接口详细契约**：[document/specs/API接口清单.md](document/specs/API接口清单.md)
 * **数据库表结构 (DDL)**：[document/specs/schema.sql](document/specs/schema.sql)
 * **Wot UI 组件库用法与知识库**：[document/reference/wotui-knowledge.md](document/reference/wotui-knowledge.md) 与 [document/reference/wotui-data.json](document/reference/wotui-data.json)
 
@@ -64,13 +82,18 @@
 
 ---
 
-## 4. 常用工程验证命令
+## 4. 工程验证与测试守则（明确区分日常精准验证 vs 用户指令全量验证）
 
-> [!CAUTION]
-> **日常修改严禁擅自跑全量验证**，仅执行改动范围对应的针对性检查；仅在用户明确指令要求全量验证时方可执行一键全量测试。
-
-* **全栈一键测试**：激活技能 `.agents/skills/ledger-verify`（仅在用户明确要求全量验证时使用）
-* **前端类型检查**：`cd front_end && pnpm type-check`
-* **前端单元测试**：`cd front_end && pnpm test:unit`
-* **后端单元测试**：`cd back_end && mvn test`
+### A. 日常开发/修 Bug 允许且推荐的精准检查（按需选用）
+* **前端类型安全检查**：`cd front_end && pnpm type-check`
+* **前端单个测试文件运行**：`cd front_end && npx vitest run src/xxx/__tests__/xxx.test.ts`
+* **后端编译与语法校验**：`cd back_end && mvn test-compile`
+* **后端单个测试类运行**：`cd back_end && mvn test -Dtest=XxxTest`
 * **后端代码格式化**：`cd back_end && mvn spotless:apply`
+
+### B. 严禁擅自执行的全量套件（只有用户明确要求时方可运行）
+> [!WARNING]
+> 以下命令只有在用户在会话中明确输入“跑全量测试”、“走全量验证”等显式指令时才允许执行：
+* ❌ 前端全量单测：`cd front_end && pnpm test:unit`
+* ❌ 后端全量测试：`cd back_end && mvn test`
+* ❌ 全栈一键测试：激活技能 `.agents/skills/ledger-verify` 或 `fullstack-verify`

@@ -4,6 +4,17 @@
 
 ---
 
+## 0. 用户核心红线与纪律（最高执行优先级）
+
+> [!CAUTION]
+> 1. **严禁擅自 `git commit` 或 `git push`**：任何前端改动完成后必须先向用户清晰汇报变更文件与内容，等待用户审核通过并给出明确指令后方可提交。
+> 2. **严禁擅自执行全量单元测试与 E2E 测试**：
+>    - 严禁擅自运行 `pnpm test:unit`（全量 110+ 单测）与 `pnpm test:e2e`。
+>    - 日常功能开发或 Bug 修复，仅允许执行针对性单用例测试（`npx vitest run src/path/to/test.ts`）或类型检查（`pnpm type-check`）。
+>    - **只有在用户明确给出“跑全量测试”指令时才允许全量运行**。
+
+---
+
 ## 1. 核心技术栈与架构
 
 * **UI 组件库**：Wot UI (`@wot-ui/ui`)，组件统一以 `wd-` 开头（如 `<wd-button>`, `<wd-toast>`, `<wd-popup>`）。
@@ -42,11 +53,11 @@
 
 ---
 
-## 4. 自动化测试与质量门禁
+## 4. 质量验证守则
 
-* **TypeScript 类型检查**：`pnpm type-check`（提交或交付前必须通过，严禁使用 `any` 绕过校验）。
-* **单元测试**：`pnpm test:unit`（Vitest）。
-* **端到端测试 (E2E)**：`pnpm test:e2e`（Playwright 驱动，Page Object 架构，视口 390×844）。
+* **日常类型检查**：`pnpm type-check`（提交或交付前必须通过，严禁使用 `any` 绕过校验）。
+* **针对性单测**：`npx vitest run src/.../foo.test.ts`（只测改动的模块）。
+* **全量单测（需用户授权）**：`pnpm test:unit`（严禁擅自执行）。
 * **开发命令**：
   ```bash
   pnpm dev:h5      # 启动 H5 开发调试
