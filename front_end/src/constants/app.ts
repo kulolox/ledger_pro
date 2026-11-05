@@ -12,8 +12,8 @@ export interface AppRuntimeInfo {
 /**
  * 默认基准版本（非 App 预览或未就绪时降级使用）
  */
-export const APP_VERSION = "1.0.1";
-export const APP_VERSION_CODE = 101;
+export const APP_VERSION = "1.0.8";
+export const APP_VERSION_CODE = 108;
 
 function getFallbackRuntimeInfo(): AppRuntimeInfo {
   return {

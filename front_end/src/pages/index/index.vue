@@ -380,6 +380,7 @@ onShow(async () => {
   }
 
   userInfo.value = getUserInfo();
+  currentBookId.value = getCurrentBookId();
 
   if (!pageReady) {
     pageReady = true;

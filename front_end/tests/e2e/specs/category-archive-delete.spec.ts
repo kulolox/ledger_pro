@@ -107,6 +107,9 @@ test.describe("Category Archive & Delete Flow", () => {
       expect(rows[0].category_id).not.toBe(catId);
       expect(rows[0].deleted).toBe(0);
       expect(rows[1].deleted).toBe(0);
+
+      // 清理本次归档测试产生的账单，防止污染后续主页流水测试
+      await checkConn.execute(`DELETE FROM transaction WHERE id IN (888801, 888802)`);
     } finally {
       await checkConn.end();
     }

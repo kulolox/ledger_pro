@@ -8,11 +8,13 @@ import {
 import type { LocalTransaction } from "@/stores/transactionStore";
 
 describe("sync.ts unit tests", () => {
-  const STORAGE_KEY = "local_transactions";
+  const STORAGE_KEY = "u_101:local_transactions";
   let storageData: Record<string, string> = {};
 
   beforeEach(() => {
-    storageData = {};
+    storageData = {
+      userInfo: JSON.stringify({ id: 101 }),
+    };
     vi.mocked(uni.getStorageSync).mockImplementation((key: string) => storageData[key] || "");
     vi.mocked(uni.setStorageSync).mockImplementation((key: string, val: string) => {
       storageData[key] = val;

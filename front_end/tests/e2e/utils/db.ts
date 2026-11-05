@@ -75,6 +75,7 @@ export async function createTestUser(): Promise<TestUserRow> {
 export async function createTestTransactions(bookId: number, accountId: number, categoryIds: { expense: number; income: number; other: number }): Promise<void> {
   const conn = await mysql.createConnection(DB_CONFIG);
   try {
+    await conn.execute("DELETE FROM `transaction` WHERE book_id = ?", [bookId]);
     let txId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
     await conn.execute(
       `INSERT INTO transaction (id, book_id, type, amount, account_id, category_id, remark, trans_time, created_at, updated_at) VALUES

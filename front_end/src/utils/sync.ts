@@ -2,7 +2,7 @@ import {
   loadTransactions,
   type LocalTransaction,
 } from "@/stores/transactionStore";
-import { getToken } from "@/utils/storage";
+import { getToken, getScopedItem, setScopedItem } from "@/utils/storage";
 import { tryRefreshToken } from "@/utils/request";
 import { MAX_AMOUNT_CENTS } from "./format";
 
@@ -21,26 +21,26 @@ let networkChangeHandler: ((res: any) => void) | null = null;
 let syncing = false;
 const pullPromises = new Map<string, Promise<number>>();
 
-// 直接从 storage 读取，避免与 store 的响应式引用混淆
+// 直接从 scoped storage 读取，避免与 store 的响应式引用混淆
 function getLocalTransactions(): LocalTransaction[] {
   try {
-    const raw = uni.getStorageSync(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const list = getScopedItem<LocalTransaction[]>(STORAGE_KEY, []);
+    return Array.isArray(list) ? list : [];
   } catch {
     return [];
   }
 }
 
 function setLocalTransactions(list: LocalTransaction[]) {
-  uni.setStorageSync(STORAGE_KEY, JSON.stringify(list));
+  setScopedItem(STORAGE_KEY, list);
 }
 
 function getLastSyncTime(): string {
-  return uni.getStorageSync(SYNC_LAST_KEY) || "";
+  return getScopedItem<string>(SYNC_LAST_KEY) || "";
 }
 
 function setLastSyncTime() {
-  uni.setStorageSync(SYNC_LAST_KEY, new Date().toISOString());
+  setScopedItem(SYNC_LAST_KEY, new Date().toISOString());
 }
 
 // 静默请求：不显示 loading，不弹 toast，用于后台同步

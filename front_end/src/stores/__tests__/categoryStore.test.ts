@@ -5,6 +5,7 @@ const mockStorage: Record<string, any> = {};
 
 beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
+  mockStorage["userInfo"] = JSON.stringify({ id: 101 });
   (uni.getStorageSync as any).mockImplementation((key: string) => mockStorage[key]);
   (uni.setStorageSync as any).mockImplementation((key: string, value: any) => {
     mockStorage[key] = value;
@@ -90,15 +91,22 @@ describe("categoryStore", () => {
     });
   });
 
-  describe("clear", () => {
-    it("resets to default categories and clears cache", () => {
-      mockStorage["category_cache"] = "{}";
-      mockStorage["category_etag"] = "some-etag";
+  describe("reset and clear", () => {
+    it("reset preserves scoped cache and resets in-memory categories", () => {
+      mockStorage["u_101:category_cache"] = JSON.stringify({ categories: { 0: [], 1: [] } });
+      store.reset();
+      expect(mockStorage["u_101:category_cache"]).toBeTruthy();
+      expect(store.categories.value[0].length).toBe(DEFAULT_CATEGORIES[0].length);
+    });
+
+    it("clear resets to default categories and removes scoped storage", () => {
+      mockStorage["u_101:category_cache"] = "{}";
+      mockStorage["u_101:category_etag"] = "some-etag";
 
       store.clear();
 
-      expect(mockStorage["category_cache"]).toBeUndefined();
-      expect(mockStorage["category_etag"]).toBeUndefined();
+      expect(mockStorage["u_101:category_cache"]).toBeUndefined();
+      expect(mockStorage["u_101:category_etag"]).toBeUndefined();
       expect(store.categories.value[0].length).toBe(DEFAULT_CATEGORIES[0].length);
     });
   });

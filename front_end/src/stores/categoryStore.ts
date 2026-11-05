@@ -2,6 +2,7 @@ import { ref } from "vue";
 import { DEFAULT_CATEGORIES, type Category } from "@/constants/categories";
 import { createCategory, updateCategory, deleteCategory, reorderCategories } from "@/api/common";
 import { tryRefreshToken } from "@/utils/request";
+import { getScopedItem, setScopedItem, removeScopedItem } from "@/utils/storage";
 
 const CATEGORY_CACHE_KEY = "category_cache";
 const CATEGORY_ETAG_KEY = "category_etag";
@@ -19,24 +20,22 @@ let loadPromise: Promise<void> | null = null;
 
 function getCache(): CategoryCache | null {
   try {
-    const raw = uni.getStorageSync(CATEGORY_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as CategoryCache;
+    return getScopedItem<CategoryCache>(CATEGORY_CACHE_KEY);
   } catch {
     return null;
   }
 }
 
 function setCache(data: Record<number, Category[]>) {
-  uni.setStorageSync(CATEGORY_CACHE_KEY, JSON.stringify({ categories: data }));
+  setScopedItem(CATEGORY_CACHE_KEY, { categories: data });
 }
 
 function getEtag(): string {
-  return uni.getStorageSync(CATEGORY_ETAG_KEY) || "";
+  return getScopedItem<string>(CATEGORY_ETAG_KEY) || "";
 }
 
 function setEtag(etag: string) {
-  uni.setStorageSync(CATEGORY_ETAG_KEY, etag);
+  setScopedItem(CATEGORY_ETAG_KEY, etag);
 }
 
 async function fetchFromServer(
@@ -211,14 +210,24 @@ export function useCategories() {
     return cats.find((c) => String(c.id) === String(categoryId))?.icon || "?";
   };
 
-  const clearCategories = () => {
+  /**
+   * 切换账号时重置分类内存状态（保留用户本地持久化缓存）
+   */
+  const resetCategoryStore = () => {
     categories.value = {
       0: [...(DEFAULT_CATEGORIES[0] || [])],
       1: [...(DEFAULT_CATEGORIES[1] || [])],
     };
-    uni.removeStorageSync(CATEGORY_CACHE_KEY);
-    uni.removeStorageSync(CATEGORY_ETAG_KEY);
     loadPromise = null;
+  };
+
+  /**
+   * 彻底清空当前账号的分类本地缓存及内存状态
+   */
+  const clearCategories = () => {
+    resetCategoryStore();
+    removeScopedItem(CATEGORY_CACHE_KEY);
+    removeScopedItem(CATEGORY_ETAG_KEY);
   };
 
   return {
@@ -233,6 +242,7 @@ export function useCategories() {
     getCategoryName,
     getCategoryColor,
     getCategoryIcon,
+    reset: resetCategoryStore,
     clear: clearCategories,
   };
 }

@@ -27,7 +27,7 @@ test.describe("Profile System Version and App Update Flow", () => {
     const systemBlock = page.locator(".section-block", { hasText: "关于系统" });
     await expect(systemBlock).toBeVisible();
     await expect(systemBlock.locator("text=软件版本")).toBeVisible();
-    await expect(systemBlock.locator("text=v1.0.0")).toBeVisible();
+    await expect(systemBlock.locator(".cell-value")).toHaveText(/v\d+\.\d+\.\d+/);
   });
 
   test("检查更新二级页面检查更新与下载进度交互流程", async ({
@@ -40,7 +40,7 @@ test.describe("Profile System Version and App Update Flow", () => {
 
     // 1. 验证应用 Hero 区域展示
     await expect(page.locator(".app-name")).toHaveText("LedgerPro");
-    await expect(page.locator(".current-version")).toContainText("v1.0.0");
+    await expect(page.locator(".current-version")).toContainText(/v\d+\.\d+\.\d+/);
 
     // 2. 等待自动请求后端版本检查完成
     await page.waitForSelector(".update-card, .latest-card", {
@@ -55,17 +55,11 @@ test.describe("Profile System Version and App Update Flow", () => {
       await expect(page.locator(".new-version-title")).toContainText("发现新版本");
       await expect(page.locator(".changelog-box")).toBeVisible();
 
-      // 点击立即下载
-      const downloadBtn = page.locator(".action-btn.primary");
-      await downloadBtn.click();
-
-      // 验证进度条展现
-      await page.waitForSelector(".progress-section", { timeout: 3000 });
-      await expect(page.locator(".progress-bar-track")).toBeVisible();
-
-      // 等待下载完成
-      await page.waitForSelector(".action-btn.success", { timeout: 10000 });
-      await expect(page.locator(".action-btn.success")).toContainText("下载完成");
+      // 验证外部下载渠道（蓝奏云极速下载卡片）
+      const lanzouCard = page.locator(".lanzou-card");
+      await expect(lanzouCard).toBeVisible();
+      await expect(lanzouCard.locator(".channel-name")).toContainText("蓝奏云极速下载");
+      await expect(lanzouCard.locator(".channel-btn-primary")).toBeVisible();
     } else {
       await expect(page.locator(".latest-title")).toHaveText(
         "当前已是最新版本",

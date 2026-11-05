@@ -1,4 +1,5 @@
-import { ref, computed } from "vue";
+import { ref } from "vue";
+import { getScopedItem, setScopedItem, removeScopedItem } from "@/utils/storage";
 
 export interface LocalTransaction {
   id: string;
@@ -24,14 +25,15 @@ const transactions = ref<LocalTransaction[]>([]);
 
 export function loadTransactions() {
   try {
-    const raw = uni.getStorageSync(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as LocalTransaction[];
-      transactions.value = parsed;
-      if (parsed.length > 0) {
-        const minId = Math.min(...parsed.map((t) => Number(t.id)));
+    const list = getScopedItem<LocalTransaction[]>(STORAGE_KEY, []);
+    if (list && Array.isArray(list)) {
+      transactions.value = list;
+      if (list.length > 0) {
+        const minId = Math.min(...list.map((t) => Number(t.id)));
         nextLocalId = minId < 0 ? minId - 1 : -1;
       }
+    } else {
+      transactions.value = [];
     }
   } catch {
     transactions.value = [];
@@ -39,7 +41,7 @@ export function loadTransactions() {
 }
 
 function persist() {
-  uni.setStorageSync(STORAGE_KEY, JSON.stringify(transactions.value));
+  setScopedItem(STORAGE_KEY, transactions.value);
 }
 
 export function addTransaction(data: {
@@ -178,10 +180,20 @@ export function getPendingDeletes(): LocalTransaction[] {
   );
 }
 
-export function clearTransactions() {
+/**
+ * 切换账号时重置内存状态（不清空当前账号本地持久化缓存）
+ */
+export function resetTransactionStore() {
   transactions.value = [];
   nextLocalId = -1;
-  uni.removeStorageSync(STORAGE_KEY);
+}
+
+/**
+ * 清除当前账号的本地离线流水缓存及内存状态
+ */
+export function clearTransactions() {
+  resetTransactionStore();
+  removeScopedItem(STORAGE_KEY);
 }
 
 export function useTransactions() {
@@ -195,6 +207,7 @@ export function useTransactions() {
     getByDate: getTransactionsByDate,
     getPending: getPendingTransactions,
     getPendingDeletes,
+    reset: resetTransactionStore,
     clear: clearTransactions,
   };
 }

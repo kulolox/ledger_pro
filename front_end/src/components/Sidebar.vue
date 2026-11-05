@@ -465,8 +465,8 @@ function onDialogCancel() {
   showBookDialog.value = false;
 }
 
-const { load: loadTransactions, clear: clearTransactions } = useTransactions();
-const { clear: clearCategories } = useCategories();
+const { load: loadTransactions, reset: resetTransactions } = useTransactions();
+const { reset: resetCategories } = useCategories();
 
 function onUserClick() {
   emit("userClick");
@@ -524,8 +524,8 @@ function onLogout() {
     logoutApi({ refresh_token: refreshToken }).catch(() => {});
   }
   stopSync();
-  clearTransactions();
-  clearCategories();
+  resetTransactions();
+  resetCategories();
   logout();
   uni.reLaunch({ url: "/pages/login/index" });
 }

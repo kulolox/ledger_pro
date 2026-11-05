@@ -1,5 +1,15 @@
 import { test, expect } from "../fixtures/test.fixture";
 import { HomePage } from "../page-objects/HomePage";
+import { TEST_USER } from "../utils/test-data";
+import mysql from "mysql2/promise";
+
+const DB_CONFIG = {
+  host: process.env.DB_HOST || "localhost",
+  port: Number(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USERNAME || "root",
+  password: process.env.DB_PASSWORD || "123456",
+  database: "ledger_pro",
+};
 
 async function pressKey(page: any, key: string) {
   await page.locator(".kb-key").filter({ hasText: key }).click();
@@ -12,6 +22,30 @@ async function inputAmount(page: any, amount: string) {
 }
 
 test.describe("Home - Transactions", () => {
+  test.beforeEach(async () => {
+    const conn = await mysql.createConnection(DB_CONFIG);
+    try {
+      const [uRows] = await conn.execute(
+        `SELECT id FROM user WHERE email = ? LIMIT 1`,
+        [TEST_USER.email]
+      );
+      if ((uRows as any[]).length > 0) {
+        const uid = (uRows as any[])[0].id;
+        const [bRows] = await conn.execute(
+          `SELECT id FROM account_book WHERE owner_id = ? AND deleted = 0 LIMIT 1`,
+          [uid]
+        );
+        if ((bRows as any[]).length > 0) {
+          const bid = (bRows as any[])[0].id;
+          await conn.execute(`DELETE FROM transaction WHERE book_id = ?`, [bid]);
+        }
+      }
+    } catch (e) {
+      console.error("beforeEach cleanup error:", e);
+    } finally {
+      await conn.end();
+    }
+  });
   test("home page renders after login", async ({ authenticatedPage }) => {
     const homePage = new HomePage(authenticatedPage);
 
@@ -169,7 +203,9 @@ test.describe("Home - Transactions", () => {
     await pressKey(authenticatedPage, "保存");
     await authenticatedPage.waitForTimeout(500);
 
-    await expect(authenticatedPage.locator(".tx-amount")).toContainText("99.00");
+    await expect(
+      authenticatedPage.locator(".tx-amount").filter({ hasText: "99.00" })
+    ).toBeVisible();
   });
 
   // Note: passes in isolation, fails in full suite due to localStorage
@@ -202,6 +238,31 @@ test.describe("Home - Transactions", () => {
     // should be empty if only pending transactions existed
     const count = await authenticatedPage.locator(".tx-item").count();
     expect(count).toBe(0);
+  });
+
+  test.afterAll(async () => {
+    const conn = await mysql.createConnection(DB_CONFIG);
+    try {
+      const [uRows] = await conn.execute(
+        `SELECT id FROM user WHERE email = ? LIMIT 1`,
+        [TEST_USER.email]
+      );
+      if ((uRows as any[]).length > 0) {
+        const uid = (uRows as any[])[0].id;
+        const [bRows] = await conn.execute(
+          `SELECT id FROM account_book WHERE owner_id = ? AND deleted = 0 LIMIT 1`,
+          [uid]
+        );
+        if ((bRows as any[]).length > 0) {
+          const bid = (bRows as any[])[0].id;
+          await conn.execute(`DELETE FROM transaction WHERE book_id = ?`, [bid]);
+        }
+      }
+    } catch (e) {
+      console.error("afterAll cleanup error:", e);
+    } finally {
+      await conn.end();
+    }
   });
 });
 

@@ -4,6 +4,7 @@ const mockStorage: Record<string, any> = {};
 
 beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
+  mockStorage["userInfo"] = JSON.stringify({ id: 101 });
   (uni.getStorageSync as any).mockImplementation((key: string) => mockStorage[key]);
   (uni.setStorageSync as any).mockImplementation((key: string, value: any) => {
     mockStorage[key] = value;
@@ -51,9 +52,9 @@ describe("transactionStore", () => {
       expect(store.useTransactions().transactions.value[0].amount).toBe(200);
     });
 
-    it("persists to storage", () => {
+    it("persists to scoped storage", () => {
       store.addTransaction(makeTx());
-      const raw = mockStorage["local_transactions"];
+      const raw = mockStorage["u_101:local_transactions"];
       expect(raw).toBeTruthy();
       const parsed = JSON.parse(raw);
       expect(parsed.length).toBe(1);
@@ -173,12 +174,21 @@ describe("transactionStore", () => {
     });
   });
 
-  describe("clearTransactions", () => {
-    it("clears all transactions and removes storage", () => {
+  describe("reset and clear", () => {
+    it("resetTransactionStore clears memory transactions but keeps scoped storage", () => {
+      store.addTransaction(makeTx());
+      expect(mockStorage["u_101:local_transactions"]).toBeTruthy();
+
+      store.resetTransactionStore();
+      expect(store.useTransactions().transactions.value.length).toBe(0);
+      expect(mockStorage["u_101:local_transactions"]).toBeTruthy();
+    });
+
+    it("clearTransactions clears both memory transactions and scoped storage", () => {
       store.addTransaction(makeTx());
       store.clearTransactions();
       expect(store.useTransactions().transactions.value.length).toBe(0);
-      expect(mockStorage["local_transactions"]).toBeUndefined();
+      expect(mockStorage["u_101:local_transactions"]).toBeUndefined();
     });
   });
 
