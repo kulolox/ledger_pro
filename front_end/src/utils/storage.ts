@@ -88,7 +88,12 @@ export const getScopedItem = <T = any>(
       return defaultValue ?? null;
     }
     try {
-      return JSON.parse(raw) as T;
+      const parsed = JSON.parse(raw);
+      // 雪花算法 ID 与超大整数保护：若反序列化为数字且超出 JS 安全整数范围，保留原字符串，严禁精度截断
+      if (typeof parsed === "number" && !Number.isSafeInteger(parsed)) {
+        return raw as unknown as T;
+      }
+      return parsed as T;
     } catch {
       return raw as unknown as T;
     }
@@ -125,18 +130,47 @@ export const removeScopedItem = (
 
 const BOOK_BASE_KEY = "currentBookId";
 
-// 当前选中账本 ID 存取（已按用户命名空间隔离）
+/**
+ * 当前选中账本 ID 存取（已按用户命名空间隔离）
+ * 严格按照原生字符串直接存取，绝不经过 JSON.parse，彻底杜绝雪花 ID 精度损失
+ */
 export const getCurrentBookId = (): string => {
-  const v = getScopedItem<string>(BOOK_BASE_KEY);
-  return v == null ? "" : String(v);
+  try {
+    const key = getUserScopedKey(BOOK_BASE_KEY);
+    const raw = uni.getStorageSync(key);
+    if (raw === "" || raw === null || raw === undefined) {
+      return "";
+    }
+    // 兼容历史若带有双引号包裹的情况
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
+        return trimmed.slice(1, -1);
+      }
+      return trimmed;
+    }
+    return String(raw);
+  } catch {
+    return "";
+  }
 };
 
-export const setCurrentBookId = (bookId: string): void => {
-  setScopedItem(BOOK_BASE_KEY, bookId);
+export const setCurrentBookId = (bookId: string | number): void => {
+  try {
+    const key = getUserScopedKey(BOOK_BASE_KEY);
+    uni.setStorageSync(key, String(bookId));
+  } catch (e) {
+    console.error(`[storage] setCurrentBookId error:`, e);
+  }
 };
 
 export const removeCurrentBookId = (): void => {
-  removeScopedItem(BOOK_BASE_KEY);
+  const key = getUserScopedKey(BOOK_BASE_KEY);
+  try {
+    uni.removeStorageSync(key);
+  } catch (e) {
+    console.error(`[storage] removeCurrentBookId error:`, e);
+  }
 };
 
 // 是否已登录（有 access token 即认为已登录）

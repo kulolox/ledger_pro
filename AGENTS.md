@@ -40,10 +40,18 @@
 2. **多账本数据隔离**：
    * 所有交易记录通过 `book_id` 进行硬隔离。
    * 所有的交易查询、新增、修改、删除操作**必须严格校验 `book_id` 归属当前登录用户**。
-   * `book_id` 为随机 8-12 位数字。
-3. **逻辑删除**：
+   * `book_id` 为雪花算法/随机 8-19 位大整数。
+3. **雪花算法 ID 强约束（严禁数值类型转换，最高红线）**：
+   * 数据库所有实体主键与外键 ID（`user.id`, `account_book.id`, `account.id`, `user_category.id`, `transaction.id`, `book_id` 等）均为 64 位 Long 整数（雪花算法 ID，通常 19 位）。
+   * **后端强约束**：通过 HTTP JSON 接口向前端传输时，**所有 Long 类型的 ID 必须全局使用 `ToStringSerializer` 序列化为纯字符串**，严禁以原生 JSON 数字输出。
+   * **前端强约束（雪花 ID 不得转换）**：
+     * 前端所有实体 ID 的 TS 类型一律声明为 `string`，**严禁使用 `number`**。
+     * **严禁对任何实体 ID 执行数值类型转换**：严禁使用 `Number(id)`、`parseInt(id)`、`parseFloat(id)`、`+id` 或盲目 `JSON.parse(id)`，防止超过 JavaScript 安全整数范围（IEEE 754 53位截断，末位被抹平为00）。
+     * **前端 ID 比对一律做字符串归一化**：比对两个 ID 是否相等时，必须统一使用 `String(a) === String(b)`，严禁裸用 `a === b` 防止隐式类型不一致导致未命中。
+     * **Storage 存取雪花 ID 严禁走 `JSON.parse`**：针对纯字符串 ID 存取必须保持原生字符串读写。
+4. **逻辑删除**：
    * 所有核心表均使用 `deleted` 字段进行逻辑删除，由 MyBatis-Plus 自动过滤。
-4. **统一响应协议**：
+5. **统一响应协议**：
    * 后端统一返回 HTTP 200，包体内包含标准 JSON 结构：
      `Result.success(data)` 或 `Result.fail(code, message)`。
    * 前端 `request.ts` 统一拦截：

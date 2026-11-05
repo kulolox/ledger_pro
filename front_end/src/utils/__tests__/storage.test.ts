@@ -83,6 +83,19 @@ describe("storage", () => {
       storage.setCurrentBookId("42");
       expect(storage.getCurrentBookId()).toBe("42");
     });
+
+    it("preserves snowflake 19-digit long ID without precision loss", () => {
+      const snowflakeId = "2117533782561947649";
+      storage.setCurrentBookId(snowflakeId);
+      // 绝不能被截断抹平为 2117533782561947600
+      expect(storage.getCurrentBookId()).toBe(snowflakeId);
+      expect(storage.getCurrentBookId()).not.toBe("2117533782561947600");
+    });
+
+    it("handles legacy double-quoted snowflake string safely", () => {
+      (uni.setStorageSync as any)("u_guest:currentBookId", '"2117533782561947649"');
+      expect(storage.getCurrentBookId()).toBe("2117533782561947649");
+    });
   });
 
   describe("isLoggedIn", () => {
@@ -167,6 +180,14 @@ describe("storage", () => {
 
       expect(mockStorage["u_888:currentBookId"]).toBeUndefined();
       expect(mockStorage["u_888:local_transactions"]).toBeUndefined();
+    });
+    it("preserves snowflake long id without precision loss in getScopedItem", () => {
+      const snowflakeId = "2117533782561947649";
+      storage.setScopedItem("test_snowflake", snowflakeId);
+      const retrieved = storage.getScopedItem<string>("test_snowflake");
+      expect(retrieved).toBe(snowflakeId);
+      expect(retrieved).not.toBe(2117533782561947600);
+      expect(retrieved).not.toBe("2117533782561947600");
     });
   });
 });

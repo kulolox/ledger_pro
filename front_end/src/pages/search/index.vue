@@ -417,7 +417,7 @@ const categoryLabel = computed(() => {
 
 const bookLabel = computed(() => {
   if (selectedBookId.value === undefined) return "全部账本";
-  const book = books.value.find((b) => b.id === selectedBookId.value);
+  const book = books.value.find((b) => String(b.id) === String(selectedBookId.value));
   return book?.name || "全部账本";
 });
 
@@ -537,17 +537,17 @@ function onTypeConfirm({ value }: { value: number[] }) {
 }
 
 // wd-picker for books
-const bookPickerValue = ref<number[]>([0]);
+const bookPickerValue = ref<(string | number)[]>([0]);
 const bookColumns = computed(() => {
   const all = [{ label: "全部账本", value: 0 }];
-  const list = books.value.map((b) => ({ label: b.name, value: b.id }));
+  const list = books.value.map((b) => ({ label: b.name, value: String(b.id) }));
   return [...all, ...list];
 });
 const selectedBookId = ref<string | undefined>(undefined);
 
-function onBookConfirm({ value }: { value: number[] }) {
+function onBookConfirm({ value }: { value: (string | number)[] }) {
   const v = value[0];
-  selectedBookId.value = v === 0 ? undefined : String(v);
+  selectedBookId.value = v === 0 || v === "0" ? undefined : String(v);
   bookPickerValue.value = [v];
 }
 

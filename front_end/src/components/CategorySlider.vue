@@ -15,7 +15,7 @@
           v-for="cat in categories"
           :key="cat.id"
           class="category-item"
-          :class="{ active: modelValue === cat.id }"
+          :class="{ active: String(modelValue) === String(cat.id) }"
           @click="$emit('update:modelValue', cat.id)"
         >
           <view

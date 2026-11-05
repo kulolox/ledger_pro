@@ -159,7 +159,7 @@
               :key="book.id"
               class="book-item"
               :class="{
-                active: book.id === currentBookId && !isEditingBooks,
+                active: String(book.id) === String(currentBookId) && !isEditingBooks,
                 editing: isEditingBooks,
               }"
               @click="onBookItemClick(book)"
@@ -170,7 +170,7 @@
                 :style="{
                   background: book.coverIcon
                     ? 'var(--bg-card)'
-                    : getBookColor(book.id),
+                    : getBookColor(String(book.id)),
                 }"
               >
                 <text
@@ -188,7 +188,7 @@
                 />
               </view>
               <wd-icon
-                v-else-if="book.id === currentBookId"
+                v-else-if="String(book.id) === String(currentBookId)"
                 name="check"
                 size="30rpx"
                 color="var(--color-primary)"
@@ -421,7 +421,7 @@ async function onConfirmBookDialog() {
       emit(
         "update:books",
         props.books.map((b) =>
-          b.id === targetBook.id
+          String(b.id) === String(targetBook.id)
             ? {
                 ...b,
                 name: updated.name || name,

@@ -221,7 +221,7 @@ const effectiveGithubUrl = computed(() => {
     return updateInfo.value.githubUrl;
   }
   const ver =
-    updateInfo.value?.latestVersion || currentVersion.value || "1.0.8";
+    updateInfo.value?.latestVersion || currentVersion.value || "1.0.9";
   const tag = ver.startsWith("v") ? ver : `v${ver}`;
   return `https://github.com/flycat0114/ledger_pro/releases/download/${tag}/LedgerPro-${tag}-prod-release-20261104.apk`;
 });

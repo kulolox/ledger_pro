@@ -53,7 +53,20 @@
 
 ---
 
-## 4. 质量验证守则
+## 4. 雪花算法 ID 强约束（雪花 ID 不得转换）
+
+> [!CAUTION]
+> 数据库所有表主键与外键 ID（`id`, `book_id`, `user_id`, `account_id`, `category_id` 等）均为 64 位大整数（雪花算法，通常 19 位），超过了 JavaScript 的 `Number.MAX_SAFE_INTEGER`（9007199254740991，16位）。任何转数值操作均会导致低位被精度抹平为 00，造成致命业务 Bug。
+
+* **TS 类型严格收敛**：所有模型与 DTO 中的 ID 字段一律声明为 `string`，严禁定义为 `number`。
+* **严禁主动数值转换**：严禁对任何 ID 字段使用 `Number(id)`、`parseInt(id)`、`parseFloat(id)` 或 `+id`。
+* **Storage 存取雪花 ID 严禁走 `JSON.parse`**：针对账本 ID、流水 ID 等纯字符串 ID，存取必须直接调用原生字符串 API，通用 Storage 读取方法严禁将纯数字大整数字符串反序列化为 JS Number。
+* **ID 比对一律做字符串归一化**：比对两个实体 ID 是否相等时（如高亮、勾选、查找），必须一律使用 `String(a) === String(b)`，严禁直接裸用 `a === b`，防止类型不一致导致未命中。
+* **UI 组件传参防污染**：Picker / 下拉选择器 / 列表等组件的 `value` 字段必须使用 `string` 绑定，回调时必须保持 `String(val)` 取用。
+
+---
+
+## 5. 质量验证守则
 
 * **日常类型检查**：`pnpm type-check`（提交或交付前必须通过，严禁使用 `any` 绕过校验）。
 * **针对性单测**：`npx vitest run src/.../foo.test.ts`（只测改动的模块）。

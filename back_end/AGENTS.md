@@ -25,6 +25,10 @@
 * **批量操作格式**：
   * 批量新增/修改统一包裹在 `{ "items": [...] }`。
   * 批量删除统一包裹在 `{ "ids": [...] }`。
+* **雪花算法 ID 传输强规范（Long 强制序列化为 String）**：
+  * 所有数据库表实体主键与外键 ID 均使用 64 位 `Long` 存储（雪花算法 ID，通常 19 位）。
+  * **序列化红线**：所有通过 HTTP JSON 接口向前端传输的响应 DTO 中，所有 `Long` 类型的字段（如 `id`, `bookId`, `userId`, `accountId`, `categoryId`）**必须全局配置 `ToStringSerializer` 序列化为纯字符串输出**，严禁以原生 JSON 数字输出给前端。
+  * **后端代码严禁强转 `int`**：后端任何针对 ID 的操作必须使用 `Long`，严禁强转 `(int)` 造成整数溢出。
 * **数据隔离与归属权校验（强红线）**：
   * 所有与交易相关的增删改查必须显式校验 `book_id` 归属当前登录用户（从 `AuthUtils.getCurrentUserId()` 提取上下文）。
   * 逻辑删除：所有业务表必须有 `deleted` 标记，由 MyBatis-Plus 框架自动过滤。

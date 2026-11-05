@@ -335,13 +335,14 @@ function onEditorSaved() {
 }
 
 // 切换当前账本
-function onSwitchBook(bookId: string) {
-  currentBookId.value = bookId;
-  setCurrentBookId(bookId);
+function onSwitchBook(bookId: string | number) {
+  const idStr = String(bookId);
+  currentBookId.value = idStr;
+  setCurrentBookId(idStr);
   showSidebar.value = false;
   load();
-  scheduleSync(bookId);
-  pullFromServer(bookId);
+  scheduleSync(idStr);
+  pullFromServer(idStr);
 }
 
 // 跳转到统计页面（携带当前选中的年月）
@@ -390,14 +391,18 @@ onShow(async () => {
     } catch {
       books.value = [];
     }
-    if (
-      !books.value.find((b) => String(b.id) === String(currentBookId.value)) &&
-      books.value.length > 0
-    ) {
+    scheduleSync(currentBookId.value);
+  }
+
+  // 账本合法性自愈纠偏：无论何时（包括从二级页返回），确保 currentBookId 一定存在于用户的有效账本中
+  if (books.value.length > 0) {
+    const matched = books.value.find(
+      (b) => String(b.id) === String(currentBookId.value),
+    );
+    if (!matched) {
       currentBookId.value = String(books.value[0].id);
       setCurrentBookId(currentBookId.value);
     }
-    scheduleSync(currentBookId.value);
   }
 
   load();

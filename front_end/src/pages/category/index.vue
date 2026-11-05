@@ -322,8 +322,8 @@
                   v-for="target in targetCategoryOptions"
                   :key="target.id"
                   class="target-cat-item"
-                  :class="{ selected: selectedTargetId === target.id }"
-                  @click="selectedTargetId = target.id"
+                  :class="{ selected: String(selectedTargetId) === String(target.id) }"
+                  @click="selectedTargetId = String(target.id)"
                 >
                   <view
                     class="target-cat-icon-wrap"
@@ -333,7 +333,7 @@
                   </view>
                   <text class="target-cat-name">{{ target.name }}</text>
                   <view
-                    v-if="selectedTargetId === target.id"
+                    v-if="String(selectedTargetId) === String(target.id)"
                     class="check-badge"
                   >
                     <wd-icon name="check" size="20rpx" color="#ffffff" />

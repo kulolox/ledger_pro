@@ -29,7 +29,13 @@ export function loadTransactions() {
     if (list && Array.isArray(list)) {
       transactions.value = list;
       if (list.length > 0) {
-        const minId = Math.min(...list.map((t) => Number(t.id)));
+        // 只提取本地负数临时 ID（如 "-1", "-2"），绝不对正数雪花算法大整数 ID 执行 Number() 转换
+        const negativeIds = list
+          .map((t) => String(t.id))
+          .filter((id) => id.startsWith("-"))
+          .map((id) => Number(id))
+          .filter((n) => !Number.isNaN(n));
+        const minId = negativeIds.length > 0 ? Math.min(...negativeIds) : 0;
         nextLocalId = minId < 0 ? minId - 1 : -1;
       }
     } else {
